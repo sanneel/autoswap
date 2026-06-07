@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="ka">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f4ee">
+    <meta name="description" content="AutoSwap">
+    <title>AutoSwap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Georgian:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body data-view="landing" data-auth="out">
+    <header class="site-header">
+      <div class="header-inner">
+        <button class="brand" type="button" data-view="landing">
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 17 3 17 3 13"></polyline><polyline points="17 7 21 7 21 11"></polyline><line x1="3" y1="17" x2="14" y2="6"></line><line x1="10" y1="18" x2="21" y2="7"></line></svg>
+          </span>
+          AutoSwap
+        </button>
+        <nav class="top-nav" aria-label="მთავარი მენიუ">
+          <button class="nav-link is-active" type="button" data-view="landing">მთავარი</button>
+          <button class="nav-link" type="button" data-scroll="how">როგორ მუშაობს</button>
+          <button class="nav-link" type="button" data-scroll="why">შესახებ</button>
+          <button class="nav-link" type="button" data-scroll="footer">კონტაქტი</button>
+          <button class="nav-link auth-in-only" type="button" data-view="offers">შეთავაზებები</button>
+          <button class="nav-link auth-in-only" type="button" data-view="messages">შეტყობინებები</button>
+        </nav>
+        <form class="header-search" role="search">
+          <label class="sr-only" for="header-search">ძებნა</label>
+          <input id="header-search" type="search" placeholder="მარკა, მოდელი ან ქალაქი">
+        </form>
+        <div class="header-actions">
+          <button class="nav-link auth-out-only" type="button" data-view="auth">შესვლა</button>
+          <button class="primary-action header-cta" type="button" data-view="create">განცხადების დამატება</button>
+          <button class="user-chip auth-in-only" type="button" data-view="auth">
+            <span class="user-chip-avatar" id="header-avatar" aria-hidden="true">A</span>
+            <span class="user-chip-name" id="header-name">პროფილი</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="view is-visible" id="landing-view" aria-labelledby="landing-title">
+        <section class="hero">
+          <span class="hero-grain" aria-hidden="true"></span>
+          <div class="hero-glow" aria-hidden="true"></div>
+          <div class="hero-inner">
+            <span class="hero-ticket" aria-hidden="true">
+              <span class="hero-ticket__head">Exchange Voucher</span>
+              <span class="hero-ticket__sep">·</span>
+              <span class="hero-ticket__num">№ <em>0001</em></span>
+            </span>
+
+            <h1 id="landing-title" class="hero-display">
+              <span class="hero-display__line">მანქანა არა ბაზარზე,</span>
+              <span class="hero-display__accent">გაცვლაში.</span>
+            </h1>
+
+            <p class="hero-lead">გაცვალე შენი მანქანა პირდაპირ სხვა მფლობელთან — შუამავლის გარეშე, მარტივად და უსაფრთხოდ.</p>
+
+            <span class="hero-rule" aria-hidden="true"></span>
+
+            <form class="hero-swap" role="search" aria-label="გაცვლის ძებნა" id="hero-swap-bar">
+              <div class="hero-swap-stage">
+                <span class="hero-swap-corner hero-swap-corner--tl" aria-hidden="true"></span>
+                <span class="hero-swap-corner hero-swap-corner--tr" aria-hidden="true"></span>
+                <span class="hero-swap-corner hero-swap-corner--bl" aria-hidden="true"></span>
+                <span class="hero-swap-corner hero-swap-corner--br" aria-hidden="true"></span>
+
+                <figure class="hero-swap-side hero-swap-side--have">
+                  <span class="hero-swap-lot">Lot A · 2020</span>
+                  <img class="hero-swap-car" src="assets/hero-bmw-530i.png" width="789" height="396" alt="BMW 530i" decoding="async" fetchpriority="high">
+                  <label class="hero-swap-tag" for="swap-have">
+                    <span class="hero-swap-tag__role">Party A</span>
+                    <span class="hero-swap-tag__label">მე მყავს</span>
+                    <input id="swap-have" name="have" type="search" placeholder="BMW 530i, 2020" autocomplete="off">
+                  </label>
+                </figure>
+
+                <button class="hero-swap-pivot" type="button" id="swap-bar-pivot" aria-label="გაცვალე ველები">
+                  <svg class="hero-swap-pivot__rim" viewBox="0 0 120 120" aria-hidden="true">
+                    <defs>
+                      <path id="hero-swap-rim-path" d="M 60,60 m -46,0 a 46,46 0 1,1 92,0 a 46,46 0 1,1 -92,0"/>
+                    </defs>
+                    <text class="hero-swap-pivot__text">
+                      <textPath href="#hero-swap-rim-path" startOffset="0">SWAP · გაცვალე · TRADE · გაცვალე · </textPath>
+                    </text>
+                  </svg>
+                  <span class="hero-swap-pivot__core" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                  </span>
+                </button>
+
+                <figure class="hero-swap-side hero-swap-side--want">
+                  <span class="hero-swap-lot">Lot B · 2021</span>
+                  <img class="hero-swap-car hero-swap-car--flip" src="assets/hero-audi-a6.png" width="821" height="396" alt="Audi A6" decoding="async" fetchpriority="high">
+                  <label class="hero-swap-tag" for="swap-want">
+                    <span class="hero-swap-tag__role">Party B</span>
+                    <span class="hero-swap-tag__label">მე მინდა</span>
+                    <input id="swap-want" name="want" type="search" placeholder="Audi A6, SUV" autocomplete="off">
+                  </label>
+                </figure>
+              </div>
+
+              <button class="hero-swap-submit" type="submit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>გაცვლის ძებნა</span>
+                <span class="hero-swap-submit__kbd" aria-hidden="true">⏎</span>
+              </button>
+            </form>
+
+            <div class="hero-actions">
+              <button class="primary-action" type="button" data-view="create">დაამატე შენი მანქანა</button>
+              <button class="secondary-action" type="button" data-scroll="swaps">
+                ნახე აქტიური გაცვლები
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </button>
+              <span class="hero-count"><strong id="hero-active-count">6</strong> აქტიური განცხადება</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="swaps" id="swaps" aria-labelledby="swaps-title">
+          <header class="swaps-head">
+            <div>
+              <p class="section-kicker">აქტიური გაცვლები</p>
+              <h2 class="section-title" id="swaps-title">ცოცხალი მფლობელები, რეალური განცხადებები</h2>
+            </div>
+            <div class="swaps-controls">
+              <button class="featured-link" type="button" data-view="feed">ყველას ნახვა <span aria-hidden="true">→</span></button>
+              <button class="carousel-arrow" type="button" data-swaps-prev aria-label="წინა">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+              <button class="carousel-arrow" type="button" data-swaps-next aria-label="შემდეგი">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </header>
+          <div class="swaps-row" id="featured-listings"></div>
+        </section>
+
+        <section class="how" id="how" aria-labelledby="how-title">
+          <p class="section-kicker">როგორ მუშაობს</p>
+          <h2 class="section-title" id="how-title">სამი ნაბიჯი გაცვლამდე</h2>
+          <ol class="steps">
+            <li class="step">
+              <span class="step-num" aria-hidden="true">1</span>
+              <div>
+                <h3>გამოაცხადე ან მოძებნე</h3>
+                <p>დაამატე შენი მანქანა, ან მოძებნე სხვისი მარკით, მოდელით ან ქალაქით.</p>
+              </div>
+            </li>
+            <li class="step">
+              <span class="step-num" aria-hidden="true">2</span>
+              <div>
+                <h3>გააგზავნე შეთავაზება</h3>
+                <p>აირჩიე განცხადება, შესთავაზე შენი მანქანა და დაამატე თანხის სხვაობა საჭიროების შემთხვევაში.</p>
+              </div>
+            </li>
+            <li class="step">
+              <span class="step-num" aria-hidden="true">3</span>
+              <div>
+                <h3>დაეთანხმე და მიწერე</h3>
+                <p>როცა შეთავაზება დადასტურდება, ჩატი იხსნება მხოლოდ ორ მფლობელს შორის.</p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section class="why" id="why" aria-labelledby="why-title">
+          <h2 class="section-title" id="why-title">რატომ <span class="accent">AutoSwap</span>?</h2>
+          <div class="why-grid">
+            <article class="why-item">
+              <span class="why-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              </span>
+              <h3>უსაფრთხო გარიგება</h3>
+              <p>გადამოწმებული მფლობელები და დაცული პროცესი.</p>
+            </article>
+            <article class="why-item">
+              <span class="why-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline></svg>
+              </span>
+              <h3>სწრაფი გაცვლა</h3>
+              <p>იპოვე გაცვლა დღეებში, არა თვეებში.</p>
+            </article>
+            <article class="why-item">
+              <span class="why-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+              </span>
+              <h3>ფართო არჩევანი</h3>
+              <p>ასობით აქტიური განცხადება ყველა კლასში.</p>
+            </article>
+            <article class="why-item">
+              <span class="why-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 12 11 15 16 9"></polyline></svg>
+              </span>
+              <h3>გამჭვირვალე პირობები</h3>
+              <p>თანხის სხვაობა წინასწარ ჩანს.</p>
+            </article>
+            <article class="why-item">
+              <span class="why-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </span>
+              <h3>პირდაპირი კონტაქტი</h3>
+              <p>ისაუბრე მფლობელთან შუამავლის გარეშე.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="cta-banner" id="cta">
+          <div>
+            <h2>მზად ხარ ახალი გაცვლისთვის?</h2>
+            <p>შეუერთდი AutoSwap-ს და დაიწყე გაცვლა დღესვე.</p>
+          </div>
+          <div class="cta-actions">
+            <button class="primary-action" type="button" data-view="create">განცხადების დამატება</button>
+            <button class="secondary-action on-tint" type="button" data-view="feed">შეთავაზებების ნახვა</button>
+          </div>
+        </section>
+
+        <footer class="landing-footer" id="footer">
+          <div class="footer-brand">
+            <span class="brand">
+              <span class="brand-mark" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 17 3 17 3 13"></polyline><polyline points="17 7 21 7 21 11"></polyline><line x1="3" y1="17" x2="14" y2="6"></line><line x1="10" y1="18" x2="21" y2="7"></line></svg>
+              </span>
+              AutoSwap
+            </span>
+            <p>მანქანების პირდაპირი გაცვლის პლატფორმა.</p>
+          </div>
+          <nav class="footer-links" aria-label="ფუტერის ბმულები">
+            <button type="button" data-scroll="how">როგორ მუშაობს</button>
+            <button type="button" data-scroll="why">შესახებ</button>
+            <button type="button" data-view="feed">განცხადებები</button>
+          </nav>
+          <div class="social-row" aria-label="სოციალური ქსელები">
+            <a href="#" aria-label="Facebook"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.77l-.44 2.89h-2.33v6.99A10 10 0 0 0 22 12z"/></svg></a>
+            <a href="#" aria-label="Instagram"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle></svg></a>
+            <a href="#" aria-label="Telegram"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21.93 4.34a1 1 0 0 0-1.08-.21L2.92 11.06a1 1 0 0 0 .05 1.87l4.43 1.42 2.05 6.16a1 1 0 0 0 1.69.36l2.96-2.96 4.46 3.25a1 1 0 0 0 1.56-.59l2.4-14.18a1 1 0 0 0-.59-1.05z"/></svg></a>
+          </div>
+          <span class="footer-copy">© 2024 AutoSwap. ყველა უფლება დაცულია.</span>
+        </footer>
+      </section>
+
+      <section class="view" id="feed-view" aria-labelledby="feed-title">
+        <div class="app-page">
+          <section class="feed-head">
+            <div>
+              <h1 id="feed-title">განცხადებები</h1>
+              <p>იპოვე სასურველი გაცვლა ქალაქის, მოდელის და თანხის სხვაობის მიხედვით.</p>
+            </div>
+            <div class="mobile-filter-actions">
+              <button class="secondary-action" type="button" data-filter-sheet>ფილტრები</button>
+              <button class="secondary-action" type="button">სორტირება</button>
+            </div>
+          </section>
+
+          <section class="filter-bar" aria-label="ფილტრები">
+            <label>
+              <span>რას აძლევ</span>
+              <select>
+                <option>ყველა მანქანა</option>
+                <option>Toyota Prius</option>
+                <option>BMW X5</option>
+              </select>
+            </label>
+            <label>
+              <span>რას ეძებ</span>
+              <select>
+                <option>ყველა</option>
+                <option>ჯიპი</option>
+                <option>სედანი</option>
+                <option>ჰეჩბეკი</option>
+              </select>
+            </label>
+            <label>
+              <span>ქალაქი</span>
+              <select>
+                <option>ყველა ქალაქი</option>
+                <option>თბილისი</option>
+                <option>ბათუმი</option>
+                <option>ქუთაისი</option>
+              </select>
+            </label>
+            <label>
+              <span>თანხის სხვაობა</span>
+              <select>
+                <option>ნებისმიერი</option>
+                <option>თანხის გარეშე</option>
+                <option>თანხას დავამატებ</option>
+                <option>თანხას ვითხოვ</option>
+              </select>
+            </label>
+            <label class="checkbox-line">
+              <input type="checkbox" checked>
+              <span>მხოლოდ შესაბამისი</span>
+            </label>
+            <button class="clear-filter" type="button">ფილტრების გასუფთავება</button>
+          </section>
+
+          <section class="market-layout">
+            <div>
+              <div class="result-toolbar">
+                <strong>6 აქტიური განცხადება</strong>
+                <div>
+                  <label>
+                    <span>სორტირება</span>
+                    <select>
+                      <option>ახალი ჯერ</option>
+                      <option>გარბენი ნაკლები</option>
+                    </select>
+                  </label>
+                  <div class="view-toggle" aria-label="ხედის არჩევა">
+                    <button class="is-active" type="button">ბადე</button>
+                    <button type="button">სია</button>
+                  </div>
+                </div>
+              </div>
+              <div class="listing-grid" id="listing-feed"></div>
+              <button class="load-more" type="button">მეტის ნახვა</button>
+            </div>
+            <aside class="right-panel" aria-label="დამატებითი ინფორმაცია">
+              <section>
+                <h2>შენახული ძებნები</h2>
+                <p>Toyota Prius, თბილისი, თანხის გარეშე</p>
+              </section>
+              <section>
+                <h2>ბოლო შეთავაზებები</h2>
+                <p>Prius 2018 და Sonata 2017</p>
+              </section>
+              <section>
+                <h2>რჩევა</h2>
+                <p>დაამატე მკაფიო ფოტოები და ზუსტი თანხის პირობა.</p>
+              </section>
+            </aside>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="detail-view" aria-labelledby="detail-title">
+        <div class="simple-page">
+          <button class="back-link" type="button" data-view="feed">განცხადებებში დაბრუნება</button>
+          <div class="detail-layout" id="detail-content"></div>
+          <section class="similar-section">
+            <h2>მსგავსი განცხადებები</h2>
+            <div class="featured-grid" id="similar-listings"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="offers-view" aria-labelledby="offers-title">
+        <div class="simple-page">
+          <div class="section-head">
+            <h1 id="offers-title">შეთავაზებები</h1>
+            <div class="tabs" role="tablist" aria-label="შეთავაზებები">
+              <button class="is-active" type="button">შემომავალი</button>
+              <button type="button">გაგზავნილი</button>
+            </div>
+          </div>
+          <div class="offer-list" id="offers-list">
+            <article class="offer-row">
+              <img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=240&q=80" alt="Toyota Prius">
+              <img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=240&q=80" alt="Hyundai Sonata">
+              <div>
+                <h2>Toyota Prius 2018 და Hyundai Sonata 2017</h2>
+                <p>თანხის სხვაობა: 2 500 GEL უნდა</p>
+              </div>
+              <span class="status">აქტიური</span>
+              <button type="button">ნახვა</button>
+            </article>
+            <article class="offer-row">
+              <img src="https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=240&q=80" alt="BMW X5">
+              <img src="https://images.unsplash.com/photo-1553440569-bcc63803a83d?auto=format&fit=crop&w=240&q=80" alt="Lexus RX">
+              <div>
+                <h2>BMW X5 2015 და Lexus RX 2014</h2>
+                <p>თანხის სხვაობა: თანხის გარეშე</p>
+              </div>
+              <span class="status">მოლოდინში</span>
+              <button type="button">ნახვა</button>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="messages-view" aria-labelledby="messages-title">
+        <div class="simple-page messages-layout">
+          <div class="chat-list">
+            <h1 id="messages-title">შეტყობინებები</h1>
+            <button class="chat-item is-active" type="button">
+              <span>ნინო ლომიძე</span>
+              <small>სონატაც ვნახე.</small>
+            </button>
+            <button class="chat-item" type="button">
+              <span>ლაშა კობახიძე</span>
+              <small>შაბათს ნახვა გაწყობს?</small>
+            </button>
+          </div>
+          <div class="chat-panel">
+            <div class="chat-title" id="chat-title">
+              <strong>ნინო ლომიძე</strong>
+              <span>Hyundai Sonata 2017</span>
+            </div>
+            <div id="message-thread">
+              <div class="bubble other">გამარჯობა, პრიუსი ისევ ხელმისაწვდომია?</div>
+              <div class="bubble mine">კი, ხელმისაწვდომია. სონატაც ვნახე.</div>
+              <div class="bubble other">შაბათს ნახვა გაწყობს?</div>
+            </div>
+            <form class="message-form" id="message-form">
+              <input id="message-input" type="text" placeholder="შეტყობინება" autocomplete="off">
+              <button type="submit">გაგზავნა</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="create-view" aria-labelledby="create-title">
+        <div class="simple-page">
+          <div class="section-head">
+            <h1 id="create-title">განცხადების დამატება</h1>
+            <p>შეავსე მანქანის მონაცემები და მიუთითე რა ტიპის გაცვლა გინდა.</p>
+          </div>
+          <form class="create-form" id="create-form">
+            <label class="photo-upload">
+              <span>ფოტოები</span>
+              <input id="vehicle-photos" name="photos" type="file" multiple accept="image/*">
+            </label>
+            <label><span>მარკა</span><input id="vehicle-make" name="make" type="text" placeholder="Toyota" required></label>
+            <label><span>მოდელი</span><input id="vehicle-model" name="model" type="text" placeholder="Prius" required></label>
+            <label><span>წელი</span><input id="vehicle-year" name="year" type="number" min="1900" max="2100" placeholder="2018" required></label>
+            <label><span>გარბენი</span><input id="vehicle-mileage" name="mileage" type="number" min="0" placeholder="142000" required></label>
+            <label><span>საწვავი</span><select id="vehicle-fuel" name="fuel_type"><option value="hybrid">ჰიბრიდი</option><option value="petrol">ბენზინი</option><option value="diesel">დიზელი</option><option value="electric">Electric</option></select></label>
+            <label><span>კოლოფი</span><select id="vehicle-transmission" name="transmission"><option value="automatic">ავტომატიკა</option><option value="manual">მექანიკა</option><option value="cvt">CVT</option></select></label>
+            <label><span>ქალაქი</span><select id="vehicle-location" name="location"><option value="თბილისი">თბილისი</option><option value="ბათუმი">ბათუმი</option><option value="ქუთაისი">ქუთაისი</option><option value="რუსთავი">რუსთავი</option></select></label>
+            <label class="wide"><span>აღწერა</span><textarea id="vehicle-description" name="description" rows="4" placeholder="მდგომარეობა, სერვისი, დეტალები"></textarea></label>
+            <label class="wide"><span>სასურველი მანქანები</span><input id="desired-vehicles" name="desired" type="text" placeholder="Lexus RX, Toyota Camry ან ჯიპი"></label>
+            <label><span>თანხის პირობა</span><select id="cash-direction" name="cash_direction"><option value="none">თანხის გარეშე</option><option value="owner_adds">თანხას დავამატებ</option><option value="owner_wants">თანხას ვითხოვ</option></select></label>
+            <label><span>თანხა GEL</span><input id="cash-amount" name="cash_amount" type="number" min="0" placeholder="2000"></label>
+            <button class="primary-action form-submit" type="submit">განცხადების შენახვა</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="view" id="auth-view" aria-labelledby="auth-title">
+        <div class="auth-box" data-mode="login">
+          <form class="auth-form auth-out-only" id="auth-form">
+            <h1 id="auth-title">შესვლა</h1>
+            <p class="auth-note" id="auth-note">გააგრძელე გაცვლის სამყაროში.</p>
+            <p class="auth-alert" id="auth-alert" role="alert" hidden></p>
+            <label class="auth-name-field"><span>სახელი</span><input id="auth-name" type="text" placeholder="გიორგი" autocomplete="name"></label>
+            <label><span>ელფოსტა</span><input id="auth-email" type="email" placeholder="you@mail.com" autocomplete="email" required></label>
+            <label><span>პაროლი</span><input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" required minlength="6"></label>
+            <button class="primary-action" type="submit" id="auth-submit">შესვლა</button>
+            <p class="auth-switch">
+              <span id="auth-switch-text">არ გაქვს ანგარიში?</span>
+              <button class="text-action" type="button" id="auth-toggle">რეგისტრაცია</button>
+            </p>
+          </form>
+
+          <div class="profile-card auth-in-only">
+            <span class="profile-avatar" id="profile-avatar" aria-hidden="true">A</span>
+            <h1 id="profile-name">მომხმარებელი</h1>
+            <p class="auth-note" id="profile-email"></p>
+            <div class="profile-actions">
+              <button class="secondary-action" type="button" data-view="offers">ჩემი შეთავაზებები</button>
+              <button class="secondary-action" type="button" data-view="messages">შეტყობინებები</button>
+              <button class="secondary-action" type="button" data-view="create">დაამატე განცხადება</button>
+            </div>
+            <button class="primary-action" type="button" id="auth-logout">გასვლა</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="მობილური მენიუ">
+      <button type="button" data-view="feed">განცხადებები</button>
+      <button type="button" data-view="offers">შეთავაზებები</button>
+      <button type="button" data-view="messages">შეტყობინებები</button>
+      <button type="button" data-view="auth">პროფილი</button>
+    </nav>
+
+    <dialog id="offer-dialog">
+      <form class="offer-modal" id="offer-form">
+        <button class="close-dialog" type="button" value="cancel" aria-label="დახურვა">x</button>
+        <h2>შეთავაზების გაგზავნა</h2>
+        <p id="offer-car-name"></p>
+        <label>
+          <span>ჩემი მანქანა</span>
+          <select id="offer-vehicle-select" name="offered_vehicle_id" required>
+            <option value="">Load your cars first</option>
+          </select>
+        </label>
+        <label>
+          <span>თანხის მხარე</span>
+          <select id="offer-cash-direction" name="cash_direction">
+            <option value="straight">თანხის გარეშე</option>
+            <option value="sender_adds">თანხას დავამატებ</option>
+            <option value="sender_wants">თანხას ვითხოვ</option>
+          </select>
+        </label>
+        <label>
+          <span>თანხა სურვილისამებრ</span>
+          <input id="offer-cash-amount" name="cash_amount" type="number" min="0" placeholder="0">
+        </label>
+        <label>
+          <span>მოკლე შეტყობინება</span>
+          <textarea id="offer-message" name="message" rows="3"></textarea>
+        </label>
+        <button class="primary-action" type="submit" value="default">შეთავაზების გაგზავნა</button>
+      </form>
+    </dialog>
+
+    <dialog id="filter-dialog">
+      <form method="dialog" class="offer-modal">
+        <button class="close-dialog" value="cancel" aria-label="დახურვა">x</button>
+        <h2>ფილტრები</h2>
+        <label><span>რას აძლევ</span><select><option>ყველა მანქანა</option><option>Toyota Prius</option></select></label>
+        <label><span>რას ეძებ</span><select><option>ყველა</option><option>ჯიპი</option><option>სედანი</option></select></label>
+        <label><span>ქალაქი</span><select><option>ყველა ქალაქი</option><option>თბილისი</option><option>ბათუმი</option></select></label>
+        <button class="primary-action" value="default">ფილტრების გამოყენება</button>
+      </form>
+    </dialog>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

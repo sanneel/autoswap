@@ -1,0 +1,70 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+.packages
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.local
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+ios/Runner/GoogleService-Info-debug.plist
+ios/firebase_app_id_file.json
+
+# Local web verification
+web/.static-server-*.log
+web/.chrome-verify-profile/
+web/runtime-web-check.png
+
+# Logs and backups
+*.log
+build*.log
+*.pre-create.bak
+*.bak
+
+# Node / Next.js (autoswap-web)
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts.bak
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Generic env / secret guards
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets.json
+credentials.json
+
+# Stray scratch files at repo root
+runtime-screenshot.png
+sr1-signin.png
+ui.xml
+WAKE_UP.md
+
+# Harness / preview scratch
+.claude/
+.agents/
+.scratch/
