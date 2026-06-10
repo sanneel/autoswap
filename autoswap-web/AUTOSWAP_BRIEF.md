@@ -113,25 +113,30 @@ AutoSwap is a peer-to-peer car marketplace focused on **swaps**, not sales. User
 ## Tone of Voice
 
 ### Direct and Practical
-- "List your car, find a match, make the trade"
+- "იპოვე ვინც შენს მანქანას ეძებს" (Find someone who wants your car)
 - No hype, no buzzwords
 - Clear instructions at every step
+- Describe what users can do, not abstract benefits
 
 ### Honest and Transparent
 - Show real listings, real prices
 - No fake metrics or testimonials
 - Acknowledge when features are incomplete
+- "აქტიური განცხადება" (active listing) not "opportunity"
 
 ### Professional but Human
 - Formal enough for trust
 - Friendly enough for engagement
 - Georgian language for local market
+- Natural phrasing, not machine translation
 
 ### Language Style
-- Short sentences
+- Short sentences (under 15 words)
 - Action-oriented
 - Specific over generic
 - Avoid: "revolutionize", "seamless", "AI-powered", "cutting-edge"
+- Avoid: "პიონერული", "ინოვაციური", "უპრეცედენტო" (pioneering, innovative, unprecedented)
+- Use: "მარტივი", "პირდაპირი", "გამჭვირვალე" (simple, direct, transparent)
 
 ---
 

@@ -279,10 +279,10 @@ img {
 
 .swap-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: stretch;
   gap: 0;
-  max-width: 880px;
+  max-width: 480px;
   margin-top: 6px;
   border: 1px solid #cdc4b4;
   border-radius: var(--radius);
@@ -482,27 +482,16 @@ img {
 
 .step {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
+  gap: 8px;
   align-items: start;
-  padding: 4px 0;
-}
-
-.step__num {
-  display: inline-grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border: 1px solid rgb(20 122 85 / 28%);
-  border-radius: 999px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   background: var(--surface);
-  color: var(--green-dark);
-  font-weight: 900;
-  font-size: 0.95rem;
 }
 
 .step h3 {
-  margin-bottom: 4px;
+  margin: 0 0 4px;
   font-size: 1rem;
 }
 

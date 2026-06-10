@@ -216,16 +216,36 @@ Caption: 0.78rem, uppercase, tracked (+0.08em)
 ## Page-Specific Rules
 
 ### Homepage Hero
-- Direct headline (what it does)
-- Single clear CTA
+- Direct headline explaining what the product does
+- Single clear CTA (primary action only)
 - No decorative elements
-- Product screenshot OR simple text
+- Simple text description, not marketing copy
+- Search bar is the main interaction point
 
-### Features/Sections
-- Single column or asymmetric
-- No icon-heavy grids
-- Specific descriptions, not generic
-- Real examples only
+### Active Listings Section
+- Simple heading: "განცხადებები" (Listings)
+- Show count of active listings
+- Compact CTA button
+
+### How It Works Section
+- Three cards in a row
+- Each card: title + short description
+- No step numbers or badges
+- No decorative icons
+- Cards have subtle border, no shadow
+
+### Reasons Section
+- Three cards in a row
+- Simple title, short description
+- Minimal icons (Lucide, 22px)
+- No eyebrows or section labels
+- Remove "why AutoSwap" framing - let content speak
+
+### Final CTA Section
+- Simple headline + subtext
+- Single primary button
+- No additional elements
+- No secondary actions
 
 ### Footer
 - Minimal, functional links
