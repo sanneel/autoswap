@@ -1,55 +1,9 @@
-# Flutter / Dart
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-build/
-.packages
-pubspec.lock
-
-# IDE
-.idea/
-.vscode/
-*.iml
-
 # OS
 .DS_Store
 Thumbs.db
 
-# Secrets
+# Secrets / env
 .env
-.env.local
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
-ios/Runner/GoogleService-Info-debug.plist
-ios/firebase_app_id_file.json
-
-# Local web verification
-web/.static-server-*.log
-web/.chrome-verify-profile/
-web/runtime-web-check.png
-
-# Logs and backups
-*.log
-build*.log
-*.pre-create.bak
-*.bak
-
-# Node / Next.js (autoswap-web)
-node_modules/
-.next/
-out/
-.vercel/
-*.tsbuildinfo
-next-env.d.ts.bak
-
-# Supabase local
-supabase/.branches/
-supabase/.temp/
-supabase/.env
-
-# Generic env / secret guards
 .env.*
 !.env.example
 *.pem
@@ -57,12 +11,25 @@ supabase/.env
 *.p12
 secrets.json
 credentials.json
+# Real Supabase config stays local; commit the .example only.
+autoswap/front/supabase-config.js
 
-# Stray scratch files at repo root
-runtime-screenshot.png
-sr1-signin.png
-ui.xml
-WAKE_UP.md
+# Node (if tooling is added later)
+node_modules/
+*.tsbuildinfo
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Logs and backups
+*.log
+*.bak
+
+# Local preview / static-server scratch
+**/.static-server-*.log
+**/.chrome-verify-profile/
 
 # Harness / preview scratch
 .claude/
