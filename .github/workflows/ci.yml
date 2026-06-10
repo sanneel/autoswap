@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  FLUTTER_VERSION: "3.22.0"
+
+jobs:
+  # Flutter Analysis and Tests
+  flutter:
+    name: Flutter (Dart ${{ matrix.dart-version }})
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        dart-version: ["3.4", "3.5"]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Cache Flutter packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.flutter
+          key: flutter-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            flutter-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test --reporter compact
+
+  # Next.js Web Dashboard Tests
+  web:
+    name: Next.js Web
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: autoswap-web
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: autoswap-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+  # Combined status check (optional, for PRs)
+  status-check:
+    name: Status Check
+    needs: [flutter, web]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Check combined status
+        run: |
+          if [[ "${{ needs.flutter.result }}" == "success" ]] && [[ "${{ needs.web.result }}" == "success" ]]; then
+            echo "All checks passed!"
+            exit 0
+          else
+            echo "Some checks failed. See job details."
+            exit 1
+          fi
