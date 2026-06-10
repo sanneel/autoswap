@@ -10,7 +10,8 @@
   --blue: #245b79;
   --amber: #ad6c1d;
   --red: #a23d35;
-  --shadow: 0 16px 42px rgb(38 33 25 / 10%);
+  --shadow: 0 2px 8px rgb(38 33 25 / 6%);
+  --shadow-lg: 0 4px 16px rgb(38 33 25 / 8%);
   --radius: 8px;
 }
 
@@ -202,7 +203,6 @@ img {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow);
 }
 
 .landing {
@@ -285,10 +285,9 @@ img {
   max-width: 880px;
   margin-top: 6px;
   border: 1px solid #cdc4b4;
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: var(--surface);
   padding: 6px;
-  box-shadow: 0 18px 40px rgb(38 33 25 / 9%);
 }
 
 .swap-bar__field {
@@ -919,7 +918,6 @@ textarea:focus {
   border-radius: var(--radius);
   background: var(--surface);
   padding: 20px;
-  box-shadow: 0 12px 28px rgb(38 33 25 / 7%);
 }
 
 .panel + .panel {
@@ -1012,7 +1010,6 @@ textarea:focus {
   border-radius: var(--radius);
   background: var(--surface);
   padding: 24px;
-  box-shadow: var(--shadow);
 }
 
 .auth-options {

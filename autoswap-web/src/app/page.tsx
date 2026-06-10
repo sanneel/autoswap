@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Handshake, MessagesSquare, Plus, Repeat2, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, Handshake, Plus, Repeat2, Search, ShieldCheck } from "lucide-react";
 import { SwapBar } from "@/components/swap-bar";
 import { VehicleCard } from "@/components/vehicle-card";
 import { demoVehicles } from "@/lib/demo-data";
@@ -70,17 +70,13 @@ export default async function Home({
   return (
     <main className="page-shell landing">
       <section className="hero" aria-labelledby="page-title">
-        <p className="eyebrow">
-          <Repeat2 size={14} aria-hidden="true" /> Swap-first marketplace
-        </p>
         <h1 id="page-title">
-          მანქანა არა ბაზარზე,
+          <span className="hero__accent">გაცვლა.</span>
           <br />
-          <span className="hero__accent">გაცვლაში.</span>
+          ბაზრის გარეშე.
         </h1>
         <p className="lead">
-          აღწერე რა გყავს და რა გინდა — შენი მონაცემები მისდევს რეალურ აქტიურ განცხადებებს და გიჩვენებს მფლობელებს,
-          რომელთა მანქანაც შენთვის შეიძლება იყოს შესაფერისი.
+          დაამატე შენი მანქანა და იპოვე ვინც შენს უნდა. ან იპოვე ის რომელიც გსურს — და შესთავაზე შენი.
         </p>
 
         <SwapBar initialWant={q} />
@@ -88,16 +84,12 @@ export default async function Home({
         <div className="hero__cta-row">
           <Link className="button button--primary hero__primary" href="/listings/new">
             <Plus size={17} aria-hidden="true" />
-            დაამატე შენი მანქანა
+            დაამატე მანქანა
           </Link>
           <Link className="button button--ghost hero__secondary" href="#active-swaps">
             <Search size={16} aria-hidden="true" />
-            ნახე აქტიური გაცვლები
-            <ArrowRight size={15} aria-hidden="true" />
+            ნახე განცხადებები
           </Link>
-          <span className="hero__count">
-            <strong>{activeCount}</strong> აქტიური განცხადება
-          </span>
         </div>
       </section>
 
@@ -119,7 +111,7 @@ export default async function Home({
             </p>
           </div>
           <Link className="button section__more" href="/listings/new">
-            <Sparkles size={16} aria-hidden="true" />
+            <Plus size={16} aria-hidden="true" />
             გამოაცხადე შენი
           </Link>
         </header>
@@ -141,29 +133,29 @@ export default async function Home({
         <header className="section__head section__head--compact">
           <div>
             <p className="section__eyebrow">როგორ მუშაობს</p>
-            <h2 id="how-it-works-title">სამი ნაბიჯი გაცვლამდე</h2>
+            <h2 id="how-it-works-title">მარტივი პროცესი</h2>
           </div>
         </header>
         <ol className="steps">
           <li className="step">
             <span className="step__num">1</span>
             <div>
-              <h3>გამოაცხადე ან მოძებნე</h3>
-              <p>დაამატე შენი მანქანა, ან მოძებნე სხვისი ისე როგორც გინდა — მარკით, მოდელით ან ქალაქით.</p>
+              <h3>დაამატე შენი მანქანა</h3>
+              <p>შეიყვანე დეტალები და მიუთითე რა გსურს სანაცვლოდ.</p>
             </div>
           </li>
           <li className="step">
             <span className="step__num">2</span>
             <div>
-              <h3>გააგზავნე შეთავაზება</h3>
-              <p>აირჩიე განცხადება, შესთავაზე შენი მანქანა და დაამატე თანხის სხვაობა საჭიროების შემთხვევაში.</p>
+              <h3>მოძებნე და შესთავაზე</h3>
+              <p>იპოვე სასურველი მანქანა, გაგზავნე შეთავაზება შენი ავტოთი.</p>
             </div>
           </li>
           <li className="step">
             <span className="step__num">3</span>
             <div>
-              <h3>დაეთანხმე და მიწერე</h3>
-              <p>როცა შეთავაზება დადასტურდება, ჩატი იხსნება მხოლოდ ორ მფლობელს შორის.</p>
+              <h3>მიწე და გაცვალე</h3>
+              <p>მფლობელი რომ დაეთანხმოს, ჩატი გაიხსნება.</p>
             </div>
           </li>
         </ol>
@@ -173,24 +165,24 @@ export default async function Home({
         <header className="section__head section__head--compact">
           <div>
             <p className="section__eyebrow">რატომ AutoSwap</p>
-            <h2 id="why-title">გაცვლა იქ, სადაც გასაყიდი არ ხდება</h2>
+            <h2 id="why-title">პირდაპირი კონტაქტი, დადასტურებული შეთავაზებით</h2>
           </div>
         </header>
         <div className="reasons__grid">
           <article className="reason">
             <ShieldCheck aria-hidden="true" size={22} />
-            <h3>დადასტურებული შეთავაზებებიდან მხოლოდ ჩატი</h3>
-            <p>მესიჯები ხელმისაწვდომია მხოლოდ ორი მფლობელისთვის, რომელთა გაცვლა უკვე დადასტურდა.</p>
+            <h3>ჩატი მხოლოდ დადასტურების შემდეგ</h3>
+            <p>ორი მფლობელი რომ შეთანხმდეს, მხოლოდ მაშინ იწყება კომუნიკაცია.</p>
           </article>
           <article className="reason">
             <Handshake aria-hidden="true" size={22} />
-            <h3>გამჭვირვალე თანხის სხვაობა</h3>
-            <p>თითოეული განცხადება გვაცნობს, თუ რამდენი თანხის სხვაობა იქნება გაცვლის შემთხვევაში.</p>
+            <h3>თანხის სხვაობა გამჭვირვალეა</h3>
+            <p>ყველა განცხადებაში ჩანს თუ რამდენი უნდა დაემატოს.</p>
           </article>
           <article className="reason">
             <CheckCircle2 aria-hidden="true" size={22} />
-            <h3>ცოცხალი მონაცემები</h3>
-            <p>ყველა განცხადება მოდის Supabase-დან რეალურ დროში — შემოწმე ვინ მართლაც ცვლის ახლა.</p>
+            <h3>რეალური მონაცემები</h3>
+            <p>ყველა განცხადება Supabase-დან მოდის — ცოცხალი ინფორმაცია, არა სტატიკური გვერდი.</p>
           </article>
         </div>
       </section>
@@ -198,17 +190,13 @@ export default async function Home({
       <section className="final-cta" aria-labelledby="cta-title">
         <div>
           <p className="section__eyebrow">დაიწყე ახლავე</p>
-          <h2 id="cta-title">გაცვალე უმოკლეს დროში</h2>
-          <p>დაამატე ერთი მანქანა — და დაიწყე გაცვლები რეალურ მფლობელებთან.</p>
+          <h2 id="cta-title">დაიწყე გაცვლა</h2>
+          <p>დაამატე შენი მანქანა და იპოვე ვინც შენს უნდა.</p>
         </div>
         <div className="final-cta__actions">
           <Link className="button button--primary" href="/listings/new">
             <Plus size={17} aria-hidden="true" />
-            დაამატე შენი მანქანა
-          </Link>
-          <Link className="button" href="/messages">
-            <MessagesSquare size={16} aria-hidden="true" />
-            შენი მესიჯები
+            დაამატე მანქანა
           </Link>
         </div>
       </section>
