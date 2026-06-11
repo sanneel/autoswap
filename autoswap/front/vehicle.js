@@ -23,6 +23,8 @@ function carCash(car) {
 }
 
 function descriptionFor(car) {
+  // The owner's own words win; the generated line is only a fallback.
+  if (car.description) return car.description;
   const parts = [car.transmissionLabel, car.categoryLabel].filter(Boolean).join(' · ');
   const intent = car.openToOffers
     ? 'მფლობელი ღიაა გაცვლის შემოთავაზებებისთვის.'
@@ -64,6 +66,7 @@ function DetailPage(car, photos) {
     car.fuel ? { label: 'საწვავი', value: car.fuel } : null,
     car.transmissionLabel ? { label: 'გადაცემათა', value: car.transmissionLabel } : null,
     car.categoryLabel ? { label: 'ტიპი', value: car.categoryLabel } : null,
+    car.estimatedValueLabel ? { label: 'ღირებულება', value: `~${car.estimatedValueLabel}` } : null,
   ].filter(Boolean);
   const statRow = stats
     .map((s) => `<div class="stat-cell"><span>${s.label}</span><strong>${s.value}</strong></div>`)
@@ -87,13 +90,13 @@ function DetailPage(car, photos) {
             </div>
             <div class="detail-actions">
               <button class="btn btn-primary detail-offer" type="button" data-offer data-id="${car.id}" data-make="${car.make}" data-model="${car.model}">${icons.swap} შესთავაზე გაცვლა</button>
-              <button class="save-btn detail-save" type="button" aria-label="${car.make} ${car.model} შენახვა">${icons.heart}</button>
+              <button class="save-btn detail-save" type="button" data-id="${car.id}" aria-label="${car.make} ${car.model} შენახვა">${icons.heart}</button>
             </div>
             <div class="detail-owner">
-              <span class="owner-avatar">${(car.make || 'A').charAt(0)}</span>
+              <span class="owner-avatar">${(car.ownerName || car.make || 'A').charAt(0)}</span>
               <div>
-                <strong>კერძო მფლობელი</strong>
-                <small>${car.city} · წევრი 2024 წლიდან</small>
+                <strong>${car.ownerName || 'კერძო მფლობელი'}</strong>
+                <small>${car.city}${car.ownerSwaps ? ` · ${car.ownerSwaps} გაცვლა` : ''}</small>
               </div>
             </div>
           </aside>
