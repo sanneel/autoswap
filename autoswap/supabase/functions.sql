@@ -202,6 +202,12 @@ create trigger match_on_vehicle_activate after update of status on public.vehicl
 
 -- -------------------------------------------------------------
 -- accept_offer(offer_id) -> conversation_id (atomic)
+--   Accepting completes the swap:
+--     * both vehicles row-locked in canonical id order so two competing
+--       accepts serialize — the second one fails the active check
+--     * both vehicles -> status 'completed'
+--     * every other open offer touching either vehicle is auto-declined
+--     * both owners' completed_swaps_count is bumped
 -- -------------------------------------------------------------
 create or replace function public.accept_offer(offer_id_input uuid)
 returns uuid
@@ -212,6 +218,7 @@ declare
   conversation_id uuid;
   v_low           uuid;
   v_high          uuid;
+  competing       record;
 begin
   select * into o from public.offers where id = offer_id_input for update;
   if not found then raise exception 'Offer not found'; end if;
@@ -221,6 +228,18 @@ begin
   end if;
   if not exists (select 1 from public.vehicles where id = o.target_vehicle_id and owner_id = auth.uid()) then
     raise exception 'Caller does not own the target vehicle';
+  end if;
+
+  perform 1
+    from public.vehicles
+   where id in (o.offered_vehicle_id, o.target_vehicle_id)
+   order by id
+     for update;
+
+  if exists (select 1 from public.vehicles
+              where id in (o.offered_vehicle_id, o.target_vehicle_id)
+                and status <> 'active') then
+    raise exception 'Both vehicles must still be active to complete a swap';
   end if;
 
   update public.offers set status = 'accepted' where id = o.id;
@@ -241,6 +260,34 @@ begin
     o.id, conversation_id, o.target_vehicle_id
   );
 
+  -- The swap is agreed: both listings leave the market.
+  update public.vehicles
+     set status = 'completed'
+   where id in (o.offered_vehicle_id, o.target_vehicle_id);
+
+  update public.profiles
+     set completed_swaps_count = completed_swaps_count + 1
+   where id in (o.from_user_id, o.to_user_id);
+
+  -- Auto-decline every other open offer involving either vehicle.
+  for competing in
+    select id, from_user_id, target_vehicle_id
+      from public.offers
+     where id <> o.id
+       and status in ('pending', 'viewed', 'countered')
+       and (target_vehicle_id  in (o.offered_vehicle_id, o.target_vehicle_id)
+         or offered_vehicle_id in (o.offered_vehicle_id, o.target_vehicle_id))
+       for update
+  loop
+    update public.offers set status = 'declined' where id = competing.id;
+    insert into public.offer_events (offer_id, actor_id, event_type, message)
+    values (competing.id, null, 'declined', 'auto-declined: vehicle was swapped in another offer');
+    insert into public.notifications (user_id, type, title, body, related_offer_id, related_vehicle_id)
+    values (competing.from_user_id, 'offer_declined', 'შეთავაზება აღარ არის აქტუალური',
+            'ერთ-ერთი მანქანა უკვე გაიცვალა — შეთავაზება ავტომატურად დაიხურა.',
+            competing.id, competing.target_vehicle_id);
+  end loop;
+
   v_low  := least(o.offered_vehicle_id, o.target_vehicle_id);
   v_high := greatest(o.offered_vehicle_id, o.target_vehicle_id);
   update public.match_suggestions set status = 'converted_to_offer'
@@ -251,6 +298,30 @@ end;
 $$;
 
 grant execute on function public.accept_offer(uuid) to authenticated;
+
+-- -------------------------------------------------------------
+-- cancel_offer(offer_id) — sender withdraws a pending/viewed offer.
+-- The 'cancelled' offer_event is logged by trg_offer_after_status.
+-- -------------------------------------------------------------
+create or replace function public.cancel_offer(offer_id_input uuid)
+returns boolean
+language plpgsql security definer set search_path = public
+as $$
+declare o public.offers%rowtype;
+begin
+  select * into o from public.offers where id = offer_id_input for update;
+  if not found then raise exception 'Offer not found'; end if;
+  if o.from_user_id <> auth.uid() then raise exception 'Only the sender can cancel this offer'; end if;
+  if o.status not in ('pending', 'viewed') then
+    raise exception 'Offer is not in a cancellable state';
+  end if;
+
+  update public.offers set status = 'cancelled' where id = o.id;
+  return true;
+end;
+$$;
+
+grant execute on function public.cancel_offer(uuid) to authenticated;
 
 -- -------------------------------------------------------------
 -- decline_offer(offer_id)

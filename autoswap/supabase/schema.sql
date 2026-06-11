@@ -90,6 +90,13 @@ create table if not exists public.vehicles (
   condition    text,
   description  text,
 
+  estimated_value int,             -- owner's value estimate in GEL (filters/sorting)
+  engine_size     numeric(3,1),    -- litres, e.g. 2.0
+  power_hp        int,
+  color           text,
+  latitude        double precision,
+  longitude       double precision,
+
   listing_type text not null default 'swap'
     check (listing_type in ('swap', 'sell', 'sell_or_swap')),
 
@@ -106,6 +113,24 @@ create table if not exists public.vehicles (
     check (status <> 'active' or (city is not null and condition is not null))
 );
 
+-- Additive upgrade for deployments created before the v2 listing fields.
+alter table public.vehicles add column if not exists estimated_value int;
+alter table public.vehicles add column if not exists engine_size     numeric(3,1);
+alter table public.vehicles add column if not exists power_hp        int;
+alter table public.vehicles add column if not exists color           text;
+alter table public.vehicles add column if not exists latitude        double precision;
+alter table public.vehicles add column if not exists longitude       double precision;
+
+do $$ begin
+  alter table public.vehicles add constraint vehicles_estimated_value_positive
+    check (estimated_value is null or estimated_value > 0);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  alter table public.vehicles add constraint vehicles_power_hp_positive
+    check (power_hp is null or power_hp > 0);
+exception when duplicate_object then null; end $$;
+
 create index if not exists vehicles_owner_idx         on public.vehicles (owner_id);
 create index if not exists vehicles_status_idx        on public.vehicles (status);
 create index if not exists vehicles_make_model_idx    on public.vehicles (lower(make), lower(model));
@@ -113,6 +138,11 @@ create index if not exists vehicles_city_idx          on public.vehicles (lower(
 create index if not exists vehicles_category_idx      on public.vehicles (lower(coalesce(category, '')));
 create index if not exists vehicles_created_idx       on public.vehicles (created_at desc);
 create index if not exists vehicles_active_created_idx on public.vehicles (created_at desc) where status = 'active';
+create index if not exists vehicles_year_idx          on public.vehicles (year);
+create index if not exists vehicles_mileage_idx       on public.vehicles (mileage);
+create index if not exists vehicles_value_idx         on public.vehicles (estimated_value);
+create index if not exists vehicles_fuel_idx          on public.vehicles (lower(coalesce(fuel_type, '')));
+create index if not exists vehicles_transmission_idx  on public.vehicles (lower(coalesce(transmission, '')));
 
 -- =============================================================
 -- 3. vehicle_photos  (max 6 per vehicle, position 0 = cover)
@@ -442,7 +472,11 @@ as
     p.display_name          as owner_name,
     p.phone_verified        as owner_phone_verified,
     p.completed_swaps_count as owner_completed_swaps,
-    (p.last_active_at is not null and p.last_active_at > now() - interval '24 hours') as owner_active_today
+    (p.last_active_at is not null and p.last_active_at > now() - interval '24 hours') as owner_active_today,
+    -- v2 columns appended last: CREATE OR REPLACE VIEW only allows adding
+    -- columns at the end of the select list.
+    v.estimated_value,
+    v.description
   from public.vehicles v
   left join public.profiles p on p.id = v.owner_id
   left join public.swap_preferences sp on sp.vehicle_id = v.id

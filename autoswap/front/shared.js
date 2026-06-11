@@ -143,11 +143,18 @@
 
     return {
       id: row.id,
+      ownerId: row.owner_id || '',
       badge: row.is_boosted ? 'TOP შეთავაზება' : 'ახალი',
       boosted: !!row.is_boosted,
 
       make: row.make || '',
       model: row.model || '',
+
+      estimatedValue: row.estimated_value != null ? Number(row.estimated_value) : null,
+      estimatedValueLabel: row.estimated_value != null
+        ? `${Number(row.estimated_value).toLocaleString('en-US')} ₾`
+        : '',
+      description: row.description || '',
 
       year: row.year != null ? String(row.year) : '',
       yearNum: row.year != null ? Number(row.year) : null,
@@ -356,10 +363,200 @@
 
   const sbClient = createClient();
 
+  // ---- Tiny TTL cache (sessionStorage) -------------------------------------
+  // The frontend is a static site talking straight to Supabase — there is no
+  // server runtime to host Redis, so hot read paths (catalog, feed) are cached
+  // per-tab instead. Writers call cacheBust() to invalidate.
+  const CACHE_PREFIX = 'as:cache:';
+
+  function cacheGet(key) {
+    try {
+      const raw = window.sessionStorage.getItem(CACHE_PREFIX + key);
+      if (!raw) return null;
+      const entry = JSON.parse(raw);
+      if (!entry || (entry.exp && Date.now() > entry.exp)) {
+        window.sessionStorage.removeItem(CACHE_PREFIX + key);
+        return null;
+      }
+      return entry.v;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function cacheSet(key, value, ttlMs) {
+    try {
+      window.sessionStorage.setItem(
+        CACHE_PREFIX + key,
+        JSON.stringify({ v: value, exp: Date.now() + ttlMs }),
+      );
+    } catch (_err) { /* quota/private mode — just skip caching */ }
+  }
+
+  function cacheBust(prefix) {
+    try {
+      const doomed = [];
+      for (let i = 0; i < window.sessionStorage.length; i += 1) {
+        const key = window.sessionStorage.key(i);
+        if (key && key.startsWith(CACHE_PREFIX + prefix)) doomed.push(key);
+      }
+      doomed.forEach((key) => window.sessionStorage.removeItem(key));
+    } catch (_err) { /* ignore */ }
+  }
+
+  // ---- Toasts ---------------------------------------------------------------
+  function toast(message, kind = 'info') {
+    let host = document.querySelector('.toast-host');
+    if (!host) {
+      host = document.createElement('div');
+      host.className = 'toast-host';
+      document.body.appendChild(host);
+    }
+    const node = document.createElement('div');
+    node.className = `toast toast--${kind}`;
+    node.setAttribute('role', 'status');
+    node.textContent = message;
+    host.appendChild(node);
+    setTimeout(() => node.classList.add('is-out'), 3600);
+    setTimeout(() => node.remove(), 4000);
+  }
+
+  // ---- Auth state (one source of truth) --------------------------------------
+  // Two sign-in paths share this state: phone OTP via the header modal
+  // (openAuthModal) and email OTP via login.html. Supabase Auth issues the
+  // 6-digit code, stores only its hash, expires it (set OTP expiry to 300s in
+  // the dashboard), rate-limits requests, and returns JWT access + refresh
+  // tokens that supabase-js rotates for us. The phone modal additionally has
+  // a clearly-labelled local demo fallback (authUser.demo === true) which can
+  // browse but cannot write — RLS flows require a real session.
+  let authUser = null;
+  const authListeners = new Set();
+
+  function demoAuthUser() {
+    const demo = getDemoUser();
+    return demo ? { demo: true, ...demo } : null;
+  }
+
+  function notifyAuth() {
+    renderAuthSlot();
+    authListeners.forEach((cb) => {
+      try { cb(authUser); } catch (_err) { /* listener error is its problem */ }
+    });
+    document.dispatchEvent(new CustomEvent('autoswap:auth'));
+  }
+
+  function onAuth(cb) {
+    authListeners.add(cb);
+    cb(authUser);
+    return () => authListeners.delete(cb);
+  }
+
+  function getAuthUser() {
+    return authUser;
+  }
+
+  // Resolves once the initial session lookup has finished. Returns the
+  // Supabase user (never the local demo user — gated pages need a real JWT).
+  const authReady = (async () => {
+    if (!sbClient) {
+      authUser = demoAuthUser();
+      notifyAuth();
+      return null;
+    }
+    let session = null;
+    try {
+      ({ data: { session } } = await sbClient.auth.getSession());
+    } catch (_err) { /* treat as signed out */ }
+    authUser = (session && session.user) || demoAuthUser();
+    notifyAuth();
+    sbClient.auth.onAuthStateChange((_event, nextSession) => {
+      const next = (nextSession && nextSession.user) || demoAuthUser();
+      if ((next && next.id) === (authUser && authUser.id) && !!next === !!authUser) {
+        authUser = next;
+        return;
+      }
+      authUser = next;
+      savedIdsPromise = null; // saved set is per-user
+      notifyAuth();
+    });
+    return session ? session.user : null;
+  })();
+
+  async function requestEmailOtp(email) {
+    if (!sbClient) return { error: 'Supabase არ არის კონფიგურირებული' };
+    const { error } = await sbClient.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    });
+    return { error: error ? error.message : null };
+  }
+
+  async function verifyEmailOtp(email, token) {
+    if (!sbClient) return { user: null, error: 'Supabase არ არის კონფიგურირებული' };
+    const { data, error } = await sbClient.auth.verifyOtp({ email, token, type: 'email' });
+    return { user: data ? data.user : null, error: error ? error.message : null };
+  }
+
+  async function signOut() {
+    if (sbClient) await sbClient.auth.signOut();
+  }
+
+  function isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ''));
+  }
+
+  let savedIdsPromise = null;
+
+  function fetchSavedIds() {
+    if (!sbClient || !authUser || authUser.demo) return Promise.resolve(new Set());
+    if (!savedIdsPromise) {
+      savedIdsPromise = sbClient
+        .from('saved_listings')
+        .select('vehicle_id')
+        .then(({ data, error }) => {
+          if (error) return new Set();
+          return new Set((data || []).map((row) => row.vehicle_id));
+        });
+    }
+    return savedIdsPromise;
+  }
+
+  async function hydrateSavedButtons() {
+    if (!authUser || authUser.demo) return;
+    const buttons = document.querySelectorAll('.save-btn:not([data-saved-hydrated])');
+    if (!buttons.length) return;
+    const saved = await fetchSavedIds();
+    buttons.forEach((btn) => {
+      btn.setAttribute('data-saved-hydrated', '1');
+      const id = btn.dataset.id || btn.closest('[data-id]')?.dataset.id;
+      if (id && saved.has(id)) btn.classList.add('is-saved');
+    });
+  }
+
+  // Keep the header auth slot + saved-button state correct across the
+  // innerHTML re-renders every page does. One observer instead of asking
+  // each page to call back in. renderAuthSlot is idempotent (writes only on
+  // state change), otherwise this would loop on its own mutations.
+  const rerenderObserver = new MutationObserver(() => {
+    renderAuthSlot();
+    hydrateSavedButtons();
+  });
+  document.addEventListener('DOMContentLoaded', () => {
+    const app = document.querySelector('#app');
+    if (app) rerenderObserver.observe(app, { childList: true, subtree: true });
+    authReady.then(() => {
+      renderAuthSlot();
+      hydrateSavedButtons();
+    });
+  });
+
   // Returns mapped listings on success (possibly empty), or null when Supabase
   // is not configured / the request failed — null means "keep the demo data".
   async function fetchFeed(limit = 48) {
     if (!sbClient) return null;
+
+    const cached = cacheGet(`feed:${limit}`);
+    if (cached) return cached.map(mapFeedRow);
 
     const { data, error } = await sbClient
       .from('public_vehicle_feed')
@@ -373,7 +570,13 @@
       return null;
     }
 
+    cacheSet(`feed:${limit}`, data || [], 60 * 1000);
     return (data || []).map(mapFeedRow);
+  }
+
+  // Listing writes call this so browsing pages refetch fresh data.
+  function bustListingCaches() {
+    cacheBust('feed:');
   }
 
   // ---- Demo dataset (shaped exactly like public_vehicle_feed rows) --------
@@ -383,18 +586,18 @@
   // the feed view will expose from profiles.
   const C = assets.cards;
   const DEMO_FEED = [
-    { id: 'demo-toyota-camry', make: 'Toyota', model: 'Camry', year: 2020, mileage: 78000, fuel_type: 'hybrid', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: C[2], desired_vehicle_labels: ['Lexus ES', 'BMW 530i'], cash_mode: 'add_money', cash_amount: 3000, is_boosted: true, created_at: '2026-06-10T08:00:00Z', owner_name: 'გიორგი', owner_phone_verified: true, owner_completed_swaps: 2, owner_response_hours: 1, owner_active_today: true },
-    { id: 'demo-bmw-530i', make: 'BMW', model: '530i', year: 2019, mileage: 90000, fuel_type: 'petrol', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: assets.bmw, desired_vehicle_labels: ['Audi A6', 'Mercedes E-Class'], cash_mode: 'add_money', cash_amount: 2000, is_boosted: false, created_at: '2026-06-10T07:30:00Z', owner_name: 'ლევანი', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 2, owner_active_today: true },
-    { id: 'demo-toyota-prius', make: 'Toyota', model: 'Prius', year: 2017, mileage: 148000, fuel_type: 'hybrid', transmission: 'automatic', city: 'რუსთავი', category: 'hatchback', cover_photo_url: C[0], desired_vehicle_labels: ['Toyota Camry', 'Hyundai Sonata'], cash_mode: 'ask_money', cash_amount: 4000, is_boosted: false, created_at: '2026-06-09T18:00:00Z', owner_name: 'ნიკა', owner_phone_verified: true, owner_completed_swaps: 0, owner_response_hours: 1, owner_active_today: true },
-    { id: 'demo-hyundai-sonata', make: 'Hyundai', model: 'Sonata', year: 2019, mileage: 96000, fuel_type: 'lpg', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: C[1], desired_vehicle_labels: ['Toyota Camry'], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-09T14:00:00Z', owner_name: 'თამარი', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 3, owner_active_today: false },
-    { id: 'demo-audi-a6-2021', make: 'Audi', model: 'A6', year: 2021, mileage: 66000, fuel_type: 'diesel', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: assets.audi, desired_vehicle_labels: ['BMW X5'], cash_mode: 'ask_money', cash_amount: 2000, is_boosted: false, created_at: '2026-06-09T10:00:00Z', owner_name: 'დავითი', owner_phone_verified: true, owner_completed_swaps: 3, owner_response_hours: 1, owner_active_today: true },
-    { id: 'demo-hyundai-tucson', make: 'Hyundai', model: 'Tucson', year: 2021, mileage: 54000, fuel_type: 'petrol', transmission: 'automatic', city: 'ბათუმი', category: 'crossover', cover_photo_url: C[3], desired_vehicle_labels: ['Toyota RAV4'], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-08T16:00:00Z', owner_name: 'ზურა', owner_phone_verified: true, owner_completed_swaps: 0, owner_response_hours: 4, owner_active_today: true },
-    { id: 'demo-toyota-rav4', make: 'Toyota', model: 'RAV4', year: 2021, mileage: 61000, fuel_type: 'hybrid', transmission: 'automatic', city: 'ქუთაისი', category: 'crossover', cover_photo_url: C[2], desired_vehicle_labels: ['Hyundai Tucson', 'Kia Sportage'], cash_mode: 'ask_money', cash_amount: 1500, is_boosted: false, created_at: '2026-06-08T11:00:00Z', owner_name: 'მარიამი', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 2, owner_active_today: false },
-    { id: 'demo-kia-optima', make: 'Kia', model: 'Optima', year: 2018, mileage: 112000, fuel_type: 'lpg', transmission: 'automatic', city: 'ქუთაისი', category: 'sedan', cover_photo_url: C[0], desired_vehicle_labels: [], cash_mode: 'flexible', cash_amount: 0, is_boosted: false, created_at: '2026-06-07T15:00:00Z', owner_name: 'გია', owner_phone_verified: false, owner_completed_swaps: 0, owner_response_hours: null, owner_active_today: false },
-    { id: 'demo-mercedes-eclass', make: 'Mercedes-Benz', model: 'E 220d', year: 2020, mileage: 74000, fuel_type: 'diesel', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: C[0], desired_vehicle_labels: ['BMW 5 Series', 'Audi A6'], cash_mode: 'flexible', cash_amount: 0, is_boosted: false, created_at: '2026-06-07T12:00:00Z', owner_name: 'ირაკლი', owner_phone_verified: true, owner_completed_swaps: 2, owner_response_hours: 1, owner_active_today: true },
-    { id: 'demo-lexus-rx', make: 'Lexus', model: 'RX 450h', year: 2019, mileage: 91000, fuel_type: 'hybrid', transmission: 'automatic', city: 'გორი', category: 'suv', cover_photo_url: C[1], desired_vehicle_labels: ['Mercedes GLE'], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-06T13:00:00Z', owner_name: 'სანდრო', owner_phone_verified: false, owner_completed_swaps: 0, owner_response_hours: 8, owner_active_today: false },
-    { id: 'demo-vw-tiguan', make: 'Volkswagen', model: 'Tiguan', year: 2019, mileage: 88000, fuel_type: 'petrol', transmission: 'automatic', city: 'ბათუმი', category: 'crossover', cover_photo_url: C[3], desired_vehicle_labels: ['Toyota Camry', 'Honda Accord'], cash_mode: 'ask_money', cash_amount: 2500, is_boosted: false, created_at: '2026-06-05T17:00:00Z', owner_name: 'ბექა', owner_phone_verified: true, owner_completed_swaps: 0, owner_response_hours: 5, owner_active_today: false },
-    { id: 'demo-bmw-x5', make: 'BMW', model: 'X5 xDrive40i', year: 2021, mileage: 58000, fuel_type: 'petrol', transmission: 'automatic', city: 'თბილისი', category: 'suv', cover_photo_url: assets.bmw, desired_vehicle_labels: [], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-04T10:00:00Z', owner_name: 'ანა', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 2, owner_active_today: true },
+    { id: 'demo-toyota-camry', estimated_value: 52000, make: 'Toyota', model: 'Camry', year: 2020, mileage: 78000, fuel_type: 'hybrid', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: C[2], desired_vehicle_labels: ['Lexus ES', 'BMW 530i'], cash_mode: 'add_money', cash_amount: 3000, is_boosted: true, created_at: '2026-06-10T08:00:00Z', owner_name: 'გიორგი', owner_phone_verified: true, owner_completed_swaps: 2, owner_response_hours: 1, owner_active_today: true },
+    { id: 'demo-bmw-530i', estimated_value: 58000, make: 'BMW', model: '530i', year: 2019, mileage: 90000, fuel_type: 'petrol', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: assets.bmw, desired_vehicle_labels: ['Audi A6', 'Mercedes E-Class'], cash_mode: 'add_money', cash_amount: 2000, is_boosted: false, created_at: '2026-06-10T07:30:00Z', owner_name: 'ლევანი', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 2, owner_active_today: true },
+    { id: 'demo-toyota-prius', estimated_value: 24000, make: 'Toyota', model: 'Prius', year: 2017, mileage: 148000, fuel_type: 'hybrid', transmission: 'automatic', city: 'რუსთავი', category: 'hatchback', cover_photo_url: C[0], desired_vehicle_labels: ['Toyota Camry', 'Hyundai Sonata'], cash_mode: 'ask_money', cash_amount: 4000, is_boosted: false, created_at: '2026-06-09T18:00:00Z', owner_name: 'ნიკა', owner_phone_verified: true, owner_completed_swaps: 0, owner_response_hours: 1, owner_active_today: true },
+    { id: 'demo-hyundai-sonata', estimated_value: 32000, make: 'Hyundai', model: 'Sonata', year: 2019, mileage: 96000, fuel_type: 'lpg', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: C[1], desired_vehicle_labels: ['Toyota Camry'], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-09T14:00:00Z', owner_name: 'თამარი', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 3, owner_active_today: false },
+    { id: 'demo-audi-a6-2021', estimated_value: 78000, make: 'Audi', model: 'A6', year: 2021, mileage: 66000, fuel_type: 'diesel', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: assets.audi, desired_vehicle_labels: ['BMW X5'], cash_mode: 'ask_money', cash_amount: 2000, is_boosted: false, created_at: '2026-06-09T10:00:00Z', owner_name: 'დავითი', owner_phone_verified: true, owner_completed_swaps: 3, owner_response_hours: 1, owner_active_today: true },
+    { id: 'demo-hyundai-tucson', estimated_value: 56000, make: 'Hyundai', model: 'Tucson', year: 2021, mileage: 54000, fuel_type: 'petrol', transmission: 'automatic', city: 'ბათუმი', category: 'crossover', cover_photo_url: C[3], desired_vehicle_labels: ['Toyota RAV4'], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-08T16:00:00Z', owner_name: 'ზურა', owner_phone_verified: true, owner_completed_swaps: 0, owner_response_hours: 4, owner_active_today: true },
+    { id: 'demo-toyota-rav4', estimated_value: 67000, make: 'Toyota', model: 'RAV4', year: 2021, mileage: 61000, fuel_type: 'hybrid', transmission: 'automatic', city: 'ქუთაისი', category: 'crossover', cover_photo_url: C[2], desired_vehicle_labels: ['Hyundai Tucson', 'Kia Sportage'], cash_mode: 'ask_money', cash_amount: 1500, is_boosted: false, created_at: '2026-06-08T11:00:00Z', owner_name: 'მარიამი', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 2, owner_active_today: false },
+    { id: 'demo-kia-optima', estimated_value: 27000, make: 'Kia', model: 'Optima', year: 2018, mileage: 112000, fuel_type: 'lpg', transmission: 'automatic', city: 'ქუთაისი', category: 'sedan', cover_photo_url: C[0], desired_vehicle_labels: [], cash_mode: 'flexible', cash_amount: 0, is_boosted: false, created_at: '2026-06-07T15:00:00Z', owner_name: 'გია', owner_phone_verified: false, owner_completed_swaps: 0, owner_response_hours: null, owner_active_today: false },
+    { id: 'demo-mercedes-eclass', estimated_value: 72000, make: 'Mercedes-Benz', model: 'E 220d', year: 2020, mileage: 74000, fuel_type: 'diesel', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: C[0], desired_vehicle_labels: ['BMW 5 Series', 'Audi A6'], cash_mode: 'flexible', cash_amount: 0, is_boosted: false, created_at: '2026-06-07T12:00:00Z', owner_name: 'ირაკლი', owner_phone_verified: true, owner_completed_swaps: 2, owner_response_hours: 1, owner_active_today: true },
+    { id: 'demo-lexus-rx', estimated_value: 83000, make: 'Lexus', model: 'RX 450h', year: 2019, mileage: 91000, fuel_type: 'hybrid', transmission: 'automatic', city: 'გორი', category: 'suv', cover_photo_url: C[1], desired_vehicle_labels: ['Mercedes GLE'], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-06T13:00:00Z', owner_name: 'სანდრო', owner_phone_verified: false, owner_completed_swaps: 0, owner_response_hours: 8, owner_active_today: false },
+    { id: 'demo-vw-tiguan', estimated_value: 48000, make: 'Volkswagen', model: 'Tiguan', year: 2019, mileage: 88000, fuel_type: 'petrol', transmission: 'automatic', city: 'ბათუმი', category: 'crossover', cover_photo_url: C[3], desired_vehicle_labels: ['Toyota Camry', 'Honda Accord'], cash_mode: 'ask_money', cash_amount: 2500, is_boosted: false, created_at: '2026-06-05T17:00:00Z', owner_name: 'ბექა', owner_phone_verified: true, owner_completed_swaps: 0, owner_response_hours: 5, owner_active_today: false },
+    { id: 'demo-bmw-x5', estimated_value: 115000, make: 'BMW', model: 'X5 xDrive40i', year: 2021, mileage: 58000, fuel_type: 'petrol', transmission: 'automatic', city: 'თბილისი', category: 'suv', cover_photo_url: assets.bmw, desired_vehicle_labels: [], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-04T10:00:00Z', owner_name: 'ანა', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 2, owner_active_today: true },
   ];
 
   // Pre-mapped demo cards (uniform shape, boosted first then newest).
@@ -481,12 +684,22 @@
     console.warn(`AutoSwap: ${kind} catalog query failed; using bundled fallback.`, error.message || error);
   }
 
+  // Catalog reads are cached for 10 minutes per (term, make) — RLS already
+  // filters out deactivated makes/models server-side.
+  const CATALOG_TTL = 10 * 60 * 1000;
+
   async function searchMakes(term = '', limit = 40) {
     if (sbClient) {
+      const cacheKey = `makes:${String(term).trim().toLowerCase()}:${limit}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
       let query = sbClient.from('car_makes').select('id,name').order('name').limit(limit);
       if (String(term).trim()) query = query.ilike('name', `%${String(term).trim()}%`);
       const { data, error } = await query;
-      if (!error && Array.isArray(data)) return data;
+      if (!error && Array.isArray(data)) {
+        cacheSet(cacheKey, data, CATALOG_TTL);
+        return data;
+      }
       if (error) logCatalogFallback('makes', error);
     }
     return containsFilter(FALLBACK_MAKES, term, limit);
@@ -494,11 +707,17 @@
 
   async function searchModels(term = '', makeId = null, limit = 60) {
     if (sbClient) {
+      const cacheKey = `models:${makeId || ''}:${String(term).trim().toLowerCase()}:${limit}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) return cached;
       let query = sbClient.from('car_models').select('id,name,make_id').order('name').limit(limit);
       if (makeId && /^\d+$/.test(String(makeId))) query = query.eq('make_id', makeId);
       if (String(term).trim()) query = query.ilike('name', `%${String(term).trim()}%`);
       const { data, error } = await query;
-      if (!error && Array.isArray(data)) return data;
+      if (!error && Array.isArray(data)) {
+        cacheSet(cacheKey, data, CATALOG_TTL);
+        return data;
+      }
       if (error) logCatalogFallback('models', error);
     }
     const scoped = makeId ? FALLBACK_MODELS.filter((m) => String(m.make_id) === String(makeId)) : FALLBACK_MODELS;
@@ -629,7 +848,163 @@
     return `<p class="offer-owner-line">${bits}</p>`;
   }
 
+  // ---- Real offers (signed-in, live listing) --------------------------------
+  function openLoginGateModal(message) {
+    const next = encodeURIComponent(window.location.pathname.split('/').pop() + window.location.search);
+    const { overlay } = buildModal(`
+      <div class="modal-body">
+        <p class="modal-eyebrow">ავტორიზაცია</p>
+        <h2 class="modal-title" id="login-gate-title">ჯერ შესვლაა საჭირო</h2>
+        <p class="offer-gate-text">${escapeAttr(message)}</p>
+        <div class="offer-actions">
+          <a class="btn btn-ghost" href="login.html?next=${next}">ელფოსტით</a>
+          <button type="button" class="btn btn-primary" id="login-gate-phone">ნომრით შესვლა</button>
+        </div>
+      </div>
+    `, 'login-gate-title');
+    overlay.querySelector('#login-gate-phone').addEventListener('click', () => openAuthModal('login'));
+  }
+
+  async function openRealOfferModal(car) {
+    const title = `${car.make || ''} ${car.model || ''}`.trim() || 'ავტომობილი';
+
+    // Resolve the target's owner (feed rows carry it; detail deep-links may not).
+    let ownerId = car.ownerId || '';
+    if (!ownerId) {
+      const { data } = await sbClient.from('vehicles').select('owner_id').eq('id', car.id).maybeSingle();
+      ownerId = data ? data.owner_id : '';
+    }
+    if (!ownerId) {
+      toast('განცხადება ვერ მოიძებნა ან აღარ არის აქტიური', 'error');
+      return;
+    }
+    if (ownerId === authUser.id) {
+      toast('საკუთარ განცხადებაზე შეთავაზებას ვერ გააგზავნი', 'error');
+      return;
+    }
+
+    const { data: mine, error: mineError } = await sbClient
+      .from('vehicles')
+      .select('id,make,model,year')
+      .eq('owner_id', authUser.id)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (mineError) {
+      toast('შენი მანქანების ჩატვირთვა ვერ მოხერხდა', 'error');
+      return;
+    }
+
+    if (!mine || !mine.length) {
+      buildModal(`
+        <div class="modal-body">
+          <p class="modal-eyebrow">გაცვლის შეთავაზება</p>
+          <h2 class="modal-title" id="offer-title">ჯერ შენი განცხადება გვჭირდება</h2>
+          <p class="offer-gate-text">შეთავაზებაში შენი აქტიური მანქანა მონაწილეობს — დაამატე განცხადება და მერე შესთავაზე ${escapeAttr(title)}-ის მფლობელს.</p>
+          <div class="offer-actions">
+            <button type="button" class="btn btn-ghost" data-close>გაუქმება</button>
+            <a class="btn btn-primary" href="sell.html">დაამატე განცხადება</a>
+          </div>
+        </div>
+      `, 'offer-title');
+      return;
+    }
+
+    const vehicleOptions = mine
+      .map((v) => `<option value="${v.id}">${escapeAttr(`${v.make} ${v.model}${v.year ? ` · ${v.year}` : ''}`)}</option>`)
+      .join('');
+
+    const { overlay, close } = buildModal(`
+      <div class="modal-body" id="offer-modal-body">
+        <p class="modal-eyebrow">გაცვლის შეთავაზება</p>
+        <h2 class="modal-title" id="offer-title">${escapeAttr(title)}</h2>
+        ${ownerTrustLine(car)}
+        <form class="offer-form" id="real-offer-form" novalidate>
+          <label class="field">
+            <span>რომელ მანქანას სთავაზობ</span>
+            <select name="offeredVehicle" required>${vehicleOptions}</select>
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span>თანხის სხვაობა</span>
+              <select name="cashMode">
+                <option value="none">თანაბარი გაცვლა</option>
+                <option value="add_money">მე ვამატებ თანხას</option>
+                <option value="ask_money">მე ვითხოვ თანხას</option>
+                <option value="flexible">შეთანხმებით</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>თანხა (₾)</span>
+              <input type="number" name="amount" min="0" placeholder="0" inputmode="numeric">
+            </label>
+          </div>
+          <label class="field">
+            <span>შეტყობინება (არასავალდებულო)</span>
+            <textarea name="message" rows="3" maxlength="500" placeholder="მაგ: მანქანა იდეალურ მდგომარეობაშია, შეგვიძლია დიაგნოსტიკაზე შევხვდეთ."></textarea>
+          </label>
+          <div class="offer-actions">
+            <button type="button" class="btn btn-ghost" data-close>გაუქმება</button>
+            <button type="submit" class="btn btn-primary">შეთავაზების გაგზავნა</button>
+          </div>
+        </form>
+      </div>
+    `, 'offer-title');
+
+    overlay.querySelector('#real-offer-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const data = new FormData(form);
+      const submitBtn = form.querySelector('[type="submit"]');
+      submitBtn.disabled = true;
+
+      const cashMode = String(data.get('cashMode') || 'none');
+      const { error } = await sbClient.from('offers').insert({
+        target_vehicle_id: car.id,
+        offered_vehicle_id: String(data.get('offeredVehicle')),
+        from_user_id: authUser.id,
+        to_user_id: ownerId,
+        cash_mode: cashMode,
+        cash_amount: cashMode === 'none' || cashMode === 'flexible' ? 0 : (Number(data.get('amount')) || 0),
+        message: String(data.get('message') || '').trim() || null,
+      });
+
+      if (error) {
+        submitBtn.disabled = false;
+        if (String(error.code) === '23505') {
+          toast('ამ წყვილზე უკვე გაქვს მოლოდინში მყოფი შეთავაზება', 'error');
+        } else {
+          toast('შეთავაზება ვერ გაიგზავნა — სცადე თავიდან', 'error');
+          console.error('AutoSwap: offer insert failed', error.message);
+        }
+        return;
+      }
+
+      overlay.querySelector('#offer-modal-body').innerHTML = `
+        <div class="offer-success">
+          <span class="offer-success-icon">${icons.check}</span>
+          <h2 class="modal-title">შეთავაზება გაიგზავნა</h2>
+          <p>${escapeAttr(title)}-ის მფლობელი ნახავს შენს შეთავაზებას. პასუხს ნახავ <a href="account.html#sent">შენს გვერდზე</a>.</p>
+          <button type="button" class="btn btn-primary" data-close>გასაგებია</button>
+        </div>
+      `;
+    });
+
+    return { overlay, close };
+  }
+
   function openOfferModal(car) {
+    // Live listing: real offer when signed in, login gate when not.
+    // The local demo user has no JWT, so RLS would reject the insert — gate it.
+    if (sbClient && car && isUuid(car.id)) {
+      if (!authUser || authUser.demo) {
+        openLoginGateModal('შეთავაზების გასაგზავნად შედი ერთჯერადი კოდით — ისე, რომ მფლობელმა იცოდეს ვინ სთავაზობს.');
+        return;
+      }
+      openRealOfferModal(car);
+      return;
+    }
+
     const title = `${car && car.make ? car.make : ''} ${car && car.model ? car.model : ''}`.trim() || 'ავტომობილი';
     const myCar = getMyCar();
 
@@ -714,10 +1089,10 @@
   // Real path: Supabase phone OTP (signInWithOtp + verifyOtp). When Supabase
   // or its SMS provider is not configured, falls back to a clearly-labelled
   // local demo flow (fixed code), same convention as the offer modal.
+  // State lives in the shared authUser above; email OTP (login.html) and this
+  // modal both feed it.
   const DEMO_USER_KEY = 'autoswap.demoUser';
   const DEMO_OTP_CODE = '1234';
-
-  let authUser = null;
 
   function getDemoUser() {
     try {
@@ -739,29 +1114,26 @@
     if (!authUser) {
       return '<button class="btn btn-light header-login" type="button" data-auth-open>შესვლა</button>';
     }
+    // Real sessions link to the account hub; the local demo user has no
+    // server-side rows to show there.
+    const name = `${icons.user}<span class="header-user-name">${escapeAttr(authDisplayName(authUser))}</span>`;
     return `
-      <span class="header-user">${icons.user}<span class="header-user-name">${escapeAttr(authDisplayName(authUser))}</span></span>
+      ${authUser.demo
+        ? `<span class="header-user">${name}</span>`
+        : `<a class="header-user" href="account.html">${name}</a>`}
       <button class="header-logout" type="button" data-logout>გასვლა</button>
     `;
   }
 
   function renderAuthSlot() {
+    // Idempotent: runs from a MutationObserver, so writing on every call
+    // would re-trigger the observer forever.
+    const state = authUser ? `in:${authUser.demo ? 'demo' : authUser.id}` : 'out';
     document.querySelectorAll('#header-auth').forEach((slot) => {
+      if (slot.dataset.authState === state) return;
+      slot.dataset.authState = state;
       slot.innerHTML = authSlotHTML();
     });
-  }
-
-  function initAuth() {
-    const demo = getDemoUser();
-    if (demo) authUser = { demo: true, ...demo };
-    if (sbClient) {
-      // Fires INITIAL_SESSION on subscribe, so this also covers page load.
-      sbClient.auth.onAuthStateChange((_event, session) => {
-        authUser = (session && session.user) || (getDemoUser() ? { demo: true, ...getDemoUser() } : null);
-        renderAuthSlot();
-      });
-    }
-    document.addEventListener('DOMContentLoaded', renderAuthSlot);
   }
 
   // Georgian mobile numbers: 5XX XX XX XX, with or without the +995 prefix.
@@ -793,7 +1165,7 @@
       if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი — დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
       localStorage.setItem(DEMO_USER_KEY, JSON.stringify({ name: name || '', phone }));
       authUser = { demo: true, name: name || '', phone };
-      renderAuthSlot();
+      notifyAuth();
       return {};
     }
     const { error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'sms' });
@@ -803,7 +1175,8 @@
   function logout() {
     localStorage.removeItem(DEMO_USER_KEY);
     authUser = null;
-    renderAuthSlot();
+    savedIdsPromise = null;
+    notifyAuth();
     sbClient?.auth.signOut().catch((err) => console.error('AutoSwap: signOut failed', err.message));
   }
 
@@ -936,8 +1309,6 @@
     return { overlay, close };
   }
 
-  initAuth();
-
   // ---- Global delegated listeners (bound once per page load) ----
   document.addEventListener('click', (event) => {
     const offerBtn = event.target.closest('[data-offer]');
@@ -946,9 +1317,48 @@
       openOfferModal({ id: offerBtn.dataset.id, make: offerBtn.dataset.make, model: offerBtn.dataset.model });
     }
   });
+  async function toggleSaved(listingId, btn) {
+    const wasSaved = btn.classList.contains('is-saved');
+    btn.classList.toggle('is-saved'); // optimistic
+    const saved = await fetchSavedIds();
+
+    const revert = (message) => {
+      btn.classList.toggle('is-saved', wasSaved);
+      if (message) toast(message, 'error');
+    };
+
+    if (wasSaved) {
+      const { error } = await sbClient
+        .from('saved_listings')
+        .delete()
+        .eq('user_id', authUser.id)
+        .eq('vehicle_id', listingId);
+      if (error) return revert('წაშლა ვერ მოხერხდა');
+      saved.delete(listingId);
+    } else {
+      const { error } = await sbClient
+        .from('saved_listings')
+        .insert({ user_id: authUser.id, vehicle_id: listingId });
+      if (error && String(error.code) !== '23505') return revert('შენახვა ვერ მოხერხდა');
+      saved.add(listingId);
+      toast('დაემატა ფავორიტებში');
+    }
+  }
+
   document.addEventListener('click', (event) => {
     const saveBtn = event.target.closest('.save-btn');
-    if (saveBtn) saveBtn.classList.toggle('is-saved');
+    if (!saveBtn) return;
+    const listingId = saveBtn.dataset.id || saveBtn.closest('[data-id]')?.dataset.id || '';
+
+    if (sbClient && isUuid(listingId)) {
+      if (!authUser || authUser.demo) {
+        openLoginGateModal('ფავორიტებში შესანახად შედი ერთჯერადი კოდით.');
+        return;
+      }
+      toggleSaved(listingId, saveBtn);
+      return;
+    }
+    saveBtn.classList.toggle('is-saved'); // demo listings stay local
   });
   document.addEventListener('click', (event) => {
     if (event.target.closest('[data-auth-open]')) openAuthModal();
@@ -958,6 +1368,22 @@
   window.AutoSwap = {
     assets,
     icons,
+    sb: sbClient,
+    isUuid,
+    toast,
+    cacheGet,
+    cacheSet,
+    cacheBust,
+    bustListingCaches,
+    authReady,
+    getAuthUser,
+    onAuth,
+    requestEmailOtp,
+    verifyEmailOtp,
+    signOut,
+    escapeAttr,
+    buildModal,
+    openLoginGateModal,
     FUEL_LABELS,
     TRANSMISSION_LABELS,
     CATEGORY_LABELS,

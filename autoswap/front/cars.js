@@ -39,6 +39,8 @@ const SORT_OPTIONS = [
   { value: 'year_desc', label: 'წელი — კლებადობით' },
   { value: 'year_asc', label: 'წელი — ზრდადობით' },
   { value: 'mileage_asc', label: 'გარბენი — ზრდადობით' },
+  { value: 'value_asc', label: 'ღირებულება — ზრდადობით' },
+  { value: 'value_desc', label: 'ღირებულება — კლებადობით' },
 ];
 
 const FRESH_OPTIONS = [
@@ -52,6 +54,7 @@ function emptyFilters() {
   return {
     query: '', make: '', makeId: '', category: '', model: '', modelGroup: '', transmission: '', fuel: '',
     city: '', cash: '', yearFrom: '', yearTo: '', mileageMin: '', mileageMax: '',
+    valueMin: '', valueMax: '',
     onlyMatches: '', verified: '', fresh: '',
     modelTerms: [],
     sort: '',
@@ -160,7 +163,7 @@ function FiltersSidebar(count) {
     .sort((a, b) => b - a);
   const f = currentFilters;
   const myCar = getMyCar();
-  const moreOpen = (f.transmission || f.fuel || f.mileageMin || f.mileageMax) ? ' open' : '';
+  const moreOpen = (f.transmission || f.fuel || f.mileageMin || f.mileageMax || f.valueMin || f.valueMax) ? ' open' : '';
 
   return `
     <aside class="filters" aria-label="ფილტრები">
@@ -203,6 +206,14 @@ function FiltersSidebar(count) {
                   <input type="number" name="mileageMin" value="${f.mileageMin || ''}" placeholder="მინ." min="0" inputmode="numeric" aria-label="გარბენი დან">
                   <span class="filter-range-sep">—</span>
                   <input type="number" name="mileageMax" value="${f.mileageMax || ''}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="გარბენი მდე">
+                </div>
+              </div>
+              <div class="filter-field">
+                <span class="filter-label">ღირებულება (₾)</span>
+                <div class="filter-range">
+                  <input type="number" name="valueMin" value="${f.valueMin || ''}" placeholder="მინ." min="0" inputmode="numeric" aria-label="ღირებულება დან">
+                  <span class="filter-range-sep">—</span>
+                  <input type="number" name="valueMax" value="${f.valueMax || ''}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="ღირებულება მდე">
                 </div>
               </div>
             </div>
@@ -353,6 +364,7 @@ function CarRow(car) {
     car.mileage ? { label: 'გარბენი', value: car.mileage } : null,
     car.fuel ? { label: 'საწვავი', value: car.fuel } : null,
     car.transmissionLabel ? { label: 'გადაცემათა', value: car.transmissionLabel } : null,
+    car.estimatedValueLabel ? { label: 'ღირებულება', value: `~${car.estimatedValueLabel}` } : null,
   ].filter(Boolean)
     .map((s) => `<div class="stat-cell"><span>${s.label}</span><strong>${s.value}</strong></div>`)
     .join('');
@@ -520,6 +532,11 @@ function sortCars(list, sort) {
       return copy.sort((a, b) => (a.yearNum || 0) - (b.yearNum || 0));
     case 'mileage_asc':
       return copy.sort((a, b) => (a.mileageNum || 0) - (b.mileageNum || 0));
+    case 'value_asc':
+      // Listings without a value estimate sink to the bottom in both directions.
+      return copy.sort((a, b) => (a.estimatedValue ?? Infinity) - (b.estimatedValue ?? Infinity));
+    case 'value_desc':
+      return copy.sort((a, b) => (b.estimatedValue ?? -Infinity) - (a.estimatedValue ?? -Infinity));
     default:
       // 'new' — boosted first, newest after; open-to-offers sinks within tier.
       return copy.sort((a, b) => {
@@ -536,6 +553,8 @@ function applyFilters(cars, f) {
   const yearTo = Number(f.yearTo) || null;
   const mileageMin = Number(f.mileageMin) || null;
   const mileageMax = Number(f.mileageMax) || null;
+  const valueMin = Number(f.valueMin) || null;
+  const valueMax = Number(f.valueMax) || null;
   const maxDays = f.fresh === '' ? null : Number(f.fresh);
 
   const filtered = cars.filter((car) => {
@@ -554,6 +573,8 @@ function applyFilters(cars, f) {
     if (yearTo && (car.yearNum == null || car.yearNum > yearTo)) return false;
     if (mileageMin && (car.mileageNum == null || car.mileageNum < mileageMin)) return false;
     if (mileageMax && (car.mileageNum == null || car.mileageNum > mileageMax)) return false;
+    if (valueMin && (car.estimatedValue == null || car.estimatedValue < valueMin)) return false;
+    if (valueMax && (car.estimatedValue == null || car.estimatedValue > valueMax)) return false;
     if (f.verified && !car.ownerVerified) return false;
     if (maxDays != null) {
       const age = daysSince(car.createdAt);
@@ -574,9 +595,22 @@ function pageSlice(list) {
   return list.slice(0, pagesShown * PAGE_SIZE);
 }
 
+// Mirror the active filters into the URL so any filtered view is a
+// shareable / bookmarkable link (and survives refresh).
+function syncFiltersToURL() {
+  const params = new URLSearchParams();
+  Object.entries(currentFilters).forEach(([key, value]) => {
+    if (key === 'modelTerms' || key === 'modelGroup') return; // derived state
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  window.history.replaceState(null, '', query ? `?${query}` : window.location.pathname);
+}
+
 // Refreshes only the dynamic parts; stable containers (form, chips nav,
 // sort select, my-car strip) keep their bound listeners.
 function update() {
+  syncFiltersToURL();
   const filtered = getFiltered();
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   if (pagesShown > pages) pagesShown = pages;
@@ -622,7 +656,7 @@ function update() {
 function readFiltersFromForm(form) {
   const data = new FormData(form);
   const f = { ...currentFilters };
-  ['query', 'make', 'category', 'model', 'yearFrom', 'yearTo', 'transmission', 'fuel', 'mileageMin', 'mileageMax', 'city', 'cash', 'fresh']
+  ['query', 'make', 'category', 'model', 'yearFrom', 'yearTo', 'transmission', 'fuel', 'mileageMin', 'mileageMax', 'valueMin', 'valueMax', 'city', 'cash', 'fresh']
     .forEach((key) => { f[key] = String(data.get(key) || '').trim(); });
   f.onlyMatches = data.get('onlyMatches') ? '1' : '';
   f.verified = data.get('verified') ? '1' : '';
