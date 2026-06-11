@@ -1475,7 +1475,7 @@ svg {
   }
 
   .header-cta::after {
-    content: "ძებნა";
+    content: "დამატება";
     font-size: 12px;
     font-weight: 800;
   }
@@ -1552,7 +1552,7 @@ svg {
   }
 
   .header-cta::after {
-    content: "ძებნა";
+    content: "დამატება";
     font-size: 12px;
   }
 
@@ -2064,6 +2064,9 @@ svg {
 /* ---- Right results column ---- */
 .results {
   display: grid;
+  /* Explicit minmax(0,…) column: the default auto column sizes to the
+     widest child's max-content and pushes the page sideways on mobile. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   min-width: 0;
 }
@@ -2426,8 +2429,10 @@ svg {
 }
 
 @media (max-width: 980px) {
+  /* minmax(0, …) so wide children can't stretch the column past the
+     viewport — plain 1fr uses an auto minimum and pushes the page wide. */
   .catalog {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .filters {
@@ -2459,7 +2464,7 @@ svg {
 
 @media (max-width: 620px) {
   .car-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .car-row-media {
@@ -3022,7 +3027,7 @@ body.modal-open {
 .stat-row {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  grid-auto-columns: minmax(0, 1fr);
   margin: 4px 0;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -3049,12 +3054,14 @@ body.modal-open {
 }
 
 .stat-cell strong {
+  overflow: hidden;
   color: var(--graphite);
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* Compact variant for feed cards */
@@ -4032,7 +4039,7 @@ body.modal-open {
 
 @media (max-width: 620px) {
   .trade-card {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "media"
       "body"
@@ -4080,7 +4087,35 @@ body.modal-open {
 
   .results-controls {
     flex: 1 1 100%;
+    flex-wrap: wrap;
     justify-content: space-between;
+  }
+
+  .results-sort {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .results-sort select {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Make chips scroll in their own row instead of widening the page. */
+  .make-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .make-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .make-chip {
+    flex: 0 0 auto;
   }
 
   .offer-trade-summary {
@@ -4502,4 +4537,133 @@ body.modal-open {
   .account-card-actions { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
 
   .profile-grid { grid-template-columns: 1fr; }
+/* ===================================================================
+   Header auth (login button / logged-in chip) + phone auth modal
+=================================================================== */
+.header-auth {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-login {
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+
+.header-cta {
+  gap: 7px;
+}
+
+.header-cta svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.header-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--deep-green);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.header-user svg {
+  width: 17px;
+  height: 17px;
+}
+
+.header-user-name {
+  max-width: 120px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.header-logout {
+  border: 0;
+  background: none;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.header-logout:hover {
+  color: var(--copper);
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin: 14px 0 16px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--warm-ivory);
+}
+
+.auth-tab {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auth-tab.is-active {
+  background: var(--card-white);
+  color: var(--deep-green);
+  box-shadow: 0 4px 10px rgba(22, 31, 25, 0.08);
+}
+
+.auth-sub {
+  margin: 12px 0 14px;
+  color: var(--secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.auth-sub strong {
+  color: var(--graphite);
+}
+
+.auth-error {
+  margin: 10px 0 0;
+  color: var(--cash-ask-fg);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.otp-input {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  text-align: center;
+}
+
+@media (max-width: 680px) {
+  .header-auth {
+    gap: 7px;
+  }
+
+  .header-login {
+    min-height: 36px;
+    padding: 0 11px;
+    font-size: 12px;
+  }
+
+  .header-user-name {
+    display: none;
+  }
 }

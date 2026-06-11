@@ -48,6 +48,7 @@
     refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"></path><path d="M21 4v5h-5"></path></svg>',
     tag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"></path><circle cx="7.5" cy="7.5" r="1.4"></circle></svg>',
     sound: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M16 8.5a4 4 0 0 1 0 7"></path><path d="M19 5.5a8 8 0 0 1 0 13"></path></svg>',
+    user: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>',
   };
 
   // ---- Display label maps -------------------------------------------------
@@ -262,9 +263,10 @@
   function Header(opts) {
     const options = opts || {};
     const active = options.active || 'listings';
+    // "Add your car" moved from the nav into the CTA — it is the conversion
+    // action, not a navigation item.
     const nav = [
       { id: 'listings', label: 'გაცვლები', href: 'cars.html' },
-      { id: 'sell', label: 'განცხადების დამატება', href: 'sell.html' },
       { id: 'contact', label: 'კონტაქტი', href: 'index.html#contact' },
     ];
 
@@ -277,9 +279,9 @@
           <div class="header-actions">
             <nav class="site-nav" aria-label="მთავარი ნავიგაცია">
               ${nav.map((item) => `<a class="${item.id === active ? 'is-active' : ''}" href="${item.href}">${item.label}</a>`).join('')}
-              <a class="${active === 'account' ? 'is-active' : ''}" data-auth-link href="login.html">შესვლა</a>
             </nav>
-            <a class="btn btn-primary header-cta" href="cars.html">მოძებნე ავტომობილი</a>
+            <div class="header-auth" id="header-auth">${authSlotHTML()}</div>
+            <a class="btn btn-accent header-cta" href="sell.html">${icons.plus}<span>დაამატე მანქანა</span></a>
           </div>
         </div>
       </header>
@@ -419,15 +421,24 @@
     setTimeout(() => node.remove(), 4000);
   }
 
-  // ---- Auth (Supabase email OTP) --------------------------------------------
-  // Supabase Auth issues the 6-digit code, stores only its hash, expires it
-  // (set OTP expiry to 300s in the dashboard), rate-limits requests, and
-  // returns JWT access + refresh tokens that supabase-js rotates for us.
+  // ---- Auth state (one source of truth) --------------------------------------
+  // Two sign-in paths share this state: phone OTP via the header modal
+  // (openAuthModal) and email OTP via login.html. Supabase Auth issues the
+  // 6-digit code, stores only its hash, expires it (set OTP expiry to 300s in
+  // the dashboard), rate-limits requests, and returns JWT access + refresh
+  // tokens that supabase-js rotates for us. The phone modal additionally has
+  // a clearly-labelled local demo fallback (authUser.demo === true) which can
+  // browse but cannot write — RLS flows require a real session.
   let authUser = null;
   const authListeners = new Set();
 
+  function demoAuthUser() {
+    const demo = getDemoUser();
+    return demo ? { demo: true, ...demo } : null;
+  }
+
   function notifyAuth() {
-    refreshAuthLinks();
+    renderAuthSlot();
     authListeners.forEach((cb) => {
       try { cb(authUser); } catch (_err) { /* listener error is its problem */ }
     });
@@ -444,24 +455,31 @@
     return authUser;
   }
 
-  // Resolves once the initial session lookup has finished.
+  // Resolves once the initial session lookup has finished. Returns the
+  // Supabase user (never the local demo user — gated pages need a real JWT).
   const authReady = (async () => {
-    if (!sbClient) return null;
-    try {
-      const { data } = await sbClient.auth.getSession();
-      authUser = data && data.session ? data.session.user : null;
-    } catch (_err) {
-      authUser = null;
+    if (!sbClient) {
+      authUser = demoAuthUser();
+      notifyAuth();
+      return null;
     }
+    let session = null;
+    try {
+      ({ data: { session } } = await sbClient.auth.getSession());
+    } catch (_err) { /* treat as signed out */ }
+    authUser = (session && session.user) || demoAuthUser();
     notifyAuth();
-    sbClient.auth.onAuthStateChange((_event, session) => {
-      const next = session ? session.user : null;
-      if ((next && next.id) === (authUser && authUser.id)) { authUser = next; return; }
+    sbClient.auth.onAuthStateChange((_event, nextSession) => {
+      const next = (nextSession && nextSession.user) || demoAuthUser();
+      if ((next && next.id) === (authUser && authUser.id) && !!next === !!authUser) {
+        authUser = next;
+        return;
+      }
       authUser = next;
       savedIdsPromise = null; // saved set is per-user
       notifyAuth();
     });
-    return authUser;
+    return session ? session.user : null;
   })();
 
   async function requestEmailOtp(email) {
@@ -487,24 +505,10 @@
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ''));
   }
 
-  // Keep the header auth link + saved-button state correct across the
-  // innerHTML re-renders every page does. One observer instead of asking
-  // each page to call back in.
-  function refreshAuthLinks() {
-    const href = authUser ? 'account.html' : 'login.html';
-    const label = authUser ? 'ჩემი გვერდი' : 'შესვლა';
-    document.querySelectorAll('[data-auth-link]').forEach((link) => {
-      // Write only on change: this runs from a MutationObserver, and an
-      // unconditional textContent write would re-trigger it forever.
-      if (link.getAttribute('href') !== href) link.href = href;
-      if (link.textContent !== label) link.textContent = label;
-    });
-  }
-
   let savedIdsPromise = null;
 
   function fetchSavedIds() {
-    if (!sbClient || !authUser) return Promise.resolve(new Set());
+    if (!sbClient || !authUser || authUser.demo) return Promise.resolve(new Set());
     if (!savedIdsPromise) {
       savedIdsPromise = sbClient
         .from('saved_listings')
@@ -518,7 +522,7 @@
   }
 
   async function hydrateSavedButtons() {
-    if (!authUser) return;
+    if (!authUser || authUser.demo) return;
     const buttons = document.querySelectorAll('.save-btn:not([data-saved-hydrated])');
     if (!buttons.length) return;
     const saved = await fetchSavedIds();
@@ -529,15 +533,19 @@
     });
   }
 
+  // Keep the header auth slot + saved-button state correct across the
+  // innerHTML re-renders every page does. One observer instead of asking
+  // each page to call back in. renderAuthSlot is idempotent (writes only on
+  // state change), otherwise this would loop on its own mutations.
   const rerenderObserver = new MutationObserver(() => {
-    refreshAuthLinks();
+    renderAuthSlot();
     hydrateSavedButtons();
   });
   document.addEventListener('DOMContentLoaded', () => {
     const app = document.querySelector('#app');
     if (app) rerenderObserver.observe(app, { childList: true, subtree: true });
     authReady.then(() => {
-      refreshAuthLinks();
+      renderAuthSlot();
       hydrateSavedButtons();
     });
   });
@@ -843,17 +851,18 @@
   // ---- Real offers (signed-in, live listing) --------------------------------
   function openLoginGateModal(message) {
     const next = encodeURIComponent(window.location.pathname.split('/').pop() + window.location.search);
-    buildModal(`
+    const { overlay } = buildModal(`
       <div class="modal-body">
         <p class="modal-eyebrow">ავტორიზაცია</p>
         <h2 class="modal-title" id="login-gate-title">ჯერ შესვლაა საჭირო</h2>
         <p class="offer-gate-text">${escapeAttr(message)}</p>
         <div class="offer-actions">
-          <button type="button" class="btn btn-ghost" data-close>გაუქმება</button>
-          <a class="btn btn-primary" href="login.html?next=${next}">შესვლა კოდით</a>
+          <a class="btn btn-ghost" href="login.html?next=${next}">ელფოსტით</a>
+          <button type="button" class="btn btn-primary" id="login-gate-phone">ნომრით შესვლა</button>
         </div>
       </div>
     `, 'login-gate-title');
+    overlay.querySelector('#login-gate-phone').addEventListener('click', () => openAuthModal('login'));
   }
 
   async function openRealOfferModal(car) {
@@ -986,8 +995,9 @@
 
   function openOfferModal(car) {
     // Live listing: real offer when signed in, login gate when not.
+    // The local demo user has no JWT, so RLS would reject the insert — gate it.
     if (sbClient && car && isUuid(car.id)) {
-      if (!authUser) {
+      if (!authUser || authUser.demo) {
         openLoginGateModal('შეთავაზების გასაგზავნად შედი ერთჯერადი კოდით — ისე, რომ მფლობელმა იცოდეს ვინ სთავაზობს.');
         return;
       }
@@ -1075,6 +1085,230 @@
     });
   }
 
+  // ---- Auth: phone OTP login / registration -------------------------------
+  // Real path: Supabase phone OTP (signInWithOtp + verifyOtp). When Supabase
+  // or its SMS provider is not configured, falls back to a clearly-labelled
+  // local demo flow (fixed code), same convention as the offer modal.
+  // State lives in the shared authUser above; email OTP (login.html) and this
+  // modal both feed it.
+  const DEMO_USER_KEY = 'autoswap.demoUser';
+  const DEMO_OTP_CODE = '1234';
+
+  function getDemoUser() {
+    try {
+      const raw = localStorage.getItem(DEMO_USER_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function authDisplayName(user) {
+    if (!user) return '';
+    if (user.demo) return user.name || user.phone;
+    const meta = user.user_metadata || {};
+    return meta.full_name || (user.phone ? `+${user.phone}` : 'ანგარიში');
+  }
+
+  function authSlotHTML() {
+    if (!authUser) {
+      return '<button class="btn btn-light header-login" type="button" data-auth-open>შესვლა</button>';
+    }
+    // Real sessions link to the account hub; the local demo user has no
+    // server-side rows to show there.
+    const name = `${icons.user}<span class="header-user-name">${escapeAttr(authDisplayName(authUser))}</span>`;
+    return `
+      ${authUser.demo
+        ? `<span class="header-user">${name}</span>`
+        : `<a class="header-user" href="account.html">${name}</a>`}
+      <button class="header-logout" type="button" data-logout>გასვლა</button>
+    `;
+  }
+
+  function renderAuthSlot() {
+    // Idempotent: runs from a MutationObserver, so writing on every call
+    // would re-trigger the observer forever.
+    const state = authUser ? `in:${authUser.demo ? 'demo' : authUser.id}` : 'out';
+    document.querySelectorAll('#header-auth').forEach((slot) => {
+      if (slot.dataset.authState === state) return;
+      slot.dataset.authState = state;
+      slot.innerHTML = authSlotHTML();
+    });
+  }
+
+  // Georgian mobile numbers: 5XX XX XX XX, with or without the +995 prefix.
+  function normalizePhone(raw) {
+    const digits = String(raw || '').replace(/\D/g, '');
+    if (/^9955\d{8}$/.test(digits)) return `+${digits}`;
+    if (/^5\d{8}$/.test(digits)) return `+995${digits}`;
+    return null;
+  }
+
+  // → { demo: boolean } on success, { error: string } on failure.
+  async function requestOtp(phone, name, mode) {
+    if (!sbClient) return { demo: true };
+    const options = mode === 'register'
+      ? { shouldCreateUser: true, data: name ? { full_name: name } : undefined }
+      : { shouldCreateUser: false };
+    const { error } = await sbClient.auth.signInWithOtp({ phone, options });
+    if (!error) return { demo: false };
+    const message = String(error.message || '');
+    // SMS provider not wired up on the Supabase project → demo flow.
+    if (/provider|not enabled|disabled|unsupported/i.test(message)) return { demo: true };
+    if (/signups not allowed/i.test(message)) return { error: 'ეს ნომერი ჯერ არ არის რეგისტრირებული — გადადი რეგისტრაციაზე.' };
+    return { error: `კოდი ვერ გაიგზავნა: ${message}` };
+  }
+
+  // → {} on success (header updates via auth listener), { error } on failure.
+  async function confirmOtp(phone, code, name, isDemo) {
+    if (isDemo) {
+      if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი — დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
+      localStorage.setItem(DEMO_USER_KEY, JSON.stringify({ name: name || '', phone }));
+      authUser = { demo: true, name: name || '', phone };
+      notifyAuth();
+      return {};
+    }
+    const { error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'sms' });
+    return error ? { error: `კოდი ვერ დადასტურდა: ${error.message}` } : {};
+  }
+
+  function logout() {
+    localStorage.removeItem(DEMO_USER_KEY);
+    authUser = null;
+    savedIdsPromise = null;
+    notifyAuth();
+    sbClient?.auth.signOut().catch((err) => console.error('AutoSwap: signOut failed', err.message));
+  }
+
+  function authFormHTML(mode) {
+    return `
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab ${mode === 'login' ? 'is-active' : ''}" type="button" data-mode="login">შესვლა</button>
+        <button class="auth-tab ${mode === 'register' ? 'is-active' : ''}" type="button" data-mode="register">რეგისტრაცია</button>
+      </div>
+      <form class="offer-form" id="auth-form" novalidate>
+        <label class="field" id="auth-name-field" ${mode === 'register' ? '' : 'hidden'}>
+          <span>სახელი</span>
+          <input type="text" name="name" autocomplete="name" placeholder="მაგ: გიორგი">
+        </label>
+        <label class="field">
+          <span>ტელეფონის ნომერი (+995)</span>
+          <input type="tel" name="phone" inputmode="tel" autocomplete="tel-national" placeholder="5XX XX XX XX" required>
+        </label>
+        <p class="auth-error" id="auth-error" hidden></p>
+        <div class="offer-actions">
+          <button type="button" class="btn btn-ghost" data-close>გაუქმება</button>
+          <button type="submit" class="btn btn-primary" id="auth-submit">კოდის გაგზავნა</button>
+        </div>
+      </form>
+    `;
+  }
+
+  function openAuthModal(initialMode) {
+    let mode = initialMode === 'register' ? 'register' : 'login';
+    const { overlay, close } = buildModal(`
+      <div class="modal-body" id="auth-body">
+        <p class="modal-eyebrow">ანგარიში</p>
+        <h2 class="modal-title" id="auth-title">გაიარე ავტორიზაცია ნომრით</h2>
+        <div id="auth-step">${authFormHTML(mode)}</div>
+      </div>
+    `, 'auth-title');
+
+    const step = overlay.querySelector('#auth-step');
+
+    const showError = (text) => {
+      const el = step.querySelector('.auth-error');
+      if (!el) return;
+      el.textContent = text;
+      el.hidden = false;
+    };
+
+    function bindPhoneStep() {
+      step.querySelectorAll('.auth-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          mode = tab.dataset.mode === 'register' ? 'register' : 'login';
+          step.innerHTML = authFormHTML(mode);
+          bindPhoneStep();
+        });
+      });
+
+      step.querySelector('#auth-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        const name = String(data.get('name') || '').trim();
+        const phone = normalizePhone(data.get('phone'));
+        if (!phone) {
+          showError('შეიყვანე ქართული მობილურის ნომერი ფორმატით 5XX XX XX XX.');
+          return;
+        }
+        if (mode === 'register' && !name) {
+          showError('შეიყვანე სახელი.');
+          return;
+        }
+        const submit = step.querySelector('#auth-submit');
+        submit.disabled = true;
+        submit.textContent = 'იგზავნება…';
+        const result = await requestOtp(phone, name, mode);
+        if (result.error) {
+          submit.disabled = false;
+          submit.textContent = 'კოდის გაგზავნა';
+          showError(result.error);
+          return;
+        }
+        bindOtpStep(phone, name, result.demo);
+      });
+    }
+
+    function bindOtpStep(phone, name, isDemo) {
+      step.innerHTML = `
+        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი — შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
+        <form class="offer-form" id="otp-form" novalidate>
+          <label class="field">
+            <span>SMS კოდი</span>
+            <input class="otp-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••">
+          </label>
+          <p class="auth-error" hidden></p>
+          <div class="offer-actions">
+            <button type="button" class="btn btn-ghost" id="auth-back">უკან</button>
+            <button type="submit" class="btn btn-primary">დადასტურება</button>
+          </div>
+        </form>
+      `;
+
+      step.querySelector('#auth-back').addEventListener('click', () => {
+        step.innerHTML = authFormHTML(mode);
+        bindPhoneStep();
+      });
+
+      step.querySelector('#otp-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const code = String(new FormData(event.currentTarget).get('code') || '').trim();
+        if (!code) {
+          showError('შეიყვანე SMS კოდი.');
+          return;
+        }
+        const result = await confirmOtp(phone, code, name, isDemo);
+        if (result.error) {
+          showError(result.error);
+          return;
+        }
+        step.innerHTML = `
+          <div class="offer-success">
+            <span class="offer-success-icon">${icons.check}</span>
+            <h2 class="modal-title">გამარჯობა${name ? `, ${escapeAttr(name)}` : ''}!</h2>
+            <p>${mode === 'register' ? 'რეგისტრაცია წარმატებით დასრულდა.' : 'შესვლა წარმატებულია.'}</p>
+            <button type="button" class="btn btn-primary" data-close>გასაგებია</button>
+          </div>
+        `;
+      });
+
+      step.querySelector('.otp-input').focus();
+    }
+
+    bindPhoneStep();
+    return { overlay, close };
+  }
+
   // ---- Global delegated listeners (bound once per page load) ----
   document.addEventListener('click', (event) => {
     const offerBtn = event.target.closest('[data-offer]');
@@ -1117,7 +1351,7 @@
     const listingId = saveBtn.dataset.id || saveBtn.closest('[data-id]')?.dataset.id || '';
 
     if (sbClient && isUuid(listingId)) {
-      if (!authUser) {
+      if (!authUser || authUser.demo) {
         openLoginGateModal('ფავორიტებში შესანახად შედი ერთჯერადი კოდით.');
         return;
       }
@@ -1125,6 +1359,10 @@
       return;
     }
     saveBtn.classList.toggle('is-saved'); // demo listings stay local
+  });
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('[data-auth-open]')) openAuthModal();
+    if (event.target.closest('[data-logout]')) logout();
   });
 
   window.AutoSwap = {
@@ -1164,6 +1402,7 @@
     searchModels,
     openOfferModal,
     openMyCarModal,
+    openAuthModal,
     getMyCar,
     setMyCar,
     clearMyCar,
