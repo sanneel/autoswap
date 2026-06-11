@@ -23,6 +23,8 @@ import { fileURLToPath } from 'node:url';
    Requires Node 18+ (built-in fetch).
 =================================================================== */
 
+import { slugify, normalizeMakeName, dedupeMakes, dedupeModels } from './lib/catalog-utils.mjs';
+
 const VPIC = 'https://vpic.nhtsa.dot.gov/api/vehicles';
 const MAKES_URL = `${VPIC}/GetMakesForVehicleType/car?format=json`;
 const modelsURL = (makeId) => `${VPIC}/GetModelsForMakeId/${makeId}?format=json`;
@@ -40,14 +42,6 @@ function fail(msg) {
   process.exit(1);
 }
 
-function normalizeMakeName(value) {
-  return String(value || '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/\.$/, '')
-    .toUpperCase();
-}
-
 function readMakeBlocklist() {
   if (!fs.existsSync(BLOCKLIST_PATH)) return new Set();
   const names = JSON.parse(fs.readFileSync(BLOCKLIST_PATH, 'utf8'));
@@ -60,14 +54,6 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
 }
 
 const BLOCKED_MAKE_NAMES = readMakeBlocklist();
-
-function slugify(value) {
-  return String(value)
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
 
 async function fetchJSON(url, attempt = 1) {
   try {
@@ -125,18 +111,7 @@ async function main() {
     console.log(`  ${BLOCKED_MAKE_NAMES.size} make names are blocklisted and will be skipped.`);
   }
   const makesJson = await fetchJSON(MAKES_URL);
-  const rawMakes = Array.isArray(makesJson.Results) ? makesJson.Results : [];
-
-  // Dedupe by MakeId (vPIC repeats a make per vehicle type).
-  const makeById = new Map();
-  for (const m of rawMakes) {
-    if (m && m.MakeId && m.MakeName && !makeById.has(m.MakeId)) {
-      const name = String(m.MakeName).trim();
-      if (BLOCKED_MAKE_NAMES.has(normalizeMakeName(name))) continue;
-      makeById.set(m.MakeId, { id: m.MakeId, name, slug: slugify(name) });
-    }
-  }
-  const makes = [...makeById.values()];
+  const makes = dedupeMakes(makesJson.Results, BLOCKED_MAKE_NAMES);
   console.log(`  ${makes.length} unique car makes.`);
 
   console.log('→ Upserting makes…');
@@ -147,17 +122,7 @@ async function main() {
   let done = 0;
   await pool(makes, FETCH_CONCURRENCY, async (make) => {
     const json = await fetchJSON(modelsURL(make.id));
-    const results = Array.isArray(json.Results) ? json.Results : [];
-
-    // Dedupe model names within a make.
-    const seen = new Set();
-    const models = [];
-    for (const r of results) {
-      const name = r && r.Model_Name ? String(r.Model_Name).trim() : '';
-      if (!name || seen.has(name.toLowerCase())) continue;
-      seen.add(name.toLowerCase());
-      models.push({ make_id: make.id, name, slug: slugify(name) });
-    }
+    const models = dedupeModels(json.Results, make.id);
 
     if (models.length) {
       await upsert('car_models', models, 'make_id,name');
