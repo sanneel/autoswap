@@ -104,11 +104,14 @@ create policy offers_insert_sender on public.offers for insert with check (
               where v.id = target_vehicle_id and v.owner_id = to_user_id and v.status = 'active')
 );
 
--- Sender cancels here; accept/decline/counter/view run via SECURITY DEFINER RPCs.
+-- Direct client updates may ONLY cancel your own outgoing open offer.
+-- Accept/decline/counter/view run via SECURITY DEFINER RPCs (which bypass
+-- RLS) — neither party must ever be able to flip a row to 'accepted' here.
 drop policy if exists offers_update_party on public.offers;
-create policy offers_update_party on public.offers for update
-  using (auth.uid() in (from_user_id, to_user_id))
-  with check (auth.uid() in (from_user_id, to_user_id));
+drop policy if exists offers_cancel_sender on public.offers;
+create policy offers_cancel_sender on public.offers for update
+  using (from_user_id = auth.uid() and status in ('pending', 'viewed'))
+  with check (from_user_id = auth.uid() and status = 'cancelled');
 
 -- ----------------------------- offer_events (system-written)
 drop policy if exists offer_events_select_party on public.offer_events;
