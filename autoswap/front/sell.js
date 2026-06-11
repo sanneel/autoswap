@@ -9,7 +9,6 @@ function SellForm() {
     <main class="sell-shell">
       <section class="container sell">
         <div class="sell-head">
-          <p class="section-kicker">განცხადების დამატება</p>
           <h1>დაამატე შენი ავტომობილი</h1>
           <p class="sell-sub">აღწერე მანქანა და რა გინდა სანაცვლოდ — განცხადება გამოჩნდება გაცვლების ფიდში.</p>
         </div>

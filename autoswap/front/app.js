@@ -88,6 +88,7 @@ function Hero() {
 
           <article class="hero-car hero-car-left">
             <img src="${assets.bmw}" alt="BMW 530i" width="791" height="396" decoding="async" fetchpriority="high">
+            <button class="sound-btn" type="button" data-rev="bmw" aria-label="BMW 530i ძრავის ხმა">${icons.sound}</button>
             <div class="hero-car-caption">
               <strong>BMW 530i</strong>
               <small>2019 · 90,000 კმ</small>
@@ -102,6 +103,7 @@ function Hero() {
 
           <article class="hero-car hero-car-right">
             <img src="${assets.porsche}" alt="Porsche 718 Spyder" width="817" height="396" decoding="async" fetchpriority="high" onerror="this.onerror=null;this.src='${assets.audi}';">
+            <button class="sound-btn" type="button" data-rev="porsche" aria-label="Porsche 718 Spyder ძრავის ხმა">${icons.sound}</button>
             <div class="hero-car-caption">
               <strong>Porsche 718 Spyder</strong>
               <small>2023 · 12,000 კმ</small>
@@ -157,8 +159,29 @@ function SearchBar() {
   `;
 }
 
+const CASH_ICONS = { add: icons.trendUp, ask: icons.trendDown, flexible: icons.swap, none: icons.equals };
+
+// The landing shows a teaser of the freshest listings; the full catalog
+// lives on cars.html.
+const LANDING_CARD_COUNT = 4;
+const landingCards = (cars) => cars.slice(0, LANDING_CARD_COUNT).map(ListingCard).join('');
+
+// Long feed titles ("Toyota Camry LE 4dr Sedan Automatic") get cut at a word
+// boundary so cards stay symmetric; the full name lives on the detail page.
+const TITLE_MAX_CHARS = 26;
+function trimTitle(title) {
+  if (title.length <= TITLE_MAX_CHARS) return title;
+  const cut = title.slice(0, TITLE_MAX_CHARS);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > 8 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
+
 function ListingCard(car) {
   const detailHref = `vehicle.html?id=${encodeURIComponent(car.id)}`;
+  const title = trimTitle(`${car.make} ${car.model}`);
+  // No concrete wants → no fake "ეძებს" line; the card stays quiet about it.
+  const wants = car.openToOffers ? '' : car.wants;
+  const meta = [car.year, car.mileage, car.fuel].filter(Boolean).join(' · ');
   return `
     <article class="listing-card" data-id="${car.id}">
       <div class="listing-media">
@@ -169,22 +192,15 @@ function ListingCard(car) {
       </div>
       <div class="listing-body">
         <div>
-          <h3><a class="card-title-link" href="${detailHref}">${car.make} ${car.model}</a></h3>
-          <p>${car.year} · ${car.mileage} · ${car.fuel}</p>
+          <h3><a class="card-title-link" href="${detailHref}" title="${car.make} ${car.model}">${title}</a></h3>
+          <p>${meta}</p>
           <span class="listing-city">${icons.location}${car.city}</span>
         </div>
-        <div class="wanted-line">
-          <span class="wanted-label">ეძებს</span>
-          <div class="wanted-main">
-            <span class="wanted-icon">${icons.swap}</span>
-            <strong>${car.wants}</strong>
-          </div>
-        </div>
-        <div class="cash-line cash-${car.cashType || 'none'}">
-          <strong>${car.cashType === 'none' ? 'თანხის გარეშე' : car.cash}</strong>
-        </div>
+        ${wants ? `
+        <p class="listing-wants"><span>ეძებს</span>${wants}</p>` : ''}
+        <p class="trade-cash trade-cash--${car.cashType || 'none'}">${CASH_ICONS[car.cashType] || icons.equals}<span>${car.cashType === 'none' ? 'თანაბარი გაცვლა' : car.cash}</span></p>
         <div class="listing-foot">
-          <button class="btn btn-secondary listing-offer" type="button" data-offer data-id="${car.id}" data-make="${car.make}" data-model="${car.model}">შესთავაზე გაცვლა</button>
+          <button class="btn btn-accent listing-offer" type="button" data-offer data-id="${car.id}" data-make="${car.make}" data-model="${car.model}">შეთავაზება</button>
         </div>
       </div>
     </article>
@@ -197,13 +213,15 @@ function ListingsSection(cars = activeListings) {
       <div class="container">
         <div class="section-head">
           <div>
-            <p class="section-kicker">01 / ახალი შეთავაზებები</p>
             <h2 id="listings-title">რეალური ავტომობილები გაცვლისთვის</h2>
           </div>
           <a class="text-link" href="cars.html">ყველა ავტომობილის ნახვა ${icons.arrowRight}</a>
         </div>
         <div class="listing-grid" id="listing-grid">
-          ${cars.map(ListingCard).join('')}
+          ${landingCards(cars)}
+        </div>
+        <div class="listings-more">
+          <a class="btn btn-secondary" href="cars.html">ყველა ავტომობილის ნახვა</a>
         </div>
       </div>
     </section>
@@ -221,7 +239,6 @@ function ProcessSection() {
     <section class="process-section" id="sections" aria-labelledby="process-title">
       <div class="container split-section">
         <div>
-          <p class="section-kicker">02 / როგორ მუშაობს</p>
           <h2 id="process-title">გაცვლა რამდენიმე მკაფიო ნაბიჯად</h2>
         </div>
         <div class="process-grid">
@@ -251,7 +268,6 @@ function BenefitsSection() {
       <div class="container">
         <div class="section-head compact">
           <div>
-            <p class="section-kicker">03 / რატომ <span class="brandcase">AutoSwap</span>?</p>
             <h2 id="benefits-title">ნაკლები ხმაური, მეტი ნდობა</h2>
           </div>
         </div>
@@ -291,7 +307,7 @@ function renderListingGrid(cars) {
   if (!grid) return;
 
   grid.innerHTML = cars.length
-    ? cars.map(ListingCard).join('')
+    ? landingCards(cars)
     : '<p class="empty-state">ამ ფილტრებით შეთავაზება ვერ მოიძებნა.</p>';
 }
 
@@ -309,6 +325,33 @@ function bindInteractions() {
 
   slider?.addEventListener('input', () => {
     if (sliderValue) sliderValue.textContent = formatDiff(slider.value);
+  });
+
+  // Hero rev buttons: one rev at a time; clicking the active one stops it.
+  let revAudio = null;
+  let activeRevBtn = null;
+
+  const stopRev = () => {
+    revAudio?.pause();
+    revAudio = null;
+    activeRevBtn?.classList.remove('is-playing');
+    activeRevBtn = null;
+  };
+
+  document.querySelectorAll('.sound-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const wasActive = activeRevBtn === btn;
+      stopRev();
+      if (wasActive) return;
+      const src = assets.revs[btn.dataset.rev];
+      if (!src) return;
+      const audio = new Audio(src);
+      audio.addEventListener('ended', stopRev);
+      revAudio = audio;
+      activeRevBtn = btn;
+      btn.classList.add('is-playing');
+      audio.play().catch(stopRev);
+    });
   });
 
   // The hero search links into the product page (cars.html), translating the

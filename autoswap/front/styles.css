@@ -497,6 +497,66 @@ svg {
   font-weight: 700;
 }
 
+/* Engine-rev button — round white speaker over the car photo. */
+.sound-btn {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(222, 211, 196, 0.9);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--deep-green);
+  box-shadow: 0 10px 20px rgba(22, 31, 25, 0.22);
+  cursor: pointer;
+}
+
+.sound-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.sound-btn:hover {
+  background: #fffaf2;
+}
+
+.sound-btn.is-playing {
+  background: var(--deep-green);
+  color: #fff;
+}
+
+/* Track the hero images' decorative translateX so the button stays
+   centered on the car itself. Reset where the translate is dropped. */
+.hero-car-left .sound-btn {
+  left: calc(50% + 26px);
+}
+
+.hero-car-right .sound-btn {
+  left: calc(50% - 26px);
+}
+
+@media (min-width: 1280px) {
+  .hero-car-left .sound-btn {
+    left: calc(50% + 34px);
+  }
+
+  .hero-car-right .sound-btn {
+    left: calc(50% - 34px);
+  }
+}
+
+@media (max-width: 1279px) {
+  .hero-car-left .sound-btn,
+  .hero-car-right .sound-btn {
+    left: 50%;
+  }
+}
+
 /* Search */
 .search-bar {
   display: grid;
@@ -829,7 +889,7 @@ svg {
 
 .listing-media {
   position: relative;
-  height: 164px;
+  height: 180px;
   overflow: hidden;
   background: linear-gradient(180deg, #fffaf2, #f1eadf);
 }
@@ -837,9 +897,7 @@ svg {
 .listing-media img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center bottom;
-  padding: 24px 22px 8px;
+  object-fit: cover;
 }
 
 .listing-badge {
@@ -888,9 +946,12 @@ svg {
 
 .listing-body h3 {
   margin: 0;
+  overflow: hidden;
   color: var(--graphite);
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .listing-body p {
@@ -914,6 +975,30 @@ svg {
   width: 14px;
   height: 14px;
   color: var(--copper);
+}
+
+/* Landing card wants line — quiet green tint instead of the old beige panel. */
+.listing-wants {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #E7EFE8;
+  color: var(--deep-green);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.listing-wants span {
+  flex: 0 0 auto;
+  color: #4E7A5E;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Wants box — copper "ეძებს" label, a green swap badge, then the target models.
@@ -1015,6 +1100,17 @@ svg {
   min-height: 40px;
   padding: 0 14px;
   font-size: 13px;
+}
+
+.listings-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.listings-more .btn {
+  min-height: 44px;
+  padding: 0 26px;
 }
 
 .quick-add {
@@ -1326,6 +1422,14 @@ svg {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  /* Odd card count in a 2-col grid: center the orphan instead of
+     leaving a hole next to it. */
+  .process-grid .process-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    width: calc(50% - 7px);
+    justify-self: center;
+  }
+
   .split-section {
     grid-template-columns: 1fr;
   }
@@ -1388,6 +1492,12 @@ svg {
   .listing-grid,
   .benefits-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .benefits-grid .benefit-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    width: calc(50% - 10px);
+    justify-self: center;
   }
 
   .cta-panel {
@@ -1474,8 +1584,8 @@ svg {
   .swap-stage {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0;
-    align-items: center;
+    gap: 14px;
+    align-items: end;
     min-height: auto;
     margin-top: 12px;
   }
@@ -1498,17 +1608,9 @@ svg {
 
   .hero-car-left img,
   .hero-car-right img {
-    width: 112%;
+    width: 100%;
     max-width: none;
     transform: none;
-  }
-
-  .hero-car-left img {
-    margin-left: -8%;
-  }
-
-  .hero-car-right img {
-    margin-right: -8%;
   }
 
   .hero-car::before {
@@ -1519,9 +1621,31 @@ svg {
     filter: blur(10px);
   }
 
-  .hero-car-left .hero-car-card,
-  .hero-car-right .hero-car-card {
-    display: none;
+  /* Compact one-line captions so both cars sit on the same baseline. */
+  .hero-car-caption {
+    margin-top: 2px;
+    padding: 5px 12px;
+  }
+
+  .sound-btn {
+    bottom: 48px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .sound-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .hero-car-caption strong {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .hero-car-caption small {
+    font-size: 11px;
+    white-space: nowrap;
   }
 
   .swap-center {
@@ -1613,6 +1737,13 @@ svg {
   .process-grid,
   .benefits-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Single column again — undo the centered-orphan treatment. */
+  .process-grid .process-card:last-child:nth-child(odd),
+  .benefits-grid .benefit-card:last-child:nth-child(odd) {
+    grid-column: auto;
+    width: auto;
   }
 
   .section-head {
@@ -3471,9 +3602,15 @@ body.modal-open {
   font-variant-numeric: tabular-nums;
 }
 
+/* Round deep-green icon badge — the original card icon treatment. */
 .trade-cash svg {
-  width: 17px;
-  height: 17px;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border-radius: 50%;
+  background: var(--deep-green);
+  color: #fff;
 }
 
 .trade-cash--add { color: var(--cash-add-fg); }
@@ -3954,5 +4091,17 @@ body.modal-open {
   .offer-trade-icon {
     margin: 0 auto;
     transform: rotate(90deg);
+  }
+}
+
+/* Ultra-narrow screens: the hero captions can't fit beside each other —
+   drop them so both cars share the same baseline. */
+@media (max-width: 480px) {
+  .hero-car-caption {
+    display: none;
+  }
+
+  .sound-btn {
+    bottom: 8px;
   }
 }
