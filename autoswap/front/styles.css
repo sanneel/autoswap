@@ -1900,19 +1900,6 @@ svg {
   color: var(--warm-ivory);
 }
 
-/* Dashed road-centerline along the band's bottom edge — the same motif
-   as the landing process section. */
-.catalog-hero::after,
-.sell-hero::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 10px;
-  height: 2px;
-  background: repeating-linear-gradient(90deg, rgba(244, 244, 239, 0.34) 0 26px, transparent 26px 44px);
-}
-
 .catalog-hero-inner {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
@@ -1961,9 +1948,8 @@ svg {
   gap: 16px;
   padding: 18px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 4px;
   background: var(--card-white);
-  box-shadow: var(--shadow-card);
 }
 
 .filters-head {
@@ -1986,7 +1972,7 @@ svg {
 .filters-title svg {
   width: 18px;
   height: 18px;
-  color: var(--copper);
+  color: var(--secondary);
 }
 
 .filter-field {
@@ -2065,7 +2051,7 @@ svg {
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
-  color: var(--copper);
+  color: var(--muted);
 }
 
 .filter-search input {
@@ -2292,10 +2278,16 @@ svg {
 
 /* ---- Make quick-filter rail: underlined tabs, not boxed chips ---- */
 /* Cars stacked in a single column. */
+/* One framed ledger, hairline-ruled between entries — a classifieds results
+   table, not a stack of floating cards. */
 .car-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card-white);
+  overflow: hidden;
 }
 
 .car-row {
@@ -2303,24 +2295,26 @@ svg {
   grid-template-columns: 244px minmax(0, 1fr) 226px;
   gap: 22px;
   padding: 18px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   background: var(--card-white);
-  box-shadow: var(--shadow-card);
-  transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+  transition: background 140ms ease;
+}
+
+.car-row:last-child {
+  border-bottom: 0;
 }
 
 .car-row:hover {
-  transform: translateY(-2px);
-  border-color: rgba(53, 107, 77, 0.45);
-  box-shadow: 0 10px 24px -14px rgba(22, 31, 25, 0.28);
+  background: #fafbf7;
 }
 
 .car-row-media {
   position: relative;
   height: 196px;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 3px;
   background: linear-gradient(180deg, #fcfcfa, #efefe9);
 }
 
@@ -2403,10 +2397,10 @@ svg {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 11px;
+  padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card-white);
+  border-radius: 3px;
+  background: var(--warm-ivory);
   color: var(--secondary);
   font-size: 13px;
   font-weight: 600;
@@ -2415,7 +2409,7 @@ svg {
 .car-spec svg {
   width: 16px;
   height: 16px;
-  color: var(--copper);
+  color: var(--muted);
 }
 
 /* "ეძებს" — label + text, no box (per design). */
@@ -2433,7 +2427,7 @@ svg {
   flex-direction: column;
   gap: 14px;
   padding-left: 20px;
-  border-left: 1px dashed #b5b5a7;
+  border-left: 1px solid var(--border);
 }
 
 .trade-deal .car-row-offer {
@@ -2453,8 +2447,8 @@ svg {
   align-items: center;
   gap: 9px;
   margin-top: auto;
-  padding: 13px 16px;
-  border-radius: 12px;
+  padding: 12px 14px;
+  border-radius: 3px;
   font-size: 15px;
   font-weight: 800;
   line-height: 1.2;
@@ -3673,12 +3667,12 @@ p {
 }
 
 .filter-group-title {
-  padding: 0;
-  color: var(--copper);
-  font-size: 12px;
+  padding: 0 0 2px;
+  color: var(--graphite);
+  font-size: 12.5px;
   font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .more-filters {
