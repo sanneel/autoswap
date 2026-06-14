@@ -434,7 +434,7 @@ async function renderThread(body, conversationId) {
       ${messages.length ? messages.map(messageBubble).join('') : '<p class="msg-empty">დაიწყე საუბარი — შეთანხმდით სად და როდის ნახავთ მანქანებს.</p>'}
     </div>
     <form class="msg-form" id="msg-form">
-      <input type="text" name="body" maxlength="2000" autocomplete="off" placeholder="დაწერე შეტყობინება..." required>
+      <input type="text" name="body" maxlength="2000" autocomplete="off" placeholder="დაწერე შეტყობინება…" required>
       <button class="btn btn-primary" type="submit">გაგზავნა</button>
     </form>
   `;

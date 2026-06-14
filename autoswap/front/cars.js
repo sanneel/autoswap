@@ -114,7 +114,7 @@ function comboField(kind, labelText, value, placeholder, disabled = false) {
   const disabledAttr = disabled ? ' disabled aria-disabled="true"' : '';
   const disabledClass = disabled ? ' is-disabled' : '';
   const clearHidden = disabled || !value ? ' hidden' : '';
-  const displayPlaceholder = disabled ? 'ჯერ აირჩიე მარკა...' : placeholder;
+  const displayPlaceholder = disabled ? 'ჯერ აირჩიე მარკა…' : placeholder;
   return `
     <div class="filter-field">
       <span class="filter-label">${labelText}</span>
@@ -176,8 +176,8 @@ function FiltersSidebar(count) {
         <fieldset class="filter-group">
           <legend class="filter-group-title">რას ეძებ</legend>
 
-          ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა...')}
-          ${comboField('model', 'მოდელი', f.model, 'მოძებნე მოდელი...', !f.makeId)}
+          ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა…')}
+          ${comboField('model', 'მოდელი', f.model, 'მოძებნე მოდელი…', !f.makeId)}
           ${selectField('category', 'მანქანის ტიპი', categories, f.category, 'ყველა ტიპი', CATEGORY_LABELS)}
 
           <div class="filter-field">
@@ -195,7 +195,7 @@ function FiltersSidebar(count) {
               <label class="filter-field">
                 <span class="filter-label">ძებნა</span>
                 <span class="filter-search">${icons.search}
-                  <input type="search" name="query" value="${escapeHtml(f.query || '')}" placeholder="მარკა, მოდელი, ქალაქი...">
+                  <input type="search" name="query" value="${escapeHtml(f.query || '')}" placeholder="მარკა, მოდელი, ქალაქი…">
                 </span>
               </label>
               ${selectField('transmission', 'გადაცემათა კოლოფი', transmissions, f.transmission, 'ყველა', TRANSMISSION_LABELS)}
@@ -279,14 +279,14 @@ function MyCarStrip() {
   const myCar = getMyCar();
   if (!myCar) {
     return `
-      <section class="mycar-strip container" id="mycar-strip">
+      <section class="mycar-panel" id="mycar-strip">
         <div class="mycar-cta">
           <span class="mycar-icon">${icons.car}</span>
           <div class="mycar-copy">
             <strong>დაამატე შენი მანქანა — ნახე ვინ ეძებს მას</strong>
             <small>60 წამი · ფასის დადება არ გჭირდება · შეთავაზებები მოდის პირდაპირ შენთან</small>
           </div>
-          <button type="button" class="btn btn-primary mycar-btn" data-mycar-edit>${icons.plus} დამატება</button>
+          <button type="button" class="btn btn-accent mycar-btn" data-mycar-edit>${icons.plus} დამატება</button>
         </div>
       </section>
     `;
@@ -295,7 +295,7 @@ function MyCarStrip() {
   const label = `${myCar.make} ${myCar.model || ''}`.trim() + (myCar.year ? ` · ${myCar.year}` : '');
   const demand = demandCount();
   return `
-    <section class="mycar-strip container" id="mycar-strip">
+    <section class="mycar-panel" id="mycar-strip">
       <div class="mycar-active">
         <span class="mycar-icon">${icons.car}</span>
         <div class="mycar-copy">
@@ -377,6 +377,7 @@ function CarRow(car) {
           <img src="${car.image}" alt="${car.make} ${car.model}" loading="lazy">
         </a>
         ${car.freshness ? `<span class="fresh-tag">${car.freshness}</span>` : ''}
+        <button class="save-btn" type="button" aria-label="${car.make} ${car.model} შენახვა">${icons.heart}</button>
       </div>
 
       <div class="car-row-body">
@@ -388,16 +389,17 @@ function CarRow(car) {
           ${matchBadge(match)}
         </div>
         <div class="stat-row stat-row--card">${statRow}</div>
-        ${car.openToOffers ? '' : `
+      </div>
+
+      <div class="trade-deal">
+        ${car.openToOffers
+          ? `<div class="trade-wants trade-wants--open"><span class="wanted-label">ეძებს</span><p class="deal-open">${escapeHtml(car.wants)}</p></div>`
+          : `
         <div class="trade-wants">
           <span class="wanted-label">ეძებს</span>
           <div class="wants-chips">${wantsChips(car)}</div>
         </div>`}
         ${cashLine(car)}
-      </div>
-
-      <div class="car-row-aside">
-        <button class="save-btn" type="button" aria-label="${car.make} ${car.model} შენახვა">${icons.heart}</button>
         <button class="btn btn-primary car-row-offer" type="button" data-offer data-id="${car.id}" data-make="${car.make}" data-model="${car.model}">${icons.swap} შესთავაზე გაცვლა</button>
       </div>
 
@@ -476,20 +478,22 @@ function CatalogPage() {
   return `
     ${Header({ active: 'listings' })}
     <main class="catalog-shell">
-      <div class="catalog-intro">
-        <div class="container">
-          <h1>გაცვალე შენი მანქანა სასურველზე</h1>
-          <p>ნახე ვინ რას ცვლის, რა სხვაობით — და გაუგზავნე სტრუქტურირებული შეთავაზება.</p>
+      <div class="catalog-hero">
+        <div class="container catalog-hero-inner">
+          <div class="catalog-hero-copy">
+            <h1>გაცვალე შენი მანქანა სასურველზე</h1>
+            <p>ნახე ვინ რას ცვლის, რა სხვაობით — და გაუგზავნე სტრუქტურირებული შეთავაზება.</p>
+            ${TrustNote()}
+          </div>
+          ${MyCarStrip()}
         </div>
       </div>
-      ${MyCarStrip()}
       <section class="catalog container">
         ${FiltersSidebar(filtered.length)}
         <div class="filters-overlay" id="filters-overlay" hidden></div>
         <div class="results">
-          ${ResultsHead(filtered.length)}
-          ${TrustNote()}
           <nav class="make-chips" id="make-chips" aria-label="მარკები">${chipsHTML()}</nav>
+          ${ResultsHead(filtered.length)}
           <div class="car-list" id="car-list">
             ${slice.length ? slice.map(CarRow).join('') : emptyStateHTML()}
           </div>
@@ -879,7 +883,7 @@ function setModelComboDisabled(disabled) {
   if (input) {
     input.disabled = disabled;
     input.setAttribute('aria-disabled', String(disabled));
-    input.placeholder = disabled ? 'ჯერ აირჩიე მარკა...' : (input.dataset.placeholder || 'მოძებნე მოდელი...');
+    input.placeholder = disabled ? 'ჯერ აირჩიე მარკა…' : (input.dataset.placeholder || 'მოძებნე მოდელი…');
   }
   if (disabled) {
     if (clear) clear.hidden = true;

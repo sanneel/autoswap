@@ -5,13 +5,15 @@
    demo submit. Edit mode: sell.html?id=<own vehicle uuid>. */
 const {
   Header, Footer, icons, sb, toast, escapeAttr, isUuid,
-  authReady, bustListingCaches, searchMakes, searchModels,
+  authReady, getAuthUser, onAuth, openAuthModal,
+  bustListingCaches, searchMakes, searchModels, FUEL_LABELS,
 } = window.AutoSwap;
 
 const MAX_PHOTOS = 6;
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const THIS_YEAR = new Date().getFullYear();
+const CITIES = ['თბილისი', 'ბათუმი', 'ქუთაისი', 'რუსთავი', 'გორი', 'ზუგდიდი', 'ფოთი', 'თელავი'];
 
 const editId = (() => {
   const raw = new URLSearchParams(window.location.search).get('id') || '';
@@ -26,7 +28,14 @@ function fieldRows(vehicle, prefs, wantsValue) {
   const p = prefs || {};
   const sel = (value, current) => (String(value) === String(current ?? '') ? ' selected' : '');
   return `
-    <div class="sell-section">
+    <div class="voice-fill" id="voice-fill" hidden>
+      <button type="button" class="voice-btn" id="voice-btn" aria-label="ხმით შევსება">${icons.mic}</button>
+      <div class="voice-copy">
+        <strong>შეავსე ხმით</strong>
+        <small id="voice-hint">დააჭირე მიკროფონს და თქვი: „BMW 530, 2020 წელი, 90 ათასი კმ, ბენზინი, ავტომატიკა, თბილისი“</small>
+      </div>
+    </div>
+    <div class="sell-section sell-section--car">
       <h2>ავტომობილი</h2>
       <div class="sell-grid">
         <label class="field"><span>მარკა *</span>
@@ -66,32 +75,20 @@ function fieldRows(vehicle, prefs, wantsValue) {
             <option value="universal"${sel('universal', v.category)}>უნივერსალი</option>
           </select>
         </label>
-        <label class="field"><span>მდგომარეობა *</span>
-          <select name="condition" required>
-            <option value="excellent"${sel('excellent', v.condition)}>იდეალური</option>
-            <option value="good"${sel('good', v.condition) || (!v.condition ? ' selected' : '')}>კარგი</option>
-            <option value="fair"${sel('fair', v.condition)}>საშუალო</option>
-            <option value="needs_work"${sel('needs_work', v.condition)}>საჭიროებს შეკეთებას</option>
-          </select>
-        </label>
         <label class="field"><span>ქალაქი *</span>
           <select name="city">
-            ${['თბილისი', 'ბათუმი', 'ქუთაისი', 'რუსთავი', 'გორი', 'ზუგდიდი', 'ფოთი', 'თელავი']
-              .map((c) => `<option value="${c}"${sel(c, v.city)}>${c}</option>`).join('')}
+            ${CITIES.map((c) => `<option value="${c}"${sel(c, v.city)}>${c}</option>`).join('')}
           </select>
         </label>
-        <label class="field"><span>სავარაუდო ღირებულება (₾) *</span>
-          <input name="estimatedValue" type="number" min="1" required placeholder="35000" value="${v.estimated_value ?? ''}"></label>
         <label class="field"><span>ძრავი (ლ)</span>
           <input name="engineSize" type="number" min="0.1" max="9.9" step="0.1" placeholder="2.0" value="${v.engine_size ?? ''}"></label>
-        <label class="field"><span>ცხ. ძალა</span>
-          <input name="powerHp" type="number" min="1" max="2000" placeholder="190" value="${v.power_hp ?? ''}"></label>
-        <label class="field"><span>ფერი</span>
-          <input name="color" maxlength="30" placeholder="შავი" value="${escapeAttr(v.color || '')}"></label>
       </div>
+      <!-- Active listings require a condition (DB check); the field left the
+           form, so a sensible default rides along invisibly. -->
+      <input type="hidden" name="condition" value="${escapeAttr(v.condition || 'good')}">
     </div>
 
-    <div class="sell-section">
+    <div class="sell-section sell-section--terms">
       <h2>რა გინდა სანაცვლოდ</h2>
       <div class="sell-grid">
         <label class="field"><span>სასურველი მანქანა</span>
@@ -109,9 +106,9 @@ function fieldRows(vehicle, prefs, wantsValue) {
       </div>
     </div>
 
-    <div class="sell-section">
+    <div class="sell-section sell-section--details">
       <h2>დეტალები</h2>
-      <label class="field"><span>აღწერა</span><textarea name="description" rows="4" maxlength="2000" placeholder="მოკლე აღწერა მანქანის მდგომარეობაზე...">${escapeAttr(v.description || '')}</textarea></label>
+      <label class="field"><span>აღწერა</span><textarea name="description" rows="2" maxlength="2000" placeholder="მოკლე აღწერა მანქანის მდგომარეობაზე…">${escapeAttr(v.description || '')}</textarea></label>
       <div class="field">
         <span>ფოტოები</span>
         ${existingPhotos.length ? `<div class="upload-previews upload-previews--existing" id="existing-photos">
@@ -136,19 +133,27 @@ function SellPage(vehicle, prefs, wantsValue) {
   return `
     ${Header({ active: 'sell' })}
     <main class="sell-shell">
-      <section class="container sell">
-        <div class="sell-head">
+      <div class="sell-hero">
+        <div class="container sell-head">
           <h1>${editId ? 'განცხადების რედაქტირება' : 'დაამატე შენი ავტომობილი'}</h1>
           <p class="sell-sub">${editId ? 'შეცვალე დეტალები — ცვლილებები მაშინვე გამოჩნდება ფიდში.' : 'აღწერე მანქანა და რა გინდა სანაცვლოდ — განცხადება გამოჩნდება გაცვლების ფიდში.'}</p>
         </div>
-        <form class="sell-form" id="sell-form" novalidate>
-          ${fieldRows(vehicle, prefs, wantsValue)}
-          <p class="auth-error" id="sell-error" role="alert" hidden></p>
-          <div class="sell-actions">
-            <a class="btn btn-ghost" href="${editId ? 'account.html' : 'cars.html'}">გაუქმება</a>
-            <button class="btn btn-primary" type="submit" id="sell-submit">${icons.plus} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
-          </div>
-        </form>
+      </div>
+      <section class="container sell">
+        <div class="sell-layout">
+          <form class="sell-form" id="sell-form" novalidate>
+            ${fieldRows(vehicle, prefs, wantsValue)}
+            <p class="auth-error" id="sell-error" role="alert" hidden></p>
+            <div class="sell-actions">
+              <a class="btn btn-ghost" href="${editId ? 'account.html' : 'cars.html'}">გაუქმება</a>
+              <button class="btn btn-accent" type="submit" id="sell-submit">${icons.plus} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
+            </div>
+          </form>
+          <aside class="sell-preview" aria-label="განცხადების გადახედვა">
+            <p class="sell-preview-label">ასე გამოჩნდება ფიდში</p>
+            <div id="sell-preview-card"></div>
+          </aside>
+        </div>
       </section>
     </main>
     ${Footer()}
@@ -176,9 +181,9 @@ function GatePanel(title, text, actions) {
 function DemoSuccess(make, model) {
   const name = make ? `${make} ${model}`.trim() : 'შენი ავტომობილი';
   return GatePanel(
-    'შენი განცხადება მიღებულია 🎉',
-    `${escapeAttr(name)} დაემატება გაცვლების ფიდში ბექენდის ჩართვისთანავე. <span class="offer-demo-note">დემო რეჟიმი — განცხადება ჯერ არ ინახება.</span>`,
-    '<a class="btn btn-primary" href="cars.html">ნახე გაცვლები</a><a class="btn btn-ghost" href="sell.html">დაამატე კიდევ ერთი</a>',
+    'დემო რეჟიმი — განცხადება არ შენახულა',
+    `${escapeAttr(name)} ფიდში ვერ მოხვდება, რადგან შენი სესია სატესტოა (SMS კოდი 1234). რეალური შენახვისთვის საჭიროა ნამდვილი ავტორიზაცია — ჩართე Google/Apple პროვაიდერი ან SMS პროვაიდერი Supabase-ის დეშბორდში და შედი თავიდან.`,
+    '<a class="btn btn-primary" href="login.html?next=sell.html">ნამდვილი შესვლა</a><a class="btn btn-ghost" href="cars.html">ნახე გაცვლები</a>',
   );
 }
 
@@ -221,6 +226,10 @@ function bindUploadZone() {
       `)
       .join('');
     previews.hidden = !pickedFiles.length;
+
+    if (previewPhotoUrl) URL.revokeObjectURL(previewPhotoUrl);
+    previewPhotoUrl = pickedFiles[0] ? URL.createObjectURL(pickedFiles[0]) : null;
+    updatePreview(document.querySelector('#sell-form'));
   });
 
   document.querySelector('#existing-photos')?.addEventListener('click', (event) => {
@@ -229,6 +238,7 @@ function bindUploadZone() {
     const fig = btn.closest('[data-photo]');
     removedPhotoIds.add(fig.dataset.photo);
     fig.remove();
+    updatePreview(document.querySelector('#sell-form'));
   });
 }
 
@@ -269,6 +279,498 @@ function bindCatalogSuggestions() {
   if (makeInput.value) fillMakes(makeInput.value);
 }
 
+/* ---- live card preview: the form mirrored as a feed card ---- */
+let previewPhotoUrl = null; // objectURL of the first picked file
+
+function cashLine(mode, amount) {
+  const gel = Number(amount) > 0 ? `${Number(amount).toLocaleString('en-US')} ₾` : '';
+  if (mode === 'add_money') return { type: 'add', icon: icons.trendUp, text: gel ? `ამატებს: +${gel}` : 'ამატებს თანხას' };
+  if (mode === 'ask_money') return { type: 'ask', icon: icons.trendDown, text: gel ? `ითხოვს: +${gel}` : 'ითხოვს თანხას' };
+  if (mode === 'flexible') return { type: 'flexible', icon: icons.swap, text: 'სხვაობა შეთანხმებით' };
+  return { type: 'none', icon: icons.equals, text: 'თანაბარი გაცვლა' };
+}
+
+function previewCardHTML(form) {
+  const val = (name) => String(new FormData(form).get(name) || '').trim();
+  const title = [val('make'), val('model')].filter(Boolean).join(' ') || 'შენი მანქანა';
+  const mileage = val('mileage') ? `${Number(val('mileage')).toLocaleString('en-US')} კმ` : '';
+  const meta = [val('year'), mileage, FUEL_LABELS[val('fuel')] || ''].filter(Boolean).join(' · ');
+  const wants = val('desired').split(',').map((s) => s.trim()).filter(Boolean).join(' / ');
+  const cash = cashLine(val('cashMode'), val('amount'));
+  const photo = previewPhotoUrl
+    || (existingPhotos.find((p) => !removedPhotoIds.has(p.id)) || {}).url
+    || null;
+
+  return `
+    <article class="listing-card sell-preview-card">
+      <div class="listing-media">
+        ${photo
+          ? `<img src="${escapeAttr(photo)}" alt="">`
+          : `<div class="preview-photo-empty">${icons.car}<span>დაამატე ფოტო</span></div>`}
+      </div>
+      <div class="listing-body">
+        <div>
+          <h3>${escapeAttr(title)}</h3>
+          ${meta ? `<p>${escapeAttr(meta)}</p>` : '<p class="preview-muted">წელი · გარბენი · საწვავი</p>'}
+          <span class="listing-city">${icons.location}${escapeAttr(val('city') || 'ქალაქი')}</span>
+        </div>
+        ${wants ? `<p class="listing-wants"><span>ეძებს</span>${escapeAttr(wants)}</p>` : ''}
+        <p class="trade-cash trade-cash--${cash.type}">${cash.icon}<span>${cash.text}</span></p>
+        <div class="listing-foot">
+          <span class="btn btn-accent listing-offer is-preview">შეთავაზება</span>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function updatePreview(form) {
+  const slot = document.querySelector('#sell-preview-card');
+  if (slot && form) slot.innerHTML = previewCardHTML(form);
+}
+
+function bindPreview(form) {
+  if (!form) return;
+  updatePreview(form);
+  form.addEventListener('input', () => updatePreview(form));
+  form.addEventListener('change', () => updatePreview(form));
+}
+
+/* ---- voice fill: speak the listing, the form types itself ----
+   Web Speech API (Chrome/Edge/Safari), lang ka-GE. One tap records an
+   utterance; the transcript is parsed into form fields (year, mileage,
+   fuel, transmission, category, city, make/model, engine size) and the
+   raw text lands in the description so nothing said is lost. */
+const FUEL_STEMS = { 'ბენზინ': 'petrol', 'დიზელ': 'diesel', 'ჰიბრიდ': 'hybrid', 'ელექტრო': 'electric', 'გაზ': 'lpg' };
+const TRANSMISSION_STEMS = { 'ავტომატ': 'automatic', 'მექანიკ': 'manual', 'ტიპტრონიკ': 'tiptronic', 'ვარიატორ': 'variator' };
+const CATEGORY_STEMS = { 'სედან': 'sedan', 'ჯიპ': 'suv', 'კროსოვერ': 'crossover', 'ჰეჩბექ': 'hatchback', 'კუპე': 'coupe', 'მინივენ': 'minivan', 'პიკაპ': 'pickup', 'უნივერსალ': 'universal' };
+const CITY_STEMS = ['თბილის', 'ბათუმ', 'ქუთაის', 'რუსთავ', 'გორ', 'ზუგდიდ', 'ფოთ', 'თელავ'];
+/* Make/model come ONLY from the catalog (car_makes / car_models): speech is
+   fuzzy-matched against real DB rows, so "BM" resolves to BMW and nothing
+   that doesn't exist in the catalog is ever written into the fields. */
+const GE_TO_LAT = {
+  ა: 'a', ბ: 'b', გ: 'g', დ: 'd', ე: 'e', ვ: 'v', ზ: 'z', თ: 't', ი: 'i',
+  კ: 'k', ლ: 'l', მ: 'm', ნ: 'n', ო: 'o', პ: 'p', ჟ: 'zh', რ: 'r', ს: 's',
+  ტ: 't', უ: 'u', ფ: 'f', ქ: 'k', ღ: 'gh', ყ: 'k', შ: 'sh', ჩ: 'ch',
+  ც: 'ts', ძ: 'dz', წ: 'ts', ჭ: 'ch', ხ: 'kh', ჯ: 'j', ჰ: 'h',
+};
+
+// Georgian spellings whose transliteration lands too far from the Latin name.
+const MAKE_ALIASES = {
+  'ბმვ': 'bmw', 'ბემვე': 'bmw', 'მერსედეს': 'mercedesbenz', 'შევროლეტ': 'chevrolet',
+  'ფოლკსვაგენ': 'volkswagen', 'ფოლცვაგენ': 'volkswagen', 'ტოიოტ': 'toyota',
+  'ჰიუნდა': 'hyundai', 'ჰუნდა': 'hyundai', 'სიტროენ': 'citroen', 'პეჟო': 'peugeot',
+  'რენო': 'renault', 'მიცუბიშ': 'mitsubishi', 'დაიჰატსუ': 'daihatsu',
+};
+
+function translit(value) {
+  return [...String(value).toLowerCase()].map((c) => GE_TO_LAT[c] ?? c).join('');
+}
+
+function normName(value) {
+  return translit(value).replace(/[^a-z0-9]/g, '');
+}
+
+function editDistance(a, b) {
+  if (Math.abs(a.length - b.length) > 3) return 99;
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+let catalogMakesPromise = null;
+function loadCatalogMakes() {
+  if (!catalogMakesPromise) {
+    catalogMakesPromise = searchMakes('', 500)
+      .then((makes) => makes.map((m) => ({ ...m, norm: normName(m.name) })));
+  }
+  return catalogMakesPromise;
+}
+
+const catalogModelsCache = new Map();
+function loadCatalogModels(makeId) {
+  if (!catalogModelsCache.has(makeId)) {
+    catalogModelsCache.set(makeId, searchModels('', makeId, 400)
+      .then((models) => models.map((m) => ({ ...m, norm: normName(m.name) }))));
+  }
+  return catalogModelsCache.get(makeId);
+}
+
+// Common Georgian function/domain words never name a car.
+const SPEECH_STOP_WORDS = new Set([
+  'და', 'ან', 'არის', 'მაქვს', 'მინდა', 'მყავს', 'ეს', 'ის', 'რომ', 'კმ',
+  'წლის', 'წელი', 'წელს', 'გარბენი', 'ძრავი', 'ლიტრი', 'მთელი', 'ფერი',
+]);
+
+// Spoken-token candidates: single tokens and two-token spans ("alfa romeo",
+// "e class"), normalized; Georgian aliases applied first. Short candidates
+// are only trusted when typed in Latin ("BM") — short Georgian words are
+// function words, not car names.
+function speechCandidates(tokens) {
+  const out = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (SPEECH_STOP_WORDS.has(tokens[i])) continue;
+    const isLatin = /^[a-z0-9.-]+$/.test(tokens[i]);
+    const alias = Object.entries(MAKE_ALIASES).find(([stem]) => tokens[i].startsWith(stem));
+    const norm = alias ? alias[1] : normName(tokens[i]);
+    if (norm.length >= (isLatin ? 2 : 3)) out.push({ norm, index: i, span: 1 });
+    if (i + 1 < tokens.length && !SPEECH_STOP_WORDS.has(tokens[i + 1])) {
+      const bigram = normName(tokens[i] + tokens[i + 1]);
+      if (bigram.length >= 3) out.push({ norm: bigram, index: i, span: 2 });
+    }
+  }
+  return out;
+}
+
+// exact > prefix (≥2 chars) > small edit distance; null when nothing is close.
+function bestNameMatch(candidate, rows) {
+  let best = null;
+  for (const row of rows) {
+    let cost;
+    if (candidate === row.norm) cost = 0;
+    else if (row.norm.startsWith(candidate) && candidate.length >= 2) cost = 0.5;
+    else {
+      const tolerance = candidate.length >= 5 ? 2 : candidate.length >= 3 ? 1 : 0;
+      const d = editDistance(candidate, row.norm);
+      if (d > tolerance) continue;
+      cost = 1 + d;
+    }
+    if (!best || cost < best.cost) best = { row, cost };
+  }
+  return best;
+}
+
+function matchMake(tokens, makes) {
+  let best = null;
+  for (const cand of speechCandidates(tokens)) {
+    const hit = bestNameMatch(cand.norm, makes);
+    if (!hit) continue;
+    // Prefer cheaper matches; on ties, longer spoken evidence wins.
+    if (!best || hit.cost < best.cost || (hit.cost === best.cost && cand.norm.length > best.norm.length)) {
+      best = { make: hit.row, index: cand.index, span: cand.span, cost: hit.cost, norm: cand.norm };
+    }
+  }
+  return best;
+}
+
+// The model is spoken right after the make — match the next few tokens
+// against that make's real model list only.
+function matchModel(tokens, afterIndex, models) {
+  const windowTokens = tokens.slice(afterIndex, afterIndex + 3);
+  let best = null;
+  for (const cand of speechCandidates(windowTokens)) {
+    const hit = bestNameMatch(cand.norm, models);
+    if (!hit) continue;
+    if (!best || hit.cost < best.cost || (hit.cost === best.cost && cand.norm.length > best.norm.length)) {
+      best = { model: hit.row, cost: hit.cost, norm: cand.norm };
+    }
+  }
+  return best ? best.model : null;
+}
+
+/* ---- Georgian spoken numbers → digits ----
+   "ორი ათას თვრამეტი" → 2018, "ას ოცი ათასი" → 120000, "ოცდახუთი" → 25. */
+const NUM_STEMS = [
+  ['ცხრაას', 900], ['რვაას', 800], ['შვიდას', 700], ['ექვსას', 600], ['ხუთას', 500],
+  ['ოთხას', 400], ['სამას', 300], ['ორას', 200], ['ას', 100],
+  ['თერთმეტ', 11], ['თორმეტ', 12], ['ცამეტ', 13], ['თოთხმეტ', 14], ['თხუთმეტ', 15],
+  ['თექვსმეტ', 16], ['ჩვიდმეტ', 17], ['თვრამეტ', 18], ['ცხრამეტ', 19],
+  ['ათ', 10], ['ცხრა', 9], ['რვა', 8], ['შვიდ', 7], ['ექვს', 6], ['ხუთ', 5],
+  ['ოთხ', 4], ['სამ', 3], ['ორ', 2], ['ერთ', 1],
+];
+const VIGESIMAL_PREFIXES = [['ოთხმოცდა', 80], ['სამოცდა', 60], ['ორმოცდა', 40], ['ოცდა', 20]];
+const VIGESIMAL_TENS = [['ოთხმოც', 80], ['სამოც', 60], ['ორმოც', 40], ['ოც', 20]];
+
+function wordNum(token) {
+  if (!token || /\d/.test(token) || token.startsWith('ათას')) return null;
+  for (const [prefix, base] of VIGESIMAL_PREFIXES) {
+    if (token.startsWith(prefix)) {
+      const rest = wordNum(token.slice(prefix.length));
+      return rest == null ? base : base + rest;
+    }
+  }
+  for (const [stem, value] of VIGESIMAL_TENS) {
+    if (token === stem || token === `${stem}ი`) return value;
+  }
+  for (const [stem, value] of NUM_STEMS) {
+    if (token === stem || token === `${stem}ი`) return value;
+  }
+  return null;
+}
+
+// Collapses runs of spoken numbers (words, and a digit multiplier before
+// "ათასი") into single digit tokens, so the rest of the parser sees digits.
+function normalizeNumbers(tokens) {
+  const out = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const token = tokens[i];
+    const startsRun = wordNum(token) != null
+      || token.startsWith('ათას')
+      || (/^\d+$/.test(token) && tokens[i + 1] && tokens[i + 1].startsWith('ათას'));
+    if (!startsRun) {
+      out.push(token);
+      i += 1;
+      continue;
+    }
+    let total = 0;
+    let current = 0;
+    while (i < tokens.length) {
+      const t = tokens[i];
+      if (t.startsWith('ათას')) {
+        current = (current || 1) * 1000;
+        total += current;
+        current = 0;
+        i += 1;
+        continue;
+      }
+      const w = wordNum(t);
+      if (w != null) {
+        current += w;
+        i += 1;
+        continue;
+      }
+      if (/^\d+$/.test(t) && tokens[i + 1] && tokens[i + 1].startsWith('ათას') && total === 0 && current === 0) {
+        current = Number(t);
+        i += 1;
+        continue;
+      }
+      break;
+    }
+    total += current;
+    if (total > 0) out.push(String(total));
+  }
+  return out;
+}
+
+function flashField(form, name, value, filled) {
+  const input = form.querySelector(`[name="${name}"]`);
+  if (!input || value == null || value === '') return;
+  input.value = value;
+  input.classList.add('field-flash');
+  setTimeout(() => input.classList.remove('field-flash'), 1800);
+  filled.push(name);
+  // Programmatic .value writes don't fire events — the live preview needs one.
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function matchStem(tokens, stems) {
+  for (const [stem, value] of Object.entries(stems)) {
+    if (tokens.some((t) => t.startsWith(stem))) return value;
+  }
+  return null;
+}
+
+const FIELD_LABELS = {
+  make: 'მარკა', model: 'მოდელი', year: 'წელი', mileage: 'გარბენი',
+  fuel: 'საწვავი', transmission: 'ტრანსმისია', category: 'კატეგორია',
+  city: 'ქალაქი', engineSize: 'ძრავი',
+};
+
+// Speech spells big numbers as groups ("180 000") — glue them back together.
+// A 4-digit year never swallows a following group.
+function tokenize(text) {
+  const raw = String(text).toLowerCase().split(/[^a-z0-9ა-ჰ.,]+/).filter(Boolean);
+  const merged = [];
+  for (const t of raw) {
+    const prev = merged[merged.length - 1];
+    const prevIsYear = prev && prev.length === 4 && Number(prev) >= 1900;
+    if (/^\d{3}$/.test(t) && prev && /^\d{1,4}$/.test(prev) && !prevIsYear) {
+      merged[merged.length - 1] = prev + t;
+    } else {
+      merged.push(t);
+    }
+  }
+  return merged;
+}
+
+function numberNear(tokens, numbers, idx, test) {
+  for (const j of [idx - 1, idx + 1, idx - 2, idx + 2]) {
+    if (j >= 0 && j < numbers.length && test(numbers[j])) return numbers[j];
+  }
+  return null;
+}
+
+// Spoken engine sizes: "ორი და ხუთი" / "2 მთელი 5" → 2.5, "ორნახევარი" → 2.5.
+function spokenEngine(tokens) {
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.startsWith('ნახევარ')) {
+      const prev = Number(tokens[i - 1]);
+      if (Number.isInteger(prev) && prev > 0 && prev < 10) return prev + 0.5;
+    }
+    const half = [['ერთნახევარ', 1.5], ['ორნახევარ', 2.5], ['სამნახევარ', 3.5]].find(([s]) => t.startsWith(s));
+    if (half) return half[1];
+    if (t === 'და' || t.startsWith('მთელ')) {
+      const a = Number(tokens[i - 1]);
+      const b = Number(tokens[i + 1]);
+      if (Number.isInteger(a) && a > 0 && a < 10 && Number.isInteger(b) && b >= 0 && b <= 9) {
+        return Number(`${a}.${b}`);
+      }
+    }
+  }
+  return null;
+}
+
+async function parseTranscript(form, text) {
+  const filled = [];
+  const tokens = normalizeNumbers(tokenize(text));
+  const numbers = tokens.map((t) => Number(t.replace(',', '.')));
+  const stemIdx = (stems) => tokens.findIndex((t) => stems.some((s) => t.startsWith(s)));
+  const isYear = (n) => Number.isInteger(n) && n >= 1980 && n <= THIS_YEAR + 1;
+  const isMileage = (n) => Number.isInteger(n) && n >= 1000 && n <= 2000000;
+
+  // Spoken decimals first — they would otherwise read as separate integers.
+  let engine = spokenEngine(tokens);
+
+  // Context keywords beat bare-number guessing: "2012 წლის", "გარბენი 180000".
+  let year = null;
+  const yearCtx = stemIdx(['წელ', 'წლის']);
+  if (yearCtx !== -1) year = numberNear(tokens, numbers, yearCtx, isYear);
+
+  let mileage = null;
+  const kmCtx = stemIdx(['გარბენ', 'კილომეტრ', 'კმ']);
+  if (kmCtx !== -1) mileage = numberNear(tokens, numbers, kmCtx, (n) => isMileage(n) && n !== year);
+
+  if (engine == null) {
+    engine = numbers.find((n) => n > 0.5 && n < 10 && !Number.isInteger(n)) ?? null;
+  }
+  if (engine == null) {
+    const engCtx = stemIdx(['ძრავ', 'ლიტრ']);
+    if (engCtx !== -1) engine = numberNear(tokens, numbers, engCtx, (n) => n > 0.5 && n < 10);
+  }
+
+  // Fallback heuristics for bare numbers.
+  if (year == null) year = numbers.find(isYear) ?? null;
+  if (mileage == null) mileage = numbers.find((n) => isMileage(n) && n !== year) ?? null;
+
+  if (year != null) flashField(form, 'year', year, filled);
+  if (mileage != null) flashField(form, 'mileage', mileage, filled);
+  if (engine != null) flashField(form, 'engineSize', engine, filled);
+
+  flashField(form, 'fuel', matchStem(tokens, FUEL_STEMS), filled);
+  flashField(form, 'transmission', matchStem(tokens, TRANSMISSION_STEMS), filled);
+  flashField(form, 'category', matchStem(tokens, CATEGORY_STEMS), filled);
+
+  const cityIdx = CITY_STEMS.findIndex((stem) => tokens.some((t) => t.startsWith(stem)));
+  if (cityIdx !== -1) flashField(form, 'city', CITIES[cityIdx], filled);
+
+  // Make/model only from the catalog — never write unvalidated text.
+  try {
+    const makes = await loadCatalogMakes();
+    const makeHit = matchMake(tokens, makes);
+    if (makeHit) {
+      flashField(form, 'make', makeHit.make.name, filled);
+      const models = await loadCatalogModels(makeHit.make.id);
+      const model = matchModel(tokens, makeHit.index + makeHit.span, models);
+      if (model) flashField(form, 'model', model.name, filled);
+    }
+  } catch (_err) { /* catalog unavailable — leave make/model for typing */ }
+
+  return filled;
+}
+
+function bindVoiceFill(form) {
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const panel = document.querySelector('#voice-fill');
+  if (!panel || !SpeechRecognitionCtor || !form) return;
+  panel.hidden = false;
+
+  const btn = panel.querySelector('#voice-btn');
+  const hint = panel.querySelector('#voice-hint');
+  const defaultHint = hint.textContent;
+  let recognition = null;
+
+  const chips = (names) => names.map((n) => `✓ ${FIELD_LABELS[n] || n}`).join(' · ');
+
+  btn.addEventListener('click', () => {
+    if (recognition) {
+      recognition.stop();
+      return;
+    }
+    recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'ka-GE';
+    recognition.continuous = true; // keep listening through pauses, stop on tap
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    let finalText = '';
+    let parsedUpto = 0;
+    const filledAll = new Set();
+    const pendingParses = [];
+    let interimActive = false;
+
+    btn.classList.add('is-listening');
+    hint.textContent = 'გისმენ… თქვი დეტალები; დასასრულებლად ისევ დააჭირე.';
+
+    const refreshChips = () => {
+      if (!interimActive && filledAll.size) hint.textContent = chips([...filledAll]);
+    };
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (!result.isFinal) {
+          interim += result[0].transcript;
+          continue;
+        }
+        if (i >= parsedUpto) {
+          // Each finalized chunk fills fields immediately — while you talk.
+          finalText += `${result[0].transcript} `;
+          pendingParses.push(parseTranscript(form, result[0].transcript).then((names) => {
+            names.forEach((n) => filledAll.add(n));
+            refreshChips();
+          }));
+          parsedUpto = i + 1;
+        }
+      }
+      const heard = interim.trim();
+      interimActive = !!heard;
+      if (heard) hint.textContent = `🎙 ${heard}`;
+      else refreshChips();
+    };
+    recognition.onerror = (event) => {
+      hint.textContent = event.error === 'not-allowed'
+        ? 'მიკროფონზე წვდომა აკრძალულია — ჩართე ბრაუზერის ნებართვა.'
+        : 'ხმის ამოცნობა ვერ მოხერხდა — სცადე თავიდან.';
+    };
+    recognition.onend = async () => {
+      btn.classList.remove('is-listening');
+      recognition = null;
+      interimActive = false;
+      const text = finalText.trim();
+      if (!text) {
+        if (hint.textContent.startsWith('გისმენ')) hint.textContent = defaultHint;
+        return;
+      }
+      await Promise.allSettled(pendingParses);
+      // Nothing said gets lost: the whole transcript lands in the description.
+      const desc = form.querySelector('[name="description"]');
+      if (desc && !desc.value.trim()) {
+        desc.value = text;
+        desc.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      hint.textContent = filledAll.size
+        ? `${chips([...filledAll])} — გადაამოწმე და შეასწორე.`
+        : 'ველები ვერ ამოვიცანი — ნათქვამი ჩავწერე აღწერაში.';
+      toast(filledAll.size ? `ხმით შეივსო ${filledAll.size} ველი` : 'ჩაწერა აღწერაში გადავიდა');
+    };
+
+    try {
+      recognition.start();
+    } catch (_err) {
+      btn.classList.remove('is-listening');
+      recognition = null;
+    }
+  });
+}
+
 /* ---- validation + persistence ---- */
 function readForm(form) {
   const data = new FormData(form);
@@ -282,12 +784,9 @@ function readForm(form) {
     fuel_type: str('fuel'),
     transmission: str('transmission'),
     category: str('category') || null,
-    condition: str('condition'),
+    condition: str('condition') || 'good',
     city: str('city'),
-    estimated_value: num('estimatedValue'),
     engine_size: num('engineSize'),
-    power_hp: num('powerHp'),
-    color: str('color') || null,
     description: str('description') || null,
     cash_mode: str('cashMode') || 'none',
     cash_amount: num('amount') || 0,
@@ -300,8 +799,7 @@ function validate(values) {
   if (!values.year || values.year < 1980 || values.year > THIS_YEAR + 1) return `წელი უნდა იყოს 1980–${THIS_YEAR + 1} შუალედში.`;
   if (values.mileage == null || values.mileage < 0) return 'გარბენი უნდა იყოს დადებითი რიცხვი.';
   if (!values.fuel_type || !values.transmission) return 'საწვავი და ტრანსმისია სავალდებულოა.';
-  if (!values.city || !values.condition) return 'ქალაქი და მდგომარეობა სავალდებულოა.';
-  if (!values.estimated_value || values.estimated_value <= 0) return 'მიუთითე სავარაუდო ღირებულება.';
+  if (!values.city) return 'ქალაქი სავალდებულოა.';
   if (values.cash_amount < 0) return 'თანხა ვერ იქნება უარყოფითი.';
   return null;
 }
@@ -338,10 +836,7 @@ async function persist(user, values) {
     category: values.category,
     condition: values.condition,
     city: values.city,
-    estimated_value: values.estimated_value,
     engine_size: values.engine_size,
-    power_hp: values.power_hp,
-    color: values.color,
     description: values.description,
   };
 
@@ -426,6 +921,8 @@ async function renderReal(user) {
   document.querySelector('#app').innerHTML = SellPage(vehicle, prefs, wantsValue);
   bindUploadZone();
   bindCatalogSuggestions();
+  bindVoiceFill(document.querySelector('#sell-form'));
+  bindPreview(document.querySelector('#sell-form'));
 
   const form = document.querySelector('#sell-form');
   const errorBox = document.querySelector('#sell-error');
@@ -443,7 +940,7 @@ async function renderReal(user) {
 
     const submit = document.querySelector('#sell-submit');
     submit.disabled = true;
-    submit.textContent = 'ინახება...';
+    submit.textContent = 'ინახება…';
 
     try {
       const vehicleId = await persist(user, values);
@@ -460,9 +957,34 @@ async function renderReal(user) {
   });
 }
 
+// Signed out: the real form is visible but grayed out behind a login
+// prompt — the page looks alive, and one tap opens the auth modal.
+function renderLocked() {
+  document.querySelector('#app').innerHTML = SellPage(null, null, '');
+  updatePreview(document.querySelector('#sell-form'));
+  const section = document.querySelector('.sell');
+  section.classList.add('sell-locked');
+  const overlay = document.createElement('div');
+  overlay.className = 'sell-locked-overlay';
+  overlay.innerHTML = `
+    <div class="sell-locked-card">
+      <h2>ჯერ შესვლაა საჭირო</h2>
+      <p>დაამატე მანქანა ერთი SMS კოდით — შეთავაზებები პირდაპირ შენთან მოვა.</p>
+      <button class="btn btn-primary auth-submit" type="button" data-auth-open>შესვლა</button>
+    </div>`;
+  section.appendChild(overlay);
+  openAuthModal();
+  // Any successful sign-in (real or demo) unlocks the page.
+  onAuth((user) => {
+    if (user) window.location.reload();
+  });
+}
+
 function renderDemo() {
   document.querySelector('#app').innerHTML = SellPage(null, null, '');
   bindUploadZone();
+  bindVoiceFill(document.querySelector('#sell-form'));
+  bindPreview(document.querySelector('#sell-form'));
   document.querySelector('#sell-form')?.addEventListener('submit', (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -481,12 +1003,14 @@ async function init() {
   }
   const user = await authReady;
   if (!user) {
-    const next = encodeURIComponent(`sell.html${editId ? `?id=${editId}` : ''}`);
-    document.querySelector('#app').innerHTML = GatePanel(
-      'ჯერ შესვლაა საჭირო',
-      'განცხადების დასამატებლად შედი ერთჯერადი კოდით — ისე, რომ შეთავაზებები შენთან მოვიდეს.',
-      `<a class="btn btn-primary" href="login.html?next=${next}">შესვლა კოდით</a><a class="btn btn-ghost" href="cars.html">გაცვლების ნახვა</a>`,
-    );
+    // A demo session (SMS provider not configured) has no JWT, so it cannot
+    // write to Supabase — give it the labelled demo form, not a login wall.
+    const demoUser = getAuthUser();
+    if (demoUser && demoUser.demo) {
+      renderDemo();
+      return;
+    }
+    renderLocked();
     return;
   }
   renderReal(user);

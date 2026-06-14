@@ -3,27 +3,29 @@
   --deep-green-hover: #0D2717;
   --panel-green: #356B4D;
   --panel-green-soft: #427A5D;
-  --warm-ivory: #F3EBDC;
-  --soft-beige: #EAE0CF;
+  --warm-ivory: #F4F4EF;
+  --soft-beige: #E9E9E2;
   --card-white: #FFFFFF;
-  --border: #D9CDBA;
+  --border: #DBDBD2;
   --graphite: #161F19;
   --secondary: #565E54;
-  --muted: #828A7E;
-  --copper: #B87342;
-  --soft-copper: #F4E2D4;
+  --muted: #6A7166;
+  --copper: #A14E21;
+  --soft-copper: #F1F1EA;
   /* Semantic cash-state tokens: add = green, ask = red, none = light blue. */
   --cash-add-bg: #E2EFE3;   --cash-add-fg: #2E7741;
   --cash-ask-bg: #F6DFDB;   --cash-ask-fg: #B23A2E;
   --cash-none-bg: #E4EDF6;  --cash-none-fg: #3A6C8F;
-  --shadow-subtle: 0 18px 38px rgba(22, 31, 25, 0.12);
-  --shadow-card: 0 10px 24px rgba(22, 31, 25, 0.08);
-  --radius: 12px;
-  --radius-sm: 10px;
+  --shadow-subtle: 0 1px 2px rgba(22, 31, 25, 0.06);
+  --shadow-card: 0 1px 2px rgba(22, 31, 25, 0.05);
+  --radius: 8px;
+  --radius-sm: 6px;
   --container: 1280px;
-  --font: "Inter", "Noto Sans Georgian", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  /* Instrument-cluster numerals: digits in mono, Georgian falls back to Noto. */
-  --font-mono: "JetBrains Mono", "Noto Sans Georgian", ui-monospace, monospace;
+  /* Type system: Georgian serif display over a workhorse Georgian sans,
+     with true mono numerals — the instrument-cluster / logbook pairing. */
+  --font: "Noto Sans Georgian", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Noto Serif Georgian", Georgia, "Times New Roman", serif;
+  --font-mono: "Spline Sans Mono", "Noto Sans Georgian", ui-monospace, monospace;
 }
 
 *,
@@ -42,6 +44,7 @@ body {
   color: var(--graphite);
   background: var(--warm-ivory);
   font-family: var(--font);
+  font-variant-numeric: tabular-nums;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -73,6 +76,15 @@ button {
   cursor: pointer;
 }
 
+a,
+button,
+input,
+select,
+textarea,
+label {
+  touch-action: manipulation;
+}
+
 svg {
   width: 18px;
   height: 18px;
@@ -84,8 +96,13 @@ svg {
 }
 
 :focus-visible {
-  outline: 3px solid rgba(184, 115, 66, 0.34);
+  outline: 3px solid rgba(18, 53, 31, 0.35);
   outline-offset: 3px;
+}
+
+/* On the dark footer the green focus ring disappears — flip it to ivory. */
+.site-footer :focus-visible {
+  outline-color: rgba(244, 244, 239, 0.6);
 }
 
 .container {
@@ -102,12 +119,8 @@ svg {
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   font-size: 14px;
-  font-weight: 700;
-  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
+  font-weight: 600;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
 .btn-primary {
@@ -125,12 +138,25 @@ svg {
 }
 
 .btn-accent:hover {
-  background: #9f6035;
+  background: #8A421B;
+}
+
+/* In-card offer buttons stay quiet — the loud accent is reserved for
+   the page-level actions (header CTA, hero search). */
+.btn-accent.listing-offer {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--deep-green);
+}
+
+.btn-accent.listing-offer:hover {
+  background: var(--soft-beige);
+  border-color: var(--deep-green);
 }
 
 .btn-secondary,
 .btn-light {
-  background: #fffaf2;
+  background: #fcfcfa;
   color: var(--deep-green);
   border-color: var(--border);
 }
@@ -138,20 +164,6 @@ svg {
 .btn-secondary:hover,
 .btn-light:hover {
   background: var(--soft-beige);
-}
-
-.section-kicker {
-  margin: 0 0 8px;
-  color: var(--copper);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/* Keep brand name in its proper casing inside uppercased kickers. */
-.brandcase {
-  text-transform: none;
 }
 
 .section-head {
@@ -166,8 +178,10 @@ svg {
 .split-section h2 {
   margin: 0;
   color: var(--deep-green);
-  font-size: clamp(24px, 2.5vw, 32px);
-  line-height: 1.15;
+  font-family: var(--font-display);
+  font-size: clamp(23px, 2.4vw, 30px);
+  font-weight: 600;
+  line-height: 1.22;
   letter-spacing: 0;
 }
 
@@ -195,7 +209,10 @@ svg {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(247, 241, 231, 0.94);
+  background: rgba(244, 244, 239, 0.94);
+  /* Deep-green top edge: the one place the brand color touches the
+     viewport chrome, like a bound book spine. */
+  border-top: 3px solid var(--deep-green);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(14px);
 }
@@ -215,29 +232,42 @@ svg {
   white-space: nowrap;
 }
 
-.brand-logo {
-  width: clamp(150px, 13vw, 220px);
-  height: auto;
-  max-height: 42px;
-  object-fit: contain;
-  object-position: left center;
+/* Typographic wordmark: small green swap tile + "autoswap" set in the site face. */
+.brand {
+  gap: 9px;
 }
 
-.brand-mark {
+.brand-tile {
   display: grid;
-  width: 34px;
-  height: 34px;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
   place-items: center;
-  border-radius: 10px 10px 14px 10px;
+  border-radius: 7px;
   background: var(--deep-green);
-  color: var(--warm-ivory);
-  font-size: 18px;
-  font-weight: 800;
-  transform: skew(-8deg);
+  color: #fff;
 }
 
-.brand-mark::first-letter {
-  transform: skew(8deg);
+.brand-tile svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+}
+
+/* Two-tone logotype everywhere — deep green "auto", copper "swap" —
+   so the header mark matches the footer instead of going monochrome. */
+.brand-word {
+  color: var(--deep-green);
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1;
+}
+
+.brand-word b {
+  color: var(--copper);
+  font-weight: 700;
 }
 
 .site-nav {
@@ -288,7 +318,7 @@ svg {
   min-height: 645px;
   padding: 52px 0 34px;
   scroll-margin-top: 80px;
-  border-bottom: 1px solid rgba(222, 211, 196, 0.7);
+  border-bottom: 1px solid rgba(219, 219, 210, 0.7);
   isolation: isolate;
 }
 
@@ -297,8 +327,8 @@ svg {
   inset: 0;
   z-index: -2;
   background-image:
-    linear-gradient(180deg, rgba(247, 241, 231, 0.58), rgba(247, 241, 231, 0.32) 44%, rgba(247, 241, 231, 0.82) 100%),
-    linear-gradient(90deg, rgba(247, 241, 231, 0.56), rgba(247, 241, 231, 0.16) 46%, rgba(247, 241, 231, 0.54)),
+    linear-gradient(180deg, rgba(244, 244, 239, 0.58), rgba(244, 244, 239, 0.32) 44%, rgba(244, 244, 239, 0.82) 100%),
+    linear-gradient(90deg, rgba(244, 244, 239, 0.56), rgba(244, 244, 239, 0.16) 46%, rgba(244, 244, 239, 0.54)),
     url("../assets/hero-road-bg.png");
   background-position: center;
   background-size: cover;
@@ -310,7 +340,7 @@ svg {
   inset: auto 0 0;
   z-index: -1;
   height: 46%;
-  background: linear-gradient(180deg, rgba(247, 241, 231, 0), rgba(247, 241, 231, 0.98));
+  background: linear-gradient(180deg, rgba(244, 244, 239, 0), rgba(244, 244, 239, 0.98));
   pointer-events: none;
 }
 
@@ -331,10 +361,11 @@ svg {
 .hero-copy h1 {
   margin: 0;
   color: var(--deep-green);
-  font-size: clamp(38px, 4.5vw, 58px);
-  font-weight: 800;
-  line-height: 1.04;
-  letter-spacing: -0.03em;
+  font-family: var(--font-display);
+  font-size: clamp(35px, 4.2vw, 54px);
+  font-weight: 600;
+  line-height: 1.14;
+  letter-spacing: -0.01em;
 }
 
 .hero-copy p {
@@ -370,7 +401,7 @@ svg {
   width: 64px;
   height: 1px;
   margin-left: 12px;
-  background: rgba(184, 115, 66, 0.6);
+  background: rgba(161, 78, 33, 0.55);
 }
 
 .swap-label-left {
@@ -400,7 +431,7 @@ svg {
   right: 13%;
   bottom: 54px;
   height: 34px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(29, 36, 30, 0.25);
   filter: blur(16px);
 }
@@ -446,7 +477,7 @@ svg {
 .swap-line {
   width: 100%;
   height: 1px;
-  background-image: linear-gradient(90deg, transparent, rgba(184, 115, 66, 0.78), transparent);
+  background-image: linear-gradient(90deg, transparent, rgba(22, 31, 25, 0.28), transparent);
 }
 
 .swap-icon {
@@ -454,12 +485,11 @@ svg {
   width: 58px;
   height: 58px;
   place-items: center;
-  border: 1px solid rgba(18, 53, 31, 0.2);
+  border: 1px solid rgba(18, 53, 31, 0.25);
   border-radius: 50%;
-  background: rgba(247, 241, 231, 0.92);
-  color: var(--panel-green);
-  box-shadow: 0 12px 24px rgba(18, 53, 31, 0.16);
-  backdrop-filter: blur(10px);
+  background: #fff;
+  color: var(--deep-green);
+  box-shadow: 0 1px 2px rgba(18, 53, 31, 0.12);
 }
 
 .swap-icon svg {
@@ -476,7 +506,7 @@ svg {
   margin-top: -4px;
   padding: 7px 18px;
   text-align: center;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(7px);
 }
@@ -508,11 +538,11 @@ svg {
   place-items: center;
   width: 46px;
   height: 46px;
-  border: 1px solid rgba(222, 211, 196, 0.9);
+  border: 1px solid rgba(219, 219, 210, 0.9);
   border-radius: 50%;
   background: #fff;
   color: var(--deep-green);
-  box-shadow: 0 10px 20px rgba(22, 31, 25, 0.22);
+  box-shadow: 0 1px 3px rgba(22, 31, 25, 0.18);
   cursor: pointer;
 }
 
@@ -522,7 +552,7 @@ svg {
 }
 
 .sound-btn:hover {
-  background: #fffaf2;
+  background: #fcfcfa;
 }
 
 .sound-btn.is-playing {
@@ -568,7 +598,7 @@ svg {
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius);
   background: var(--panel-green);
-  box-shadow: 0 18px 34px rgba(53, 107, 77, 0.15);
+  box-shadow: 0 1px 2px rgba(22, 31, 25, 0.08);
 }
 
 .swap-plan {
@@ -592,7 +622,7 @@ svg {
 }
 
 .swap-plan-item span {
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.82);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -613,7 +643,7 @@ svg {
   width: 42px;
   height: 42px;
   place-items: center;
-  border-radius: 50%;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.16);
   color: #fff;
 }
@@ -643,7 +673,7 @@ svg {
 }
 
 .field-label {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.85);
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -662,7 +692,7 @@ svg {
 }
 
 .search-field input::placeholder {
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .search-field select {
@@ -699,7 +729,7 @@ svg {
   place-items: center;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.16);
   color: #fff;
 }
@@ -735,7 +765,7 @@ svg {
 }
 
 .slider-end {
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -891,7 +921,7 @@ svg {
   position: relative;
   height: 180px;
   overflow: hidden;
-  background: linear-gradient(180deg, #fffaf2, #f1eadf);
+  background: linear-gradient(180deg, #fcfcfa, #efefe9);
 }
 
 .listing-media img {
@@ -906,9 +936,9 @@ svg {
   left: 12px;
   z-index: 2;
   padding: 5px 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--soft-copper);
-  color: #8f562f;
+  color: #565E54;
   font-size: 11px;
   font-weight: 800;
 }
@@ -922,7 +952,7 @@ svg {
   width: 36px;
   height: 36px;
   place-items: center;
-  border: 1px solid rgba(222, 211, 196, 0.9);
+  border: 1px solid rgba(219, 219, 210, 0.9);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.76);
   color: var(--deep-green);
@@ -1010,7 +1040,7 @@ svg {
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fbf7ef;
+  background: #f7f7f2;
 }
 
 .wanted-label {
@@ -1033,7 +1063,7 @@ svg {
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: 8px;
   background: var(--deep-green);
   color: #fff;
 }
@@ -1118,7 +1148,7 @@ svg {
   width: 36px;
   height: 36px;
   place-items: center;
-  border-radius: 50%;
+  border-radius: 8px;
   background: var(--deep-green);
   color: #fff;
 }
@@ -1138,7 +1168,7 @@ svg {
   padding: 28px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #fffaf2;
+  background: #fcfcfa;
   color: var(--secondary);
   font-weight: 700;
   text-align: center;
@@ -1161,7 +1191,7 @@ svg {
   inset: 0;
   z-index: -1;
   background-image:
-    linear-gradient(180deg, rgba(247, 241, 231, 0.86), rgba(247, 241, 231, 0.64) 48%, rgba(247, 241, 231, 0.9) 100%),
+    linear-gradient(180deg, rgba(244, 244, 239, 0.86), rgba(244, 244, 239, 0.64) 48%, rgba(244, 244, 239, 0.9) 100%),
     url("../assets/bg-hills.svg?v=2");
   background-position: center;
   background-size: cover;
@@ -1179,111 +1209,121 @@ svg {
   top: 90px;
 }
 
-.process-grid {
+/* The three steps sit on a dashed road centerline as numbered stops —
+   an open route instead of three look-alike boxed cards. */
+.process-route {
+  --route-gap: 28px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: var(--route-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.process-card {
+.process-step {
   position: relative;
-  min-height: 220px;
-  padding: 24px 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.58);
+  padding-top: 54px;
 }
 
-.process-icon {
+/* Road centerline running behind the markers; stops at the last marker. */
+.process-step::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: 34px;
+  right: calc(-1 * var(--route-gap));
+  height: 2px;
+  background: repeating-linear-gradient(90deg, rgba(18, 53, 31, 0.32) 0 14px, transparent 14px 26px);
+}
+
+.process-step:last-child::before {
+  content: none;
+}
+
+.step-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: grid;
-  width: 54px;
-  height: 54px;
+  width: 34px;
+  height: 34px;
   place-items: center;
   border-radius: 50%;
-  background: #e7dfd2;
-  color: var(--deep-green);
+  background: var(--deep-green);
+  color: var(--warm-ivory);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 0 0 4px rgba(244, 244, 239, 0.85);
 }
 
-.process-icon svg {
-  width: 25px;
-  height: 25px;
+.process-step:last-child .step-marker {
+  background: var(--copper);
 }
 
-.step-index {
-  position: absolute;
-  top: 21px;
-  right: 18px;
-  color: var(--copper);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.process-card h3,
-.benefit-card h3 {
-  margin: 22px 0 8px;
+.process-step h3,
+.benefit-row h3 {
+  margin: 0;
   color: var(--graphite);
   font-size: 16px;
   line-height: 1.25;
 }
 
-.process-card p,
-.benefit-card p {
+.process-step h3 {
+  margin-bottom: 8px;
+}
+
+.process-step p,
+.benefit-row p {
   margin: 0;
   color: var(--secondary);
   font-size: 13px;
   font-weight: 600;
 }
 
-/* Benefits — sits on the same road/trees backdrop as the hero so the lower
-   card area reads as a designed band rather than a flat panel. The cream
-   gradient overlays keep the white cards and text readable over the photo. */
+/* Benefits — a single ruled ledger panel on plain ivory. Three stacked
+   rows (glyph / claim / detail) read like a spec sheet, and the quiet
+   background varies the page rhythm between the two photo bands. */
 .benefits-section {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
   padding: 68px 0;
 }
 
-.benefits-section::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image:
-    linear-gradient(180deg, rgba(247, 241, 231, 0.82), rgba(247, 241, 231, 0.62) 46%, rgba(247, 241, 231, 0.92) 100%),
-    url("../assets/hero-road-bg.png");
-  background-position: center;
-  background-size: cover;
-}
-
-.benefits-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.benefit-card {
-  min-height: 214px;
-  padding: 28px;
+.benefits-ledger {
+  max-width: 920px;
+  margin-inline: auto;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--card-white);
-  text-align: center;
+  box-shadow: var(--shadow-card);
 }
 
-.benefit-card > span {
+.benefit-row {
   display: grid;
-  width: 64px;
-  height: 64px;
-  margin: 0 auto;
-  place-items: center;
-  color: var(--deep-green);
+  grid-template-columns: 24px minmax(200px, 0.55fr) 1fr;
+  gap: 10px 22px;
+  align-items: start;
+  padding: 24px 28px;
 }
 
-.benefit-card svg {
-  width: 42px;
-  height: 42px;
-  stroke-width: 1.5;
+.benefit-row + .benefit-row {
+  border-top: 1px solid var(--border);
+}
+
+.benefit-row p {
+  max-width: 58ch;
+}
+
+.benefit-glyph {
+  color: var(--deep-green);
+  margin-top: 1px;
+}
+
+.benefit-glyph svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.7;
 }
 
 /* CTA */
@@ -1311,8 +1351,10 @@ svg {
 .cta-panel h2 {
   max-width: 680px;
   margin: 0;
-  font-size: clamp(24px, 3vw, 34px);
-  line-height: 1.15;
+  font-family: var(--font-display);
+  font-size: clamp(23px, 2.8vw, 32px);
+  font-weight: 600;
+  line-height: 1.22;
 }
 
 .cta-panel p {
@@ -1332,10 +1374,11 @@ svg {
   min-width: 170px;
 }
 
-/* Footer */
+/* Footer — inverted: the page closes on the brand green instead of
+   trailing off into another pale strip. */
 .site-footer {
-  border-top: 1px solid var(--border);
-  background: #f2eadf;
+  background: var(--deep-green);
+  color: rgba(244, 244, 239, 0.9);
 }
 
 .footer-grid {
@@ -1343,7 +1386,7 @@ svg {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 26px 0 22px;
+  padding: 34px 0 26px;
 }
 
 .footer-brand {
@@ -1351,16 +1394,38 @@ svg {
   gap: 8px;
 }
 
-.footer-brand .brand-logo {
-  width: 168px;
-  max-height: 36px;
+.footer-brand .brand {
+  min-height: 0;
+}
+
+.footer-brand .brand-word {
+  font-size: 18px;
+}
+
+.footer-brand .brand-tile {
+  width: 24px;
+  height: 24px;
+}
+
+.site-footer .brand-tile {
+  background: var(--warm-ivory);
+  color: var(--deep-green);
+}
+
+.site-footer .brand-word {
+  color: var(--warm-ivory);
+}
+
+.site-footer .brand-word b {
+  color: #D8A878;
 }
 
 .footer-brand p {
   margin: 0;
-  color: var(--secondary);
-  font-size: 13px;
-  font-weight: 600;
+  color: rgba(244, 244, 239, 0.68);
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 500;
 }
 
 .footer-nav {
@@ -1370,25 +1435,40 @@ svg {
 }
 
 .footer-nav a {
-  color: var(--graphite);
+  color: rgba(244, 244, 239, 0.85);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .footer-nav a:hover {
-  color: var(--deep-green);
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-color: rgba(216, 168, 120, 0.8);
+  text-underline-offset: 4px;
 }
 
 .footer-base {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   min-height: 52px;
-  border-top: 1px solid rgba(217, 205, 186, 0.7);
-  color: var(--muted);
+  color: rgba(244, 244, 239, 0.55);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
+}
+
+/* The road-centerline rule from the process section closes the page too —
+   a dashed divider instead of the stock hairline. */
+.footer-base::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, rgba(244, 244, 239, 0.28) 0 14px, transparent 14px 26px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1417,17 +1497,8 @@ svg {
     grid-column: 1 / -1;
   }
 
-  .listing-grid,
-  .process-grid {
+  .listing-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  /* Odd card count in a 2-col grid: center the orphan instead of
-     leaving a hole next to it. */
-  .process-grid .process-card:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-    width: calc(50% - 7px);
-    justify-self: center;
   }
 
   .split-section {
@@ -1489,15 +1560,8 @@ svg {
     margin-bottom: 10px;
   }
 
-  .listing-grid,
-  .benefits-grid {
+  .listing-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .benefits-grid .benefit-card:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-    width: calc(50% - 10px);
-    justify-self: center;
   }
 
   .cta-panel {
@@ -1524,16 +1588,13 @@ svg {
     font-size: 16px;
   }
 
-  .brand-logo {
-    width: clamp(132px, 38vw, 160px);
-    max-height: 34px;
+  .brand-word {
+    font-size: 18px;
   }
 
-  .brand-mark {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px 8px 11px 8px;
-    font-size: 14px;
+  .brand-tile {
+    width: 26px;
+    height: 26px;
   }
 
   .header-actions {
@@ -1662,8 +1723,8 @@ svg {
     width: 50px;
     height: 50px;
     border-color: rgba(23, 64, 43, 0.24);
-    background: rgba(247, 241, 231, 0.95);
-    box-shadow: 0 7px 14px rgba(18, 53, 31, 0.14);
+    background: rgba(244, 244, 239, 0.95);
+    box-shadow: 0 1px 2px rgba(18, 53, 31, 0.12);
   }
 
   .swap-icon svg {
@@ -1678,7 +1739,7 @@ svg {
     margin-top: 16px;
     padding: 8px;
     border-radius: 12px;
-    box-shadow: 0 12px 22px rgba(23, 64, 43, 0.16);
+    box-shadow: 0 1px 2px rgba(23, 64, 43, 0.12);
   }
 
   .swap-plan {
@@ -1733,17 +1794,40 @@ svg {
     min-height: 46px;
   }
 
-  .listing-grid,
-  .process-grid,
-  .benefits-grid {
+  .listing-grid {
     grid-template-columns: 1fr;
   }
 
-  /* Single column again — undo the centered-orphan treatment. */
-  .process-grid .process-card:last-child:nth-child(odd),
-  .benefits-grid .benefit-card:last-child:nth-child(odd) {
-    grid-column: auto;
-    width: auto;
+  /* The route turns vertical: markers stack down the left edge with the
+     dashed line running between them, like stops on a written itinerary. */
+  .process-route {
+    --route-gap: 30px;
+    grid-template-columns: 1fr;
+    gap: var(--route-gap);
+  }
+
+  .process-step {
+    padding: 0 0 0 52px;
+  }
+
+  .process-step::before {
+    top: 40px;
+    bottom: calc(-1 * var(--route-gap));
+    left: 16px;
+    right: auto;
+    width: 2px;
+    height: auto;
+    background: repeating-linear-gradient(180deg, rgba(18, 53, 31, 0.32) 0 12px, transparent 12px 22px);
+  }
+
+  /* Ledger rows stack: glyph + claim on one line, detail below. */
+  .benefit-row {
+    grid-template-columns: 24px 1fr;
+    padding: 20px;
+  }
+
+  .benefit-row p {
+    grid-column: 2;
   }
 
   .section-head {
@@ -1805,21 +1889,51 @@ svg {
   background: var(--warm-ivory);
 }
 
-.catalog-intro {
-  padding: 24px 0 6px;
+/* Committed deep-green band: page title, trust rules and the my-car
+   instrument panel share one surface instead of four stacked boxes.
+   The sell page opens on the same band. */
+.catalog-hero,
+.sell-hero {
+  position: relative;
+  padding: 30px 0 34px;
+  background: var(--deep-green);
+  color: var(--warm-ivory);
 }
 
-.catalog-intro h1 {
+/* Dashed road-centerline along the band's bottom edge — the same motif
+   as the landing process section. */
+.catalog-hero::after,
+.sell-hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, rgba(244, 244, 239, 0.34) 0 26px, transparent 26px 44px);
+}
+
+.catalog-hero-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  align-items: center;
+  gap: 18px 48px;
+}
+
+.catalog-hero h1 {
   margin: 0;
-  color: var(--graphite);
-  font-size: 24px;
-  font-weight: 800;
+  color: var(--warm-ivory);
+  font-size: 31px;
+  font-weight: 600;
+  line-height: 1.18;
 }
 
-.catalog-intro p {
-  margin: 6px 0 0;
-  color: var(--secondary);
-  font-size: 14px;
+.catalog-hero-copy > p {
+  margin: 10px 0 0;
+  max-width: 52ch;
+  color: rgba(244, 244, 239, 0.8);
+  font-size: 14.5px;
+  line-height: 1.55;
 }
 
 .catalog {
@@ -1835,6 +1949,11 @@ svg {
   position: sticky;
   top: 78px;
   align-self: start;
+  /* Taller than the viewport → scroll inside the sidebar, never cut off. */
+  max-height: calc(100vh - 92px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .filters-form {
@@ -2071,16 +2190,13 @@ svg {
   min-width: 0;
 }
 
+/* Unboxed toolbar — sits between the make rail and the cards. */
 .results-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card-white);
-  box-shadow: var(--shadow-card);
+  margin-top: -2px;
 }
 
 .results-count {
@@ -2154,45 +2270,49 @@ svg {
   height: 15px;
 }
 
-/* ---- Make quick-filter chips ---- */
+/* ---- Make quick-filter rail: underlined tabs, not boxed chips ---- */
 .make-chips {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
 }
 
 .make-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--card-white);
-  color: var(--graphite);
-  font-size: 13px;
+  gap: 7px;
+  min-height: 44px;
+  margin-bottom: -1px;
+  padding: 0 13px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 13.5px;
   font-weight: 700;
-  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  white-space: nowrap;
+  transition: color 160ms ease, border-color 160ms ease;
 }
 
 .make-chip span {
   color: var(--muted);
+  font-size: 12px;
   font-weight: 700;
 }
 
 .make-chip:hover {
-  border-color: var(--panel-green);
+  color: var(--graphite);
+  border-bottom-color: var(--border);
 }
 
 .make-chip.is-active {
-  background: var(--deep-green);
-  border-color: var(--deep-green);
-  color: #fff;
+  color: var(--deep-green);
+  border-bottom-color: var(--deep-green);
 }
 
 .make-chip.is-active span {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--copper);
 }
 
 /* Cars stacked in a single column. */
@@ -2206,9 +2326,9 @@ svg {
   display: grid;
   grid-template-columns: 244px minmax(0, 1fr) 226px;
   gap: 22px;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 12px;
   background: var(--card-white);
   box-shadow: var(--shadow-card);
   transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
@@ -2216,16 +2336,16 @@ svg {
 
 .car-row:hover {
   transform: translateY(-2px);
-  border-color: rgba(53, 107, 77, 0.4);
-  box-shadow: var(--shadow-subtle);
+  border-color: rgba(53, 107, 77, 0.45);
+  box-shadow: 0 10px 24px -14px rgba(22, 31, 25, 0.28);
 }
 
 .car-row-media {
   position: relative;
-  height: 192px;
+  height: 196px;
   overflow: hidden;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #fffaf2, #f1eadf);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fcfcfa, #efefe9);
 }
 
 .car-row-media img {
@@ -2243,12 +2363,12 @@ svg {
   align-items: center;
   gap: 6px;
   padding: 7px 13px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--soft-copper);
-  color: #8f562f;
+  color: #565E54;
   font-size: 12px;
   font-weight: 800;
-  box-shadow: 0 6px 14px rgba(143, 86, 47, 0.18);
+  box-shadow: 0 1px 2px rgba(22, 31, 25, 0.1);
 }
 
 .car-badge svg {
@@ -2271,15 +2391,23 @@ svg {
 .car-row-title {
   margin: 0;
   color: var(--graphite);
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.15;
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.18;
 }
 
+/* Year as a registration-plate tag: mono digits in a thin frame. */
 .car-row-year {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 8px 2px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
   color: var(--secondary);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
+  vertical-align: 3px;
 }
 
 .car-row-body .listing-city {
@@ -2321,25 +2449,27 @@ svg {
   margin-top: auto;
 }
 
-/* ---- Right aside (heart, cash, offer) ---- */
-.car-row-aside {
+/* ---- Deal panel: the swap terms as a detachable coupon ----
+   Dashed left rule = ticket perforation; wants, cash and the offer CTA
+   read as one signed slip rather than loose card furniture. */
+.trade-deal {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  padding-left: 20px;
+  border-left: 1px dashed #b5b5a7;
 }
 
-.car-row-aside .save-btn {
-  position: static;
-  align-self: flex-end;
-  width: 46px;
-  height: 46px;
-  background: var(--card-white);
-  border: 1px solid var(--border);
+.trade-deal .car-row-offer {
+  margin-top: auto;
 }
 
-.car-row-aside .save-btn svg {
-  width: 20px;
-  height: 20px;
+.deal-open {
+  margin: 0;
+  color: var(--graphite);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .car-row-cash {
@@ -2443,22 +2573,13 @@ svg {
     grid-template-columns: 210px minmax(0, 1fr);
   }
 
-  .car-row-aside {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
+  .catalog-hero-inner {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
   }
 
-  .car-row-aside .save-btn,
-  .car-row-cash {
-    margin-top: 0;
-  }
-
-  .car-row-offer {
-    width: auto;
-    flex: 1 1 200px;
+  .catalog-hero h1 {
+    font-size: 26px;
   }
 }
 
@@ -2515,9 +2636,10 @@ body.modal-open {
   width: min(520px, 100%);
   max-height: 90vh;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 26px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 10px;
   background: var(--card-white);
   box-shadow: var(--shadow-subtle);
 }
@@ -2551,8 +2673,9 @@ body.modal-open {
 .modal-title {
   margin: 0 0 18px;
   color: var(--graphite);
+  font-family: var(--font-display);
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .offer-form,
@@ -2624,7 +2747,7 @@ body.modal-open {
   width: 60px;
   height: 60px;
   margin: 0 auto;
-  border-radius: 50%;
+  border-radius: 10px;
   background: var(--cash-add-bg);
   color: var(--cash-add-fg);
 }
@@ -2682,8 +2805,8 @@ body.modal-open {
 .detail-main-media {
   position: relative;
   overflow: hidden;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #fffaf2, #f1eadf);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fcfcfa, #efefe9);
   aspect-ratio: 16 / 10;
 }
 
@@ -2729,7 +2852,7 @@ body.modal-open {
   gap: 14px;
   padding: 24px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 10px;
   background: var(--card-white);
   box-shadow: var(--shadow-card);
 }
@@ -2814,7 +2937,7 @@ body.modal-open {
   margin-top: 28px;
   padding: 24px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 10px;
   background: var(--card-white);
   box-shadow: var(--shadow-card);
 }
@@ -2846,7 +2969,7 @@ body.modal-open {
   padding: 40px 28px;
   text-align: center;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 10px;
   background: var(--card-white);
   box-shadow: var(--shadow-card);
 }
@@ -2856,7 +2979,7 @@ body.modal-open {
   place-items: center;
   width: 64px;
   height: 64px;
-  border-radius: 50%;
+  border-radius: 10px;
   background: var(--soft-beige);
   color: var(--copper);
 }
@@ -2887,43 +3010,283 @@ body.modal-open {
 }
 
 .sell {
-  max-width: 860px;
+  max-width: 1180px;
   padding: 28px 0 64px;
 }
 
+/* Form on the left, live feed-card preview on the right. */
+.sell-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 318px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Clipboard frame: the live card sits on a beige board so it reads as
+   "this is the artifact you're producing", not a fourth form panel. */
+.sell-preview {
+  position: sticky;
+  top: 86px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--soft-beige);
+}
+
+.sell-preview-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Copper register mark in front of the label — a stamp, not a status LED. */
+.sell-preview-label::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  background: var(--copper);
+}
+
+/* Paper-stack offset instead of a soft glow. */
+.sell-preview-card {
+  border-radius: 4px;
+  box-shadow: 3px 3px 0 rgba(22, 31, 25, 0.08);
+}
+
+.sell-preview-card .listing-offer.is-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 40px;
+  pointer-events: none;
+}
+
+.preview-photo-empty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  height: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.preview-photo-empty svg {
+  width: 30px;
+  height: 30px;
+}
+
+.preview-muted {
+  color: var(--muted) !important;
+}
+
+@media (max-width: 980px) {
+  .sell-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Preview drops below the form and stops sticking. */
+  .sell-preview {
+    position: static;
+    max-width: 360px;
+  }
+}
+
+/* Slim band: the whole add-car flow must fit one desktop viewport,
+   so the hero spends as little height as possible. */
+.sell-hero {
+  padding: 14px 0 24px;
+}
+
+.sell-hero::after {
+  bottom: 8px;
+}
+
 .sell-head {
-  margin-bottom: 26px;
-  text-align: center;
+  text-align: left;
 }
 
 .sell-head h1 {
-  margin: 6px 0 0;
-  color: var(--graphite);
-  font-size: 30px;
+  margin: 0;
+  color: var(--warm-ivory);
+  font-size: 21px;
+  font-weight: 600;
 }
 
 .sell-sub {
-  max-width: 540px;
-  margin: 10px auto 0;
-  color: var(--secondary);
+  max-width: 620px;
+  margin: 4px 0 0;
+  color: rgba(244, 244, 239, 0.8);
+  font-size: 13px;
 }
 
+/* The form is a three-step ledger — sections carry mono step numbers
+   from a CSS counter (a real sequence: car → terms → details). */
 .sell-form {
   gap: 18px;
+  counter-reset: sell-step;
 }
 
+/* Logbook panels: flat, square-cornered, ruled — no float, no gloss. */
 .sell-section {
-  padding: 20px 22px;
+  padding: 22px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 4px;
   background: var(--card-white);
-  box-shadow: var(--shadow-card);
 }
 
 .sell-section h2 {
-  margin: 0 0 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
   color: var(--graphite);
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+}
+
+/* Step numeral as a plain ledger entry — ink on paper, no badge. */
+.sell-section h2::before {
+  counter-increment: sell-step;
+  content: counter(sell-step, decimal-leading-zero);
+  flex: 0 0 auto;
+  color: var(--copper);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ---- One-viewport workbench (desktop) ----
+   The three steps sit side by side — car fields left, terms + details
+   right, preview in its own column — with denser controls so the whole
+   flow fits without scrolling. Mobile keeps full-size touch targets
+   and stacks naturally. */
+@media (min-width: 981px) {
+  .sell {
+    max-width: none;
+    padding: 10px 0 44px;
+  }
+
+  /* Single-line band: title and hint share one baseline. */
+  .sell-hero {
+    padding: 10px 0 18px;
+  }
+
+  .sell-hero::after {
+    bottom: 7px;
+  }
+
+  .sell-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 4px 14px;
+  }
+
+  .sell-head h1 {
+    font-size: 19px;
+  }
+
+  .sell-sub {
+    margin: 0;
+    font-size: 12.5px;
+  }
+
+  .sell-layout {
+    grid-template-columns: minmax(0, 1fr) 296px;
+    gap: 16px;
+  }
+
+  .sell-form {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+    grid-template-areas:
+      "voice   voice"
+      "car     terms"
+      "car     details"
+      "error   error"
+      "actions actions";
+    align-items: stretch;
+    gap: 10px 14px;
+  }
+
+  .voice-fill {
+    grid-area: voice;
+  }
+
+  .sell-section--car { grid-area: car; }
+  .sell-section--terms { grid-area: terms; }
+  .sell-section--details { grid-area: details; }
+
+  #sell-error {
+    grid-area: error;
+    margin: 0;
+  }
+
+  #sell-error[hidden] {
+    display: none;
+  }
+
+  .sell-actions {
+    grid-area: actions;
+  }
+
+  .sell-section {
+    padding: 14px 16px 16px;
+  }
+
+  .sell-section h2 {
+    margin: 0 0 10px;
+    padding-bottom: 8px;
+    font-size: 16px;
+  }
+
+  .sell-section h2::before {
+    font-size: 11.5px;
+  }
+
+  .sell-section .field {
+    gap: 4px;
+  }
+
+  .sell-section .field > span {
+    font-size: 11.5px;
+  }
+
+  .sell-section .field input,
+  .sell-section .field select {
+    min-height: 38px;
+    padding: 7px 11px;
+    font-size: 13.5px;
+  }
+
+  .sell-section .field textarea {
+    min-height: 48px;
+    padding: 8px 11px;
+    font-size: 13.5px;
+  }
+
+  .sell-actions .btn {
+    min-height: 42px;
+  }
+
+  .sell-preview {
+    padding: 12px;
+  }
+
+  .sell-preview-label {
+    margin-bottom: 10px;
+  }
 }
 
 .sell-grid {
@@ -2942,6 +3305,10 @@ body.modal-open {
   gap: 12px;
 }
 
+.sell-actions .btn {
+  border-radius: 4px;
+}
+
 .sell-success-page {
   display: grid;
   place-items: center;
@@ -2956,7 +3323,7 @@ body.modal-open {
   padding: 40px 30px;
   text-align: center;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 10px;
   background: var(--card-white);
   box-shadow: var(--shadow-card);
 }
@@ -3018,9 +3385,65 @@ body.modal-open {
   font-variant-numeric: tabular-nums;
 }
 
-.section-kicker {
-  font-family: var(--font-mono);
-  font-weight: 700;
+/* Editorial display face on page-level headings — section heads, page
+   titles and modal titles share it; in-card UI stays in the workhorse sans. */
+.catalog-hero h1,
+.sell-head h1,
+.auth-card h1,
+.account-body h1,
+.detail-title,
+.detail-missing-card h1,
+.sell-success-card h1,
+.detail-about h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/* Plex Mono ships here in 500/600 only — anything heavier would be
+   synthesized and smudgy, so digits cap at 600 across the cluster. */
+.car-row-cash,
+.cash-line strong,
+.results-count strong,
+.filters-count strong,
+.slider-value,
+.trade-cash,
+.stat-cell strong,
+.page-btn,
+.filters-toggle-badge,
+.want-chip--more,
+.load-more span,
+.mycar-copy small b {
+  font-weight: 600;
+}
+
+::selection {
+  background: rgba(161, 78, 33, 0.22);
+}
+
+/* Paper grain over the whole page — one even pass of texture so flat
+   ivory panels stop reading as untouched default backgrounds. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  opacity: 0.045;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* Even line lengths on display headings; fewer orphans in prose. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 /* Instrument-cluster stat row (detail page) */
@@ -3064,6 +3487,30 @@ body.modal-open {
   text-overflow: ellipsis;
 }
 
+/* The detail panel is too narrow for a single 5-cell strip — wrap the
+   cluster into a 3-up grid so values never truncate. */
+.detail-panel .stat-row {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.detail-panel .stat-cell + .stat-cell {
+  border-left: 0;
+}
+
+.detail-panel .stat-cell:nth-child(3n + 2),
+.detail-panel .stat-cell:nth-child(3n) {
+  border-left: 1px solid var(--border);
+}
+
+.detail-panel .stat-cell:nth-child(n + 4) {
+  border-top: 1px solid var(--border);
+}
+
+.detail-panel .stat-cell strong {
+  font-size: 12px;
+}
+
 /* Compact variant for feed cards */
 .stat-row--card {
   margin: 12px 0;
@@ -3089,16 +3536,7 @@ body.modal-open {
   transform: scale(1.045);
 }
 
-/* Editorial copper rule under the hero headline */
-.hero-copy h1::after {
-  content: "";
-  display: block;
-  width: 64px;
-  height: 3px;
-  margin: 18px auto 0;
-  border-radius: 2px;
-  background: var(--copper);
-}
+/* (hero headline rule removed — the headline stands on its own) */
 
 .results-count strong {
   font-size: 20px;
@@ -3129,73 +3567,66 @@ body.modal-open {
    groups, mobile filter sheet, sticky CTA, structured offer modal.
 =================================================================== */
 
-/* ---- "My car" context strip (the spine of the page) ---- */
-.mycar-strip {
-  margin-top: 14px;
+/* ---- "My car" instrument panel — lives inside the hero band ---- */
+.mycar-panel {
+  min-width: 0;
 }
 
 .mycar-cta,
 .mycar-active {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
-  padding: 14px 18px;
-  border: 1px solid var(--border);
+  padding: 18px;
+  border: 1px solid rgba(244, 244, 239, 0.22);
   border-radius: var(--radius);
-  background: var(--card-white);
-  box-shadow: var(--shadow-card);
-}
-
-.mycar-cta {
-  border-left: 4px solid var(--copper);
-}
-
-.mycar-active {
-  border-left: 4px solid var(--deep-green);
+  background: rgba(244, 244, 239, 0.07);
 }
 
 .mycar-icon {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: var(--deep-green);
-  color: #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--warm-ivory);
+  color: var(--deep-green);
 }
 
 .mycar-icon svg {
-  width: 21px;
-  height: 21px;
+  width: 22px;
+  height: 22px;
 }
 
 .mycar-copy {
-  flex: 1 1 auto;
+  flex: 1 1 160px;
   min-width: 0;
   display: grid;
-  gap: 2px;
+  gap: 3px;
 }
 
 .mycar-copy strong {
-  color: var(--graphite);
+  color: var(--warm-ivory);
   font-size: 15px;
   font-weight: 800;
 }
 
 .mycar-copy small {
-  color: var(--secondary);
-  font-size: 13px;
+  color: rgba(244, 244, 239, 0.72);
+  font-size: 12.5px;
   font-weight: 600;
+  line-height: 1.45;
 }
 
 .mycar-copy small b {
-  color: var(--deep-green);
+  color: var(--warm-ivory);
   font-family: var(--font-mono);
 }
 
 .mycar-btn {
-  flex: 0 0 auto;
+  flex: 1 1 100%;
   gap: 7px;
 }
 
@@ -3204,7 +3635,7 @@ body.modal-open {
   padding: 6px 10px;
   border-radius: 8px;
   background: transparent;
-  color: var(--secondary);
+  color: rgba(244, 244, 239, 0.78);
   font-size: 13px;
   font-weight: 700;
   text-decoration: underline;
@@ -3212,7 +3643,7 @@ body.modal-open {
 }
 
 .mycar-edit:hover {
-  color: var(--deep-green);
+  color: var(--warm-ivory);
 }
 
 .matches-toggle,
@@ -3236,12 +3667,18 @@ body.modal-open {
   cursor: pointer;
 }
 
+/* Lives on the deep-green hero panel — flips to ivory-on-green. */
 .matches-toggle {
   flex: 0 0 auto;
   padding: 9px 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--warm-ivory);
+  border: 1px solid rgba(244, 244, 239, 0.3);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--warm-ivory);
+}
+
+.matches-toggle input {
+  accent-color: var(--copper);
 }
 
 /* ---- Filter groups (3 swap-intent sections) ---- */
@@ -3386,7 +3823,7 @@ body.modal-open {
 
 @keyframes combo-flash {
   0%, 100% { border-color: var(--border); box-shadow: none; }
-  30% { border-color: var(--copper); box-shadow: 0 0 0 3px rgba(184, 115, 66, 0.24); }
+  30% { border-color: var(--copper); box-shadow: 0 0 0 3px rgba(161, 78, 33, 0.22); }
 }
 
 /* ---- Results head: count once + sort + mobile filter toggle ---- */
@@ -3426,7 +3863,7 @@ body.modal-open {
   min-width: 20px;
   height: 20px;
   padding: 0 5px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--deep-green);
   color: #fff;
   font-family: var(--font-mono);
@@ -3434,39 +3871,39 @@ body.modal-open {
   font-weight: 700;
 }
 
-/* ---- Trust model note: rules, not marketing ---- */
+/* ---- Trust model note: rules, not marketing — a footnote in the hero ---- */
 .trust-note {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 11px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: #fbf7ef;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(244, 244, 239, 0.18);
 }
 
 .trust-note svg {
   flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   margin-top: 1px;
-  color: var(--deep-green);
+  color: rgba(244, 244, 239, 0.85);
 }
 
 .trust-note p {
   margin: 0;
-  color: var(--secondary);
-  font-size: 13px;
+  max-width: 62ch;
+  color: rgba(244, 244, 239, 0.74);
+  font-size: 12.5px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 /* ---- Trade card: their car / the terms / the human ---- */
 .trade-card {
-  grid-template-columns: 232px minmax(0, 1fr) 188px;
+  grid-template-columns: 240px minmax(0, 1fr) 224px;
   grid-template-areas:
-    "media body aside"
-    "trust trust trust";
+    "media body deal"
+    "trust trust deal";
   gap: 16px 22px;
 }
 
@@ -3478,17 +3915,16 @@ body.modal-open {
   grid-area: body;
 }
 
-.trade-card .car-row-aside {
-  grid-area: aside;
-  justify-content: space-between;
+.trade-card .trade-deal {
+  grid-area: deal;
 }
 
-/* Compact single-line CTA; the heart stays beside it on every breakpoint. */
 .trade-card .car-row-offer {
-  min-height: 40px;
+  width: 100%;
+  min-height: 44px;
   padding: 0 14px;
-  gap: 7px;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 13.5px;
   white-space: nowrap;
 }
 
@@ -3503,7 +3939,7 @@ body.modal-open {
 }
 
 .trade-card.is-reverse {
-  border-color: rgba(184, 115, 66, 0.55);
+  border-color: rgba(161, 78, 33, 0.5);
 }
 
 .fresh-tag {
@@ -3512,7 +3948,7 @@ body.modal-open {
   left: 10px;
   z-index: 2;
   padding: 4px 9px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.88);
   color: var(--secondary);
   font-size: 11px;
@@ -3532,7 +3968,7 @@ body.modal-open {
   align-items: center;
   gap: 6px;
   padding: 6px 11px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
@@ -3550,21 +3986,13 @@ body.modal-open {
 
 .match-badge--reverse {
   background: var(--soft-copper);
-  color: #8f562f;
+  color: #565E54;
 }
 
+/* Inside the deal panel the perforation is the frame — no inner box. */
 .trade-wants {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fbf7ef;
-}
-
-.trade-wants .wanted-label {
-  flex: 0 0 auto;
+  display: grid;
+  gap: 8px;
 }
 
 .wants-chips {
@@ -3579,7 +4007,7 @@ body.modal-open {
   align-items: center;
   padding: 5px 11px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--card-white);
   color: var(--graphite);
   font-size: 13px;
@@ -3601,12 +4029,13 @@ body.modal-open {
 .trade-cash {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin: 12px 0 0;
+  gap: 9px;
+  margin: 0;
   font-family: var(--font-mono);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  line-height: 1.35;
 }
 
 /* Round deep-green icon badge — the original card icon treatment. */
@@ -3615,7 +4044,7 @@ body.modal-open {
   width: 34px;
   height: 34px;
   padding: 8px;
-  border-radius: 50%;
+  border-radius: 8px;
   background: var(--deep-green);
   color: #fff;
 }
@@ -3760,7 +4189,7 @@ body.modal-open {
   padding: 13px 14px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fbf7ef;
+  background: #f7f7f2;
   text-align: center;
 }
 
@@ -3788,7 +4217,7 @@ body.modal-open {
   place-items: center;
   width: 38px;
   height: 38px;
-  border-radius: 50%;
+  border-radius: 8px;
   background: var(--deep-green);
   color: #fff;
 }
@@ -3833,8 +4262,8 @@ body.modal-open {
   align-items: center;
   gap: 14px;
   padding: 18px 16px;
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
+  border: 1px dashed #b5b5a7;
+  border-radius: 4px;
   background: var(--warm-ivory);
   cursor: pointer;
   transition: border-color 160ms ease, background-color 160ms ease;
@@ -3866,7 +4295,7 @@ body.modal-open {
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: 4px;
   background: var(--deep-green);
   color: #fff;
 }
@@ -3905,7 +4334,7 @@ body.modal-open {
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 4px;
   aspect-ratio: 4 / 3;
   background: var(--card-white);
 }
@@ -3935,14 +4364,19 @@ body.modal-open {
     grid-template-columns: 200px minmax(0, 1fr);
     grid-template-areas:
       "media body"
-      "aside aside"
+      "deal deal"
       "trust trust";
   }
 
-  .trade-card .car-row-aside {
+  /* The coupon perforation rotates: dashed top rule instead of left. */
+  .trade-deal {
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
+    padding: 14px 0 0;
+    border-left: 0;
+    border-top: 1px dashed #b5b5a7;
   }
 
   .trade-card .car-row-offer {
@@ -3969,16 +4403,22 @@ body.modal-open {
     right: 0;
     bottom: 0;
     z-index: 95;
+    /* dvh: mobile browser chrome shrinks the visual viewport — with plain
+       vh the bottom of the sheet lands behind the URL bar and can't be
+       reached. Cap below the visible height and scroll inside. */
     max-height: 86vh;
+    max-height: 80dvh;
     overflow-y: auto;
-    border-radius: 18px 18px 0 0;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 10px 18px 0 0;
     background: var(--card-white);
-    box-shadow: 0 -18px 44px rgba(22, 31, 25, 0.28);
+    box-shadow: 0 -2px 10px rgba(22, 31, 25, 0.12);
   }
 
   body.filters-open .filters-form {
     border: 0;
-    border-radius: 18px 18px 0 0;
+    border-radius: 10px 18px 0 0;
     box-shadow: none;
     padding-bottom: 22px;
   }
@@ -4043,21 +4483,12 @@ body.modal-open {
     grid-template-areas:
       "media"
       "body"
-      "aside"
+      "deal"
       "trust";
-  }
-
-  .mycar-cta,
-  .mycar-active {
-    flex-wrap: wrap;
   }
 
   .mycar-copy {
     flex: 1 1 180px;
-  }
-
-  .mycar-btn {
-    flex: 1 1 100%;
   }
 
   .matches-toggle {
@@ -4203,13 +4634,15 @@ body.modal-open {
   text-align: center;
 }
 
+/* The auth card opens with the brand tile (green square + swap arrows),
+   not a stock shield-in-a-circle — signing in is entering the garage. */
 .auth-icon {
   display: inline-flex;
   width: 52px;
   height: 52px;
-  border-radius: 50%;
-  background: var(--soft-beige);
-  color: var(--deep-green);
+  border-radius: 12px;
+  background: var(--deep-green);
+  color: var(--warm-ivory);
   align-items: center;
   justify-content: center;
   margin-bottom: 14px;
@@ -4367,7 +4800,7 @@ body.modal-open {
 .status-badge {
   display: inline-flex;
   padding: 2px 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 700;
   background: var(--soft-beige);
@@ -4394,7 +4827,7 @@ body.modal-open {
 
 .offer-side { display: grid; }
 
-.offer-side small { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.offer-side small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
 
 .offer-side strong { font-size: 15px; }
 
@@ -4423,13 +4856,14 @@ body.modal-open {
   gap: 10px;
   height: 52vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   margin: 14px 0;
 }
 
 .msg-bubble {
   max-width: 78%;
   background: var(--soft-beige);
-  border-radius: 14px 14px 14px 4px;
+  border-radius: 10px 14px 14px 4px;
   padding: 10px 14px;
   align-self: flex-start;
 }
@@ -4437,7 +4871,7 @@ body.modal-open {
 .msg-bubble.is-mine {
   background: var(--deep-green);
   color: var(--warm-ivory);
-  border-radius: 14px 14px 4px 14px;
+  border-radius: 10px 14px 4px 14px;
   align-self: flex-end;
 }
 
@@ -4490,7 +4924,7 @@ body.modal-open {
 .skeleton-row {
   height: 96px;
   border-radius: var(--radius);
-  background: linear-gradient(100deg, var(--soft-beige) 40%, #f2ead9 50%, var(--soft-beige) 60%);
+  background: linear-gradient(100deg, var(--soft-beige) 40%, #f1f1ea 50%, var(--soft-beige) 60%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.2s infinite linear;
 }
@@ -4537,6 +4971,8 @@ body.modal-open {
   .account-card-actions { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
 
   .profile-grid { grid-template-columns: 1fr; }
+}
+
 /* ===================================================================
    Header auth (login button / logged-in chip) + phone auth modal
 =================================================================== */
@@ -4565,65 +5001,66 @@ body.modal-open {
 .header-user {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
+  min-height: 40px;
+  padding: 4px 14px 4px 5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-white);
   color: var(--deep-green);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+a.header-user:hover {
+  border-color: var(--copper);
+}
+
+.header-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--deep-green);
+  color: #fff;
   font-size: 13px;
   font-weight: 800;
 }
 
-.header-user svg {
-  width: 17px;
-  height: 17px;
+.header-avatar svg {
+  width: 15px;
+  height: 15px;
 }
 
 .header-user-name {
-  max-width: 120px;
+  max-width: 140px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .header-logout {
-  border: 0;
-  background: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--card-white);
   color: var(--secondary);
-  font-size: 12px;
-  font-weight: 700;
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+}
+
+.header-logout svg {
+  width: 16px;
+  height: 16px;
 }
 
 .header-logout:hover {
   color: var(--copper);
-}
-
-.auth-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
-  margin: 14px 0 16px;
-  padding: 5px;
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  background: var(--warm-ivory);
-}
-
-.auth-tab {
-  min-height: 38px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  color: var(--secondary);
-  font-size: 13px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.auth-tab.is-active {
-  background: var(--card-white);
-  color: var(--deep-green);
-  box-shadow: 0 4px 10px rgba(22, 31, 25, 0.08);
+  border-color: var(--copper);
 }
 
 .auth-sub {
@@ -4652,6 +5089,87 @@ body.modal-open {
   text-align: center;
 }
 
+/* Auth modals: calm and product-like — title in brand green, one
+   full-width action, secondary actions as quiet text links. */
+.auth-modal .modal-title {
+  margin: 2px 0 12px;
+  color: var(--deep-green);
+}
+
+.auth-modal .auth-note {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 14px;
+}
+
+.auth-link-btn {
+  display: block;
+  margin: 12px auto 0;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-link-btn:hover {
+  color: var(--copper);
+}
+
+/* Locked sell page: real form rendered grayed-out behind a login prompt
+   instead of a dead gate screen. */
+.sell-locked {
+  position: relative;
+}
+
+.sell-locked .sell-head,
+.sell-locked .sell-form {
+  opacity: 0.45;
+  filter: grayscale(0.55);
+  pointer-events: none;
+  user-select: none;
+}
+
+.sell-locked-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.sell-locked-card {
+  pointer-events: auto;
+  position: sticky;
+  top: 120px;
+  margin-top: 140px;
+  max-width: 360px;
+  padding: 24px 26px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-white);
+  box-shadow: 0 2px 8px rgba(22, 31, 25, 0.1);
+  text-align: center;
+}
+
+.sell-locked-card h2 {
+  margin: 0 0 6px;
+  font-size: 19px;
+  color: var(--deep-green);
+}
+
+.sell-locked-card p {
+  margin: 0 0 14px;
+  color: var(--secondary);
+  font-size: 14px;
+}
+
 @media (max-width: 680px) {
   .header-auth {
     gap: 7px;
@@ -4665,5 +5183,296 @@ body.modal-open {
 
   .header-user-name {
     display: none;
+  }
+
+  /* Name hidden → the chip collapses to just the avatar circle. */
+  .header-user {
+    padding: 4px;
+  }
+}
+
+/* ===================================================================
+   OAuth provider buttons (Google branding) + auth divider
+=================================================================== */
+.auth-providers {
+  display: grid;
+  gap: 9px;
+  margin: 14px 0 0;
+}
+
+.btn-provider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-provider svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.btn-provider:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Google: white button, official multicolor G, neutral border. */
+.btn-google {
+  border: 1px solid #d5cdbf;
+  background: #fff;
+  color: #1f1f1f;
+}
+
+.btn-google:hover {
+  background: #faf8f4;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ===================================================================
+   Sell form polish + voice fill (mic dictation)
+=================================================================== */
+/* White inputs on the white card read far better than beige-on-beige;
+   square corners keep the logbook register. */
+.sell-section .field input,
+.sell-section .field select,
+.sell-section .field textarea {
+  border-radius: 4px;
+  background: #fff;
+}
+
+.sell-section .field input:focus,
+.sell-section .field select:focus,
+.sell-section .field textarea:focus {
+  border-color: var(--panel-green);
+  box-shadow: 0 0 0 3px rgba(53, 107, 77, 0.14);
+}
+
+/* A lone last field in the 2-col grid spans the full row. */
+.sell-grid > .field:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+/* Dictation as a bench tool: a flat beige strip with a square mic key —
+   quiet equipment, not a feature banner. */
+.voice-fill[hidden] {
+  display: none;
+}
+
+.voice-fill {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--soft-beige);
+}
+
+.voice-btn {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 4px;
+  background: var(--deep-green);
+  color: #fff;
+}
+
+.voice-btn:hover {
+  background: var(--deep-green-hover);
+}
+
+.voice-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.voice-btn.is-listening {
+  background: #b23a2e;
+  color: #fff;
+  animation: voice-pulse 1.2s ease-out infinite;
+}
+
+@keyframes voice-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(178, 58, 46, 0.4); }
+  100% { box-shadow: 0 0 0 16px rgba(178, 58, 46, 0); }
+}
+
+.voice-copy {
+  min-width: 0;
+}
+
+.voice-copy strong {
+  display: block;
+  color: var(--graphite);
+  font-size: 14px;
+}
+
+.voice-copy small {
+  display: block;
+  margin-top: 2px;
+  color: var(--secondary);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* Fields the dictation just filled glow briefly. */
+.field input.field-flash,
+.field select.field-flash,
+.field textarea.field-flash {
+  border-color: var(--copper);
+  background: #fff3e2;
+  transition: background-color 1.4s ease, border-color 1.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-btn.is-listening {
+    animation: none;
+  }
+}
+
+/* One-viewport workbench, part 2 — compact voice + upload controls.
+   Lives after the base voice/upload rules so the desktop overrides win
+   the order battle (same specificity as the base selectors above). */
+@media (min-width: 981px) {
+  .voice-fill {
+    padding: 9px 14px;
+    gap: 12px;
+  }
+
+  .voice-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .voice-btn svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  /* Title and hint flow on one line so the strip stays mic-height. */
+  .voice-copy {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+  }
+
+  .voice-copy strong {
+    font-size: 13px;
+  }
+
+  .voice-copy small {
+    margin-top: 0;
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
+  .upload-zone {
+    padding: 9px 12px;
+    gap: 11px;
+  }
+
+  .upload-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .upload-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .upload-text strong {
+    font-size: 13px;
+  }
+
+  .upload-text small {
+    font-size: 11px;
+  }
+
+  .upload-previews {
+    grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+}
+
+/* One-viewport workbench, part 3 — rules whose base selectors are
+   declared late in the file, so the compact versions must come last. */
+@media (min-width: 981px) {
+  .sell-grid {
+    gap: 10px;
+  }
+
+  .sell-section .field + .field {
+    margin-top: 10px;
+  }
+}
+
+/* Short desktop viewports (720p laptops): one extra notch of density. */
+@media (min-width: 981px) and (max-height: 740px) {
+  .sell {
+    padding: 8px 0 28px;
+  }
+
+  .sell-hero {
+    padding: 8px 0 16px;
+  }
+
+  .sell-form {
+    gap: 8px 14px;
+  }
+
+  .sell-section {
+    padding: 11px 14px 12px;
+  }
+
+  .sell-grid {
+    gap: 8px;
+  }
+
+  .sell-section .field + .field {
+    margin-top: 8px;
+  }
+
+  .sell-section .field input,
+  .sell-section .field select {
+    min-height: 34px;
+    padding: 5px 10px;
+  }
+
+  .sell-section .field textarea {
+    min-height: 40px;
+  }
+
+  .sell-actions .btn {
+    min-height: 40px;
   }
 }

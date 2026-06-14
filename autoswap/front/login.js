@@ -1,11 +1,12 @@
-/* AutoSwap — OTP login / registration.
-   Email → 6-digit one-time code → session. Supabase Auth generates the code,
-   stores only its hash, expires it (set to 5 min in the dashboard) and
-   rate-limits requests; supabase-js keeps the JWT + refresh token rotating.
+/* AutoSwap — login / registration page.
+   Sign-in methods: Google OAuth, or Georgian phone number with
+   a one-time SMS code (account auto-created on first login). Email auth is
+   intentionally removed — the number is the marketplace identity, and OAuth
+   users are asked to attach one right after (shared.js maybeRequirePhone).
    ?next=<page> sends the user back where they came from. */
 const {
-  Header, Footer, icons, sb, toast,
-  requestEmailOtp, verifyEmailOtp, authReady, escapeAttr,
+  Header, Footer, icons, sb, toast, escapeAttr, authReady,
+  signInWithProvider, normalizePhone, requestPhoneOtp, confirmPhoneOtp, AUTH_DEMO_CODE,
 } = window.AutoSwap;
 
 const RESEND_COOLDOWN_S = 60;
@@ -31,17 +32,21 @@ function Shell(inner) {
   `;
 }
 
-function EmailStep(email, error) {
+function PhoneStep(phone, error) {
   return Shell(`
-    <span class="auth-icon">${icons.shield}</span>
+    <span class="auth-icon">${icons.swap}</span>
     <h1>შესვლა ან რეგისტრაცია</h1>
-    <p class="auth-sub">შეიყვანე ელფოსტა — გამოგიგზავნით 6-ნიშნა ერთჯერად კოდს. პაროლი არ გჭირდება.</p>
+    <p class="auth-sub">გააგრძელე Google-ით, ან შეიყვანე ნომერი — გამოგიგზავნით ერთჯერად SMS კოდს.</p>
+    <div class="auth-providers">
+      <button type="button" class="btn-provider btn-google" data-provider="google">${icons.google}<span>Google-ით გაგრძელება</span></button>
+    </div>
+    <div class="auth-divider"><span>ან ნომრით</span></div>
     ${error ? `<p class="auth-error" role="alert">${escapeAttr(error)}</p>` : ''}
-    <form class="auth-form" id="email-form" novalidate>
+    <form class="auth-form" id="phone-form" novalidate>
       <label class="field">
-        <span>ელფოსტა</span>
-        <input type="email" name="email" required autocomplete="email" inputmode="email"
-               placeholder="you@example.com" value="${escapeAttr(email || '')}">
+        <span>ტელეფონის ნომერი (+995)</span>
+        <input type="tel" name="phone" required autocomplete="tel-national" inputmode="tel"
+               placeholder="5XX XX XX XX" value="${escapeAttr(phone || '')}">
       </label>
       <button class="btn btn-primary auth-submit" type="submit">გამომიგზავნე კოდი</button>
     </form>
@@ -49,37 +54,29 @@ function EmailStep(email, error) {
   `);
 }
 
-function CodeStep(email, error) {
+function CodeStep(phone, isDemo, error) {
   return Shell(`
     <span class="auth-icon">${icons.check}</span>
     <h1>შეიყვანე კოდი</h1>
-    <p class="auth-sub">6-ნიშნა კოდი გაიგზავნა <strong>${escapeAttr(email)}</strong>-ზე. კოდი მოქმედებს 5 წუთის განმავლობაში.</p>
+    <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი — შეიყვანე კოდი <strong>${AUTH_DEMO_CODE}</strong>.` : ' კოდი მოქმედებს 5 წუთის განმავლობაში.'}</p>
     ${error ? `<p class="auth-error" role="alert">${escapeAttr(error)}</p>` : ''}
     <form class="auth-form" id="code-form" novalidate>
       <label class="field">
         <span>ერთჯერადი კოდი</span>
         <input type="text" name="code" required inputmode="numeric" autocomplete="one-time-code"
-               pattern="\\d{6}" maxlength="6" placeholder="000000" class="auth-code-input">
+               maxlength="6" placeholder="0000" class="auth-code-input">
       </label>
       <button class="btn btn-primary auth-submit" type="submit">შესვლა</button>
     </form>
     <div class="auth-secondary">
       <button type="button" class="auth-link" id="resend-btn" disabled>კოდის თავიდან გაგზავნა (<span id="resend-count">${RESEND_COOLDOWN_S}</span>)</button>
-      <button type="button" class="auth-link" id="change-email">სხვა ელფოსტა</button>
+      <button type="button" class="auth-link" id="change-phone">სხვა ნომერი</button>
     </div>
   `);
 }
 
-function NotConfigured() {
-  return Shell(`
-    <span class="auth-icon">${icons.shield}</span>
-    <h1>დემო რეჟიმი</h1>
-    <p class="auth-sub">ავტორიზაცია ჩაირთვება Supabase-ის კონფიგურაციის შემდეგ — შექმენი <code>front/supabase-config.js</code> ფაილი <code>supabase-config.example.js</code>-ის მიხედვით.</p>
-    <a class="btn btn-primary auth-submit" href="cars.html">გაცვლების ნახვა</a>
-  `);
-}
-
-let currentEmail = '';
+let currentPhone = '';
+let currentIsDemo = false;
 let resendTimer = null;
 
 function friendlyError(message) {
@@ -112,81 +109,102 @@ function startResendCooldown() {
   }, 1000);
 }
 
-function renderEmailStep(error) {
-  document.querySelector('#app').innerHTML = EmailStep(currentEmail, error);
-  const form = document.querySelector('#email-form');
+function bindProviders() {
+  document.querySelectorAll('.btn-provider').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      const { error } = await signInWithProvider(btn.dataset.provider);
+      if (error) {
+        btn.disabled = false;
+        renderPhoneStep(friendlyError(error));
+      }
+      // On success the browser navigates away to the provider.
+    });
+  });
+}
+
+function renderPhoneStep(error) {
+  document.querySelector('#app').innerHTML = PhoneStep(currentPhone, error);
+  bindProviders();
+  const form = document.querySelector('#phone-form');
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const email = String(new FormData(form).get('email') || '').trim().toLowerCase();
-    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      renderEmailStep('შეიყვანე სწორი ელფოსტა.');
+    const raw = String(new FormData(form).get('phone') || '').trim();
+    const phone = normalizePhone(raw);
+    if (!phone) {
+      currentPhone = raw;
+      renderPhoneStep('შეიყვანე ქართული მობილურის ნომერი ფორმატით 5XX XX XX XX.');
       return;
     }
     form.querySelector('[type="submit"]').disabled = true;
-    const { error: otpError } = await requestEmailOtp(email);
-    if (otpError) {
-      currentEmail = email;
-      renderEmailStep(friendlyError(otpError));
+    // Account is auto-created on first login; the name popup follows the
+    // first verified sign-in (shared.js maybeRequireProfile).
+    const result = await requestPhoneOtp(phone);
+    if (result.error) {
+      currentPhone = raw;
+      renderPhoneStep(friendlyError(result.error));
       return;
     }
-    currentEmail = email;
+    currentPhone = phone;
+    currentIsDemo = !!result.demo;
     renderCodeStep();
   });
-  form.querySelector('[name="email"]').focus();
+  form.querySelector('[name="phone"]').focus();
 }
 
 function renderCodeStep(error) {
-  document.querySelector('#app').innerHTML = CodeStep(currentEmail, error);
+  document.querySelector('#app').innerHTML = CodeStep(currentPhone, currentIsDemo, error);
   startResendCooldown();
 
   const form = document.querySelector('#code-form');
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const code = String(new FormData(form).get('code') || '').trim();
-    if (!/^\d{6}$/.test(code)) {
-      renderCodeStep('კოდი 6 ციფრისგან შედგება.');
+    if (!/^\d{4,6}$/.test(code)) {
+      renderCodeStep('შეიყვანე SMS კოდი.');
       return;
     }
     form.querySelector('[type="submit"]').disabled = true;
-    const { user, error: verifyError } = await verifyEmailOtp(currentEmail, code);
-    if (verifyError || !user) {
-      renderCodeStep(friendlyError(verifyError));
+    const result = await confirmPhoneOtp(currentPhone, code, currentIsDemo);
+    if (result.error) {
+      renderCodeStep(friendlyError(result.error));
       return;
     }
     toast('შესვლა წარმატებულია');
-    window.location.replace(nextTarget());
+    // Demo sessions can browse but not write — gated pages would bounce
+    // them straight back here, so land on the catalog instead.
+    window.location.replace(currentIsDemo ? 'cars.html' : nextTarget());
   });
 
   document.querySelector('#resend-btn').addEventListener('click', async (event) => {
     event.currentTarget.disabled = true;
-    const { error: otpError } = await requestEmailOtp(currentEmail);
-    if (otpError) {
-      renderCodeStep(friendlyError(otpError));
+    const result = await requestPhoneOtp(currentPhone);
+    if (result.error) {
+      renderCodeStep(friendlyError(result.error));
       return;
     }
+    currentIsDemo = !!result.demo;
     toast('ახალი კოდი გაიგზავნა');
     renderCodeStep();
   });
 
-  document.querySelector('#change-email').addEventListener('click', () => {
+  document.querySelector('#change-phone').addEventListener('click', () => {
     clearInterval(resendTimer);
-    renderEmailStep();
+    renderPhoneStep();
   });
 
   form.querySelector('[name="code"]').focus();
 }
 
 async function init() {
-  if (!sb) {
-    document.querySelector('#app').innerHTML = NotConfigured();
-    return;
-  }
   const user = await authReady;
   if (user) {
     window.location.replace(nextTarget());
     return;
   }
-  renderEmailStep();
+  // Without Supabase the phone flow still works in the labelled demo mode,
+  // so the page renders either way.
+  renderPhoneStep();
 }
 
 init();
