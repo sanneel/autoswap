@@ -129,22 +129,6 @@ function comboField(kind, labelText, value, placeholder, disabled = false) {
   `;
 }
 
-/* ---- Make quick-filter chips (counts from the full dataset) ---- */
-function chipsHTML() {
-  const counts = {};
-  allCars.forEach((car) => { counts[car.make] = (counts[car.make] || 0) + 1; });
-  const makes = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 6);
-  const chips = [{ label: 'ყველა', make: '', count: allCars.length }]
-    .concat(makes.map((make) => ({ label: make, make, count: counts[make] })));
-
-  return chips
-    .map((chip) => {
-      const active = (currentFilters.make || '') === chip.make ? ' is-active' : '';
-      return `<button type="button" class="make-chip${active}" data-make="${chip.make}">${chip.label} <span>(${chip.count})</span></button>`;
-    })
-    .join('');
-}
-
 /* How many filters the user actually engaged — drives the mobile badge. */
 function activeFilterCount() {
   const skip = ['makeId', 'modelGroup', 'modelTerms', 'sort'];
@@ -492,7 +476,6 @@ function CatalogPage() {
         ${FiltersSidebar(filtered.length)}
         <div class="filters-overlay" id="filters-overlay" hidden></div>
         <div class="results">
-          <nav class="make-chips" id="make-chips" aria-label="მარკები">${chipsHTML()}</nav>
           ${ResultsHead(filtered.length)}
           <div class="car-list" id="car-list">
             ${slice.length ? slice.map(CarRow).join('') : emptyStateHTML()}
@@ -631,9 +614,6 @@ function update() {
     badge.textContent = n ? String(n) : '';
     badge.hidden = !n;
   }
-
-  const chips = document.querySelector('#make-chips');
-  if (chips) chips.innerHTML = chipsHTML();
 
   const list = document.querySelector('#car-list');
   if (list) {
@@ -1047,28 +1027,6 @@ function bindEvents() {
 
   document.querySelector('#sort-select')?.addEventListener('change', (event) => {
     currentFilters.sort = event.target.value;
-    pagesShown = 1;
-    update();
-  });
-
-  document.querySelector('#make-chips')?.addEventListener('click', async (event) => {
-    const chip = event.target.closest('.make-chip');
-    if (!chip) return;
-    const changed = currentFilters.make !== (chip.dataset.make || '');
-    currentFilters.make = chip.dataset.make || '';
-    currentFilters.makeId = '';
-    if (changed) {
-      resetModelFilter();
-    }
-    // Keep the make combobox input in sync with the chosen chip.
-    const makeInput = document.querySelector('.combo[data-combo="make"] .combo-input');
-    if (makeInput) {
-      makeInput.value = currentFilters.make;
-      const clear = document.querySelector('.combo[data-combo="make"] .combo-clear');
-      if (clear) clear.hidden = !currentFilters.make;
-    }
-    if (currentFilters.make) await resolveSelectedMakeId();
-    setModelComboDisabled(!currentFilters.makeId);
     pagesShown = 1;
     update();
   });
