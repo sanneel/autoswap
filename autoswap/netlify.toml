@@ -1,0 +1,27 @@
+# Netlify deploy config for the AutoSwap static frontend.
+#
+# Set these in Site settings → Environment variables (Production):
+#   AUTO_SWAP_SUPABASE_URL        = https://YOUR_PROJECT_REF.supabase.co
+#   AUTO_SWAP_SUPABASE_ANON_KEY   = <public anon key>
+# The build command materializes the gitignored front/supabase-config.js from
+# them; without it the site runs in demo mode.
+
+[build]
+  command = "node scripts/gen-config.mjs"
+  publish = "front"
+
+# Static multi-page site — no SPA rewrite. Each *.html is served directly.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Long-cache static assets; HTML stays revalidated so deploys are picked up.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

@@ -230,27 +230,28 @@ function ListingsSection(cars = activeListings) {
 
 function ProcessSection() {
   const steps = [
-    { icon: icons.car, title: 'დაამატე შენი ავტომობილი', text: 'აღწერე მანქანა, გარბენი, ფასი და სასურველი გაცვლა.' },
-    { icon: icons.swap, title: 'იპოვე შესაბამისი გაცვლა', text: 'ნახე რას ეძებენ მფლობელები და რა თანხის სხვაობაა.' },
-    { icon: icons.message, title: 'გაგზავნე შეთავაზება', text: 'შესთავაზე შენი მანქანა და შეთანხმდი პირდაპირ მფლობელთან.' },
+    { title: 'დაამატე შენი ავტომობილი', text: 'აღწერე მანქანა, გარბენი, ფასი და სასურველი გაცვლა.' },
+    { title: 'იპოვე შესაბამისი გაცვლა', text: 'ნახე რას ეძებენ მფლობელები და რა თანხის სხვაობაა.' },
+    { title: 'გაგზავნე შეთავაზება', text: 'შესთავაზე შენი მანქანა და შეთანხმდი პირდაპირ მფლობელთან.' },
   ];
 
+  // Steps render as stops on a route — milestone markers on a dashed
+  // centerline — instead of a grid of look-alike icon cards.
   return `
     <section class="process-section" id="sections" aria-labelledby="process-title">
       <div class="container split-section">
         <div>
           <h2 id="process-title">გაცვლა რამდენიმე მკაფიო ნაბიჯად</h2>
         </div>
-        <div class="process-grid">
+        <ol class="process-route">
           ${steps.map((step, index) => `
-            <article class="process-card">
-              <span class="process-icon">${step.icon}</span>
-              <span class="step-index">${index + 1}</span>
+            <li class="process-step">
+              <span class="step-marker" aria-hidden="true">${index + 1}</span>
               <h3>${step.title}</h3>
               <p>${step.text}</p>
-            </article>
+            </li>
           `).join('')}
-        </div>
+        </ol>
       </div>
     </section>
   `;
@@ -271,10 +272,10 @@ function BenefitsSection() {
             <h2 id="benefits-title">ნაკლები ხმაური, მეტი ნდობა</h2>
           </div>
         </div>
-        <div class="benefits-grid">
+        <div class="benefits-ledger">
           ${benefits.map((item) => `
-            <article class="benefit-card">
-              <span>${item.icon}</span>
+            <article class="benefit-row">
+              <span class="benefit-glyph" aria-hidden="true">${item.icon}</span>
               <h3>${item.title}</h3>
               <p>${item.text}</p>
             </article>
@@ -377,7 +378,7 @@ function bindInteractions() {
 
 function App() {
   return `
-    ${Header({ active: 'listings' })}
+    ${Header()}
     <main>
       ${Hero()}
       ${ListingsSection()}

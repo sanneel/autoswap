@@ -49,6 +49,9 @@
     tag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"></path><circle cx="7.5" cy="7.5" r="1.4"></circle></svg>',
     sound: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"></path><path d="M16 8.5a4 4 0 0 1 0 7"></path><path d="M19 5.5a8 8 0 0 1 0 13"></path></svg>',
     user: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>',
+    mic: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v3"></path></svg>',
+    logout: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg>',
+    google: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" stroke="none" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" stroke="none" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" stroke="none" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" stroke="none" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"/></svg>',
   };
 
   // ---- Display label maps -------------------------------------------------
@@ -262,7 +265,9 @@
   // ---- Shared chrome ------------------------------------------------------
   function Header(opts) {
     const options = opts || {};
-    const active = options.active || 'listings';
+    // No default: pages without a matching nav item (landing, login, …)
+    // render the nav with nothing highlighted.
+    const active = options.active || '';
     // "Add your car" moved from the nav into the CTA — it is the conversion
     // action, not a navigation item.
     const nav = [
@@ -274,14 +279,15 @@
       <header class="site-header">
         <div class="container header-inner">
           <a class="brand" href="index.html#home" aria-label="AutoSwap მთავარი გვერდი">
-            <img class="brand-logo" src="${assets.logo}" alt="AutoSwap" width="1640" height="338">
+            <span class="brand-tile" aria-hidden="true">${icons.swap}</span>
+            <span class="brand-word">auto<b>swap</b></span>
           </a>
           <div class="header-actions">
             <nav class="site-nav" aria-label="მთავარი ნავიგაცია">
               ${nav.map((item) => `<a class="${item.id === active ? 'is-active' : ''}" href="${item.href}">${item.label}</a>`).join('')}
             </nav>
-            <div class="header-auth" id="header-auth">${authSlotHTML()}</div>
             <a class="btn btn-accent header-cta" href="sell.html">${icons.plus}<span>დაამატე მანქანა</span></a>
+            <div class="header-auth" id="header-auth">${authSlotHTML()}</div>
           </div>
         </div>
       </header>
@@ -293,7 +299,10 @@
       <footer class="site-footer" id="contact">
         <div class="container footer-grid">
           <div class="footer-brand">
-            <img class="brand-logo" src="${assets.logo}" alt="AutoSwap" width="1640" height="338">
+            <span class="brand" aria-hidden="true">
+              <span class="brand-tile">${icons.swap}</span>
+              <span class="brand-word">auto<b>swap</b></span>
+            </span>
             <p>რეალური გაცვლები რეალურ მფლობელებს შორის.</p>
           </div>
           <nav class="footer-nav" aria-label="ფუტერის ნავიგაცია">
@@ -422,13 +431,14 @@
   }
 
   // ---- Auth state (one source of truth) --------------------------------------
-  // Two sign-in paths share this state: phone OTP via the header modal
-  // (openAuthModal) and email OTP via login.html. Supabase Auth issues the
-  // 6-digit code, stores only its hash, expires it (set OTP expiry to 300s in
-  // the dashboard), rate-limits requests, and returns JWT access + refresh
-  // tokens that supabase-js rotates for us. The phone modal additionally has
-  // a clearly-labelled local demo fallback (authUser.demo === true) which can
-  // browse but cannot write — RLS flows require a real session.
+  // Sign-in paths sharing this state: phone OTP (header modal + login.html)
+  // and Google OAuth. Email registration is intentionally removed — the
+  // phone number is the primary identity; OAuth users are required to attach
+  // a number afterwards (openPhoneRequiredModal). Supabase Auth issues the
+  // OTP code, stores only its hash, expires it, rate-limits requests, and
+  // returns JWT access + refresh tokens that supabase-js rotates for us. The
+  // phone flow additionally has a clearly-labelled local demo fallback
+  // (authUser.demo === true) which can browse but cannot write.
   let authUser = null;
   const authListeners = new Set();
 
@@ -482,19 +492,16 @@
     return session ? session.user : null;
   })();
 
-  async function requestEmailOtp(email) {
-    if (!sbClient) return { error: 'Supabase არ არის კონფიგურირებული' };
-    const { error } = await sbClient.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
+  // Google OAuth — redirects away and back; Supabase restores the
+  // session on return. Configure the provider in the Supabase dashboard
+  // (Authentication → Providers) and allow the site URL as a redirect.
+  async function signInWithProvider(provider) {
+    if (!sbClient) return { error: 'დემო რეჟიმი — Google-ით შესვლა მოითხოვს Supabase-ის კონფიგურაციას.' };
+    const { error } = await sbClient.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: window.location.href.split('#')[0] },
     });
     return { error: error ? error.message : null };
-  }
-
-  async function verifyEmailOtp(email, token) {
-    if (!sbClient) return { user: null, error: 'Supabase არ არის კონფიგურირებული' };
-    const { data, error } = await sbClient.auth.verifyOtp({ email, token, type: 'email' });
-    return { user: data ? data.user : null, error: error ? error.message : null };
   }
 
   async function signOut() {
@@ -547,6 +554,7 @@
     authReady.then(() => {
       renderAuthSlot();
       hydrateSavedButtons();
+      maybeRequireProfile();
     });
   });
 
@@ -857,7 +865,7 @@
         <h2 class="modal-title" id="login-gate-title">ჯერ შესვლაა საჭირო</h2>
         <p class="offer-gate-text">${escapeAttr(message)}</p>
         <div class="offer-actions">
-          <a class="btn btn-ghost" href="login.html?next=${next}">ელფოსტით</a>
+          <a class="btn btn-ghost" href="login.html?next=${next}">Google-ით</a>
           <button type="button" class="btn btn-primary" id="login-gate-phone">ნომრით შესვლა</button>
         </div>
       </div>
@@ -1103,11 +1111,18 @@
     }
   }
 
+  // "+995555993535" → "+995 555 99 35 35" for the header chip.
+  function formatPhoneDisplay(phone) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    const m = digits.match(/^995(5\d{2})(\d{2})(\d{2})(\d{2})$/);
+    return m ? `+995 ${m[1]} ${m[2]} ${m[3]} ${m[4]}` : (digits ? `+${digits}` : '');
+  }
+
   function authDisplayName(user) {
     if (!user) return '';
-    if (user.demo) return user.name || user.phone;
+    if (user.demo) return user.name || formatPhoneDisplay(user.phone);
     const meta = user.user_metadata || {};
-    return meta.full_name || (user.phone ? `+${user.phone}` : 'ანგარიში');
+    return meta.full_name || formatPhoneDisplay(user.phone) || 'ანგარიში';
   }
 
   function authSlotHTML() {
@@ -1116,19 +1131,28 @@
     }
     // Real sessions link to the account hub; the local demo user has no
     // server-side rows to show there.
-    const name = `${icons.user}<span class="header-user-name">${escapeAttr(authDisplayName(authUser))}</span>`;
+    const display = authDisplayName(authUser);
+    // Uppercase only Latin initials — Georgian script has no everyday
+    // uppercase, and Mtavruli forms look off in an avatar.
+    const first = display.trim().charAt(0);
+    const initial = /[a-z]/.test(first) ? first.toUpperCase() : first;
+    const chip = `
+      <span class="header-avatar" aria-hidden="true">${/^[+\d]/.test(initial) ? icons.user : initial}</span>
+      <span class="header-user-name">${escapeAttr(display)}</span>
+    `;
     return `
       ${authUser.demo
-        ? `<span class="header-user">${name}</span>`
-        : `<a class="header-user" href="account.html">${name}</a>`}
-      <button class="header-logout" type="button" data-logout>გასვლა</button>
+        ? `<span class="header-user">${chip}</span>`
+        : `<a class="header-user" href="account.html" title="ჩემი ანგარიში">${chip}</a>`}
+      <button class="header-logout" type="button" data-logout title="გასვლა" aria-label="გასვლა">${icons.logout}</button>
     `;
   }
 
   function renderAuthSlot() {
     // Idempotent: runs from a MutationObserver, so writing on every call
-    // would re-trigger the observer forever.
-    const state = authUser ? `in:${authUser.demo ? 'demo' : authUser.id}` : 'out';
+    // would re-trigger the observer forever. The display name is part of the
+    // state key so saving a name re-renders the chip.
+    const state = authUser ? `in:${authUser.demo ? 'demo' : authUser.id}:${authDisplayName(authUser)}` : 'out';
     document.querySelectorAll('#header-auth').forEach((slot) => {
       if (slot.dataset.authState === state) return;
       slot.dataset.authState = state;
@@ -1144,32 +1168,123 @@
     return null;
   }
 
-  // → { demo: boolean } on success, { error: string } on failure.
-  async function requestOtp(phone, name, mode) {
-    if (!sbClient) return { demo: true };
-    const options = mode === 'register'
-      ? { shouldCreateUser: true, data: name ? { full_name: name } : undefined }
-      : { shouldCreateUser: false };
-    const { error } = await sbClient.auth.signInWithOtp({ phone, options });
+  // Direct Supabase send — last-resort fallback if the rate-limited Edge
+  // Function is not reachable. Carries no IP-based protection; the deployed
+  // `request-otp` function is the intended path.
+  async function sendOtpDirect(phone) {
+    const { error } = await sbClient.auth.signInWithOtp({ phone, options: { shouldCreateUser: true } });
     if (!error) return { demo: false };
     const message = String(error.message || '');
-    // SMS provider not wired up on the Supabase project → demo flow.
     if (/provider|not enabled|disabled|unsupported/i.test(message)) return { demo: true };
-    if (/signups not allowed/i.test(message)) return { error: 'ეს ნომერი ჯერ არ არის რეგისტრირებული — გადადი რეგისტრაციაზე.' };
     return { error: `კოდი ვერ გაიგზავნა: ${message}` };
   }
 
-  // → {} on success (header updates via auth listener), { error } on failure.
-  async function confirmOtp(phone, code, name, isDemo) {
+  // → { demo: boolean } on success, { error: string } on failure.
+  // The account is auto-created on first login — one flow for everyone.
+  // Routes through the `request-otp` Edge Function so the server-side rate
+  // limiter (per-IP burst, per-phone bombing, distributed velocity) is the
+  // authority — a check in this client could just be skipped.
+  async function requestOtp(phone) {
+    if (!sbClient) return { demo: true };
+    const base = String(window.AUTO_SWAP_SUPABASE_URL || '').trim().replace(/\/$/, '');
+    const anonKey = String(window.AUTO_SWAP_SUPABASE_ANON_KEY || '').trim();
+    let res;
+    try {
+      res = await fetch(`${base}/functions/v1/request-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+        body: JSON.stringify({ phone }),
+      });
+    } catch (_err) {
+      // Function unreachable (offline / not deployed yet) — keep auth working.
+      return sendOtpDirect(phone);
+    }
+    if (res.status === 404) return sendOtpDirect(phone);
+    let data = {};
+    try { data = await res.json(); } catch (_err) { /* fall through to status check */ }
+    if (res.status === 429 || data.blocked) {
+      const wait = Number(data.retry_after) || 60;
+      // Reuse the existing "code could not be sent" wrapper; owner owns copy.
+      return { error: `კოდი ვერ გაიგზავნა: ${data.error || 'too many requests'} (${wait}s)` };
+    }
+    if (!res.ok) return { error: `კოდი ვერ გაიგზავნა: ${data.error || res.statusText}` };
+    if (data.status === 'provider_disabled') return { demo: true };
+    return { demo: false };
+  }
+
+  // → { user } on success (header updates via auth listener), { error } on failure.
+  async function confirmOtp(phone, code, isDemo) {
     if (isDemo) {
       if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი — დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
-      localStorage.setItem(DEMO_USER_KEY, JSON.stringify({ name: name || '', phone }));
-      authUser = { demo: true, name: name || '', phone };
+      // A returning demo user keeps the name they already gave.
+      const existing = getDemoUser();
+      const demoUser = { name: (existing && existing.phone === phone && existing.name) || '', phone };
+      localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser));
+      authUser = { demo: true, ...demoUser };
+      notifyAuth();
+      return { user: authUser };
+    }
+    const { data, error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'sms' });
+    return error ? { error: `კოდი ვერ დადასტურდა: ${error.message}` } : { user: data.user };
+  }
+
+  // ---- Display name (asked once, after the number is verified) -------------
+  function needsName(user) {
+    if (!user) return false;
+    if (user.demo) return !user.name;
+    return !(user.user_metadata && user.user_metadata.full_name);
+  }
+
+  async function saveDisplayName(name) {
+    if (authUser && authUser.demo) {
+      const demoUser = { ...getDemoUser(), name };
+      localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser));
+      authUser = { demo: true, ...demoUser };
       notifyAuth();
       return {};
     }
-    const { error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'sms' });
-    return error ? { error: `კოდი ვერ დადასტურდა: ${error.message}` } : {};
+    const { data, error } = await sbClient.auth.updateUser({ data: { full_name: name } });
+    if (error) return { error: `სახელი ვერ შეინახა: ${error.message}` };
+    authUser = data.user;
+    notifyAuth();
+    return {};
+  }
+
+  function openNameRequiredModal() {
+    const { overlay, close } = buildModal(`
+      <div class="modal-body auth-modal">
+        <h2 class="modal-title" id="name-req-title">როგორ მოგმართოთ?</h2>
+        <p class="auth-sub">სახელი გამოჩნდება შენს განცხადებებზე და შეთავაზებებზე.</p>
+        <form class="offer-form" id="name-req-form" novalidate>
+          <label class="field">
+            <span>სახელი</span>
+            <input type="text" name="name" autocomplete="name" placeholder="მაგ: გიორგი" required>
+          </label>
+          <p class="auth-error" hidden></p>
+          <button type="submit" class="btn btn-primary auth-submit">შენახვა</button>
+        </form>
+        <button type="button" class="auth-link-btn" data-close>მოგვიანებით</button>
+      </div>
+    `, 'name-req-title');
+    overlay.querySelector('#name-req-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const errorBox = overlay.querySelector('.auth-error');
+      const name = String(new FormData(event.currentTarget).get('name') || '').trim();
+      if (!name) {
+        errorBox.textContent = 'შეიყვანე სახელი.';
+        errorBox.hidden = false;
+        return;
+      }
+      const result = await saveDisplayName(name);
+      if (result.error) {
+        errorBox.textContent = result.error;
+        errorBox.hidden = false;
+        return;
+      }
+      toast(`გამარჯობა, ${name}!`);
+      close();
+    });
+    overlay.querySelector('[name="name"]').focus();
   }
 
   function logout() {
@@ -1180,37 +1295,160 @@
     sbClient?.auth.signOut().catch((err) => console.error('AutoSwap: signOut failed', err.message));
   }
 
-  function authFormHTML(mode) {
-    return `
-      <div class="auth-tabs" role="tablist">
-        <button class="auth-tab ${mode === 'login' ? 'is-active' : ''}" type="button" data-mode="login">შესვლა</button>
-        <button class="auth-tab ${mode === 'register' ? 'is-active' : ''}" type="button" data-mode="register">რეგისტრაცია</button>
-      </div>
-      <form class="offer-form" id="auth-form" novalidate>
-        <label class="field" id="auth-name-field" ${mode === 'register' ? '' : 'hidden'}>
-          <span>სახელი</span>
-          <input type="text" name="name" autocomplete="name" placeholder="მაგ: გიორგი">
-        </label>
-        <label class="field">
-          <span>ტელეფონის ნომერი (+995)</span>
-          <input type="tel" name="phone" inputmode="tel" autocomplete="tel-national" placeholder="5XX XX XX XX" required>
-        </label>
-        <p class="auth-error" id="auth-error" hidden></p>
-        <div class="offer-actions">
-          <button type="button" class="btn btn-ghost" data-close>გაუქმება</button>
-          <button type="submit" class="btn btn-primary" id="auth-submit">კოდის გაგზავნა</button>
+  // ---- Required phone for OAuth accounts ----------------------------------
+  // The number is the marketplace identity: Google users must attach
+  // one before the account is complete. Real path verifies via SMS
+  // (updateUser → phone_change OTP); without an SMS provider the number is
+  // stored on user_metadata after the labelled demo code.
+  function needsPhone(user) {
+    if (!user || user.demo) return false;
+    return !user.phone && !(user.user_metadata && user.user_metadata.phone);
+  }
+
+  async function requestPhoneAttach(phone) {
+    const { error } = await sbClient.auth.updateUser({ phone });
+    if (!error) return { demo: false };
+    const message = String(error.message || '');
+    if (/provider|not enabled|disabled|unsupported|sms/i.test(message)) return { demo: true };
+    return { error: `ნომერი ვერ დაემატა: ${message}` };
+  }
+
+  async function confirmPhoneAttach(phone, code, isDemo) {
+    if (isDemo) {
+      if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი — დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
+      const { error } = await sbClient.auth.updateUser({ data: { phone } });
+      return error ? { error: `ნომერი ვერ შეინახა: ${error.message}` } : {};
+    }
+    const { error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'phone_change' });
+    return error ? { error: `კოდი ვერ დადასტურდა: ${error.message}` } : {};
+  }
+
+  function openPhoneRequiredModal() {
+    const { overlay, close } = buildModal(`
+      <div class="modal-body auth-modal">
+        <h2 class="modal-title" id="phone-req-title">დაამატე ტელეფონის ნომერი</h2>
+        <p class="auth-sub">ნომერი სავალდებულოა — გაცვლის შეთავაზებები და კონტაქტი ნომერზე დგას.</p>
+        <div id="phone-req-step">
+          <form class="offer-form" id="phone-req-form" novalidate>
+            <label class="field">
+              <span>ტელეფონის ნომერი</span>
+              <input type="tel" name="phone" inputmode="tel" autocomplete="tel-national" placeholder="5XX XX XX XX" required>
+            </label>
+            <p class="auth-error" hidden></p>
+            <button type="submit" class="btn btn-primary auth-submit">კოდის გაგზავნა</button>
+          </form>
+          <button type="button" class="auth-link-btn" data-close>მოგვიანებით</button>
         </div>
-      </form>
+      </div>
+    `, 'phone-req-title');
+
+    const step = overlay.querySelector('#phone-req-step');
+    const showError = (text) => {
+      const el = step.querySelector('.auth-error');
+      if (!el) return;
+      el.textContent = text;
+      el.hidden = false;
+    };
+
+    step.querySelector('#phone-req-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const phone = normalizePhone(new FormData(event.currentTarget).get('phone'));
+      if (!phone) {
+        showError('შეიყვანე ქართული მობილურის ნომერი ფორმატით 5XX XX XX XX.');
+        return;
+      }
+      const submit = event.currentTarget.querySelector('[type="submit"]');
+      submit.disabled = true;
+      const result = await requestPhoneAttach(phone);
+      if (result.error) {
+        submit.disabled = false;
+        showError(result.error);
+        return;
+      }
+      step.innerHTML = `
+        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${result.demo ? ` დემო რეჟიმი — შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
+        <form class="offer-form" id="phone-req-otp" novalidate>
+          <label class="field">
+            <span>SMS კოდი</span>
+            <input class="otp-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••">
+          </label>
+          <p class="auth-error" hidden></p>
+          <button type="submit" class="btn btn-primary auth-submit">დადასტურება</button>
+        </form>
+        <button type="button" class="auth-link-btn" data-close>მოგვიანებით</button>
+      `;
+      step.querySelector('.otp-input').focus();
+      step.querySelector('#phone-req-otp').addEventListener('submit', async (otpEvent) => {
+        otpEvent.preventDefault();
+        const code = String(new FormData(otpEvent.currentTarget).get('code') || '').trim();
+        if (!code) {
+          showError('შეიყვანე SMS კოდი.');
+          return;
+        }
+        const confirmed = await confirmPhoneAttach(phone, code, result.demo);
+        if (confirmed.error) {
+          showError(confirmed.error);
+          return;
+        }
+        const { data } = await sbClient.auth.getUser();
+        if (data && data.user) {
+          authUser = data.user;
+          notifyAuth();
+        }
+        toast('ნომერი დაემატა');
+        close();
+      });
+    });
+  }
+
+  // One nudge per page load: an OAuth account without a number gets the
+  // required-phone modal until it attaches one; a verified account without
+  // a name gets the name popup (dismissable — re-asked next session).
+  const NAME_LATER_KEY = 'autoswap.nameLater';
+
+  function maybeRequireProfile() {
+    if (document.querySelector('.modal-overlay')) return;
+    if (needsPhone(authUser)) {
+      openPhoneRequiredModal();
+      return;
+    }
+    if (needsName(authUser) && !sessionStorage.getItem(NAME_LATER_KEY)) {
+      sessionStorage.setItem(NAME_LATER_KEY, '1');
+      openNameRequiredModal();
+    }
+  }
+
+  function authProvidersHTML() {
+    return `
+      <div class="auth-providers">
+        <button type="button" class="btn-provider btn-google" data-provider="google">${icons.google}<span>Google-ით გაგრძელება</span></button>
+      </div>
+      <div class="auth-divider"><span>ან ნომრით</span></div>
     `;
   }
 
-  function openAuthModal(initialMode) {
-    let mode = initialMode === 'register' ? 'register' : 'login';
+  // One flow for both new and returning users: phone → SMS code. The name
+  // is asked only after the number is verified (and only when missing).
+  function authFormHTML() {
+    return `
+      ${authProvidersHTML()}
+      <form class="offer-form" id="auth-form" novalidate>
+        <label class="field">
+          <span>ტელეფონის ნომერი</span>
+          <input type="tel" name="phone" inputmode="tel" autocomplete="tel-national" placeholder="5XX XX XX XX" required>
+        </label>
+        <p class="auth-error" id="auth-error" hidden></p>
+        <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">კოდის გაგზავნა</button>
+      </form>
+      <p class="auth-note">პირველი შესვლისას ანგარიში ავტომატურად შეიქმნება.</p>
+    `;
+  }
+
+  function openAuthModal() {
     const { overlay, close } = buildModal(`
-      <div class="modal-body" id="auth-body">
-        <p class="modal-eyebrow">ანგარიში</p>
-        <h2 class="modal-title" id="auth-title">გაიარე ავტორიზაცია ნომრით</h2>
-        <div id="auth-step">${authFormHTML(mode)}</div>
+      <div class="modal-body auth-modal" id="auth-body">
+        <h2 class="modal-title" id="auth-title">შესვლა</h2>
+        <div id="auth-step">${authFormHTML()}</div>
       </div>
     `, 'auth-title');
 
@@ -1224,42 +1462,40 @@
     };
 
     function bindPhoneStep() {
-      step.querySelectorAll('.auth-tab').forEach((tab) => {
-        tab.addEventListener('click', () => {
-          mode = tab.dataset.mode === 'register' ? 'register' : 'login';
-          step.innerHTML = authFormHTML(mode);
-          bindPhoneStep();
+      step.querySelectorAll('.btn-provider').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          const { error } = await signInWithProvider(btn.dataset.provider);
+          if (error) {
+            btn.disabled = false;
+            showError(error);
+          }
+          // On success the browser navigates away to the provider.
         });
       });
 
       step.querySelector('#auth-form').addEventListener('submit', async (event) => {
         event.preventDefault();
-        const data = new FormData(event.currentTarget);
-        const name = String(data.get('name') || '').trim();
-        const phone = normalizePhone(data.get('phone'));
+        const phone = normalizePhone(new FormData(event.currentTarget).get('phone'));
         if (!phone) {
           showError('შეიყვანე ქართული მობილურის ნომერი ფორმატით 5XX XX XX XX.');
-          return;
-        }
-        if (mode === 'register' && !name) {
-          showError('შეიყვანე სახელი.');
           return;
         }
         const submit = step.querySelector('#auth-submit');
         submit.disabled = true;
         submit.textContent = 'იგზავნება…';
-        const result = await requestOtp(phone, name, mode);
+        const result = await requestOtp(phone);
         if (result.error) {
           submit.disabled = false;
           submit.textContent = 'კოდის გაგზავნა';
           showError(result.error);
           return;
         }
-        bindOtpStep(phone, name, result.demo);
+        bindOtpStep(phone, result.demo);
       });
     }
 
-    function bindOtpStep(phone, name, isDemo) {
+    function bindOtpStep(phone, isDemo) {
       step.innerHTML = `
         <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი — შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
         <form class="offer-form" id="otp-form" novalidate>
@@ -1268,15 +1504,13 @@
             <input class="otp-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••">
           </label>
           <p class="auth-error" hidden></p>
-          <div class="offer-actions">
-            <button type="button" class="btn btn-ghost" id="auth-back">უკან</button>
-            <button type="submit" class="btn btn-primary">დადასტურება</button>
-          </div>
+          <button type="submit" class="btn btn-primary auth-submit">დადასტურება</button>
         </form>
+        <button type="button" class="auth-link-btn" id="auth-back">სხვა ნომერი</button>
       `;
 
       step.querySelector('#auth-back').addEventListener('click', () => {
-        step.innerHTML = authFormHTML(mode);
+        step.innerHTML = authFormHTML();
         bindPhoneStep();
       });
 
@@ -1287,22 +1521,61 @@
           showError('შეიყვანე SMS კოდი.');
           return;
         }
-        const result = await confirmOtp(phone, code, name, isDemo);
+        const result = await confirmOtp(phone, code, isDemo);
         if (result.error) {
           showError(result.error);
           return;
         }
-        step.innerHTML = `
-          <div class="offer-success">
-            <span class="offer-success-icon">${icons.check}</span>
-            <h2 class="modal-title">გამარჯობა${name ? `, ${escapeAttr(name)}` : ''}!</h2>
-            <p>${mode === 'register' ? 'რეგისტრაცია წარმატებით დასრულდა.' : 'შესვლა წარმატებულია.'}</p>
-            <button type="button" class="btn btn-primary" data-close>გასაგებია</button>
-          </div>
-        `;
+        if (needsName(result.user || authUser)) {
+          bindNameStep();
+          return;
+        }
+        showSuccess(authDisplayName(result.user || authUser));
       });
 
       step.querySelector('.otp-input').focus();
+    }
+
+    // Asked once, right after the number is verified — never before.
+    function bindNameStep() {
+      step.innerHTML = `
+        <p class="auth-sub">ნომერი დადასტურდა — როგორ მოგმართოთ?</p>
+        <form class="offer-form" id="name-form" novalidate>
+          <label class="field">
+            <span>სახელი</span>
+            <input type="text" name="name" autocomplete="name" placeholder="მაგ: გიორგი" required>
+          </label>
+          <p class="auth-error" hidden></p>
+          <button type="submit" class="btn btn-primary auth-submit">შენახვა</button>
+        </form>
+        <button type="button" class="auth-link-btn" data-close>მოგვიანებით</button>
+      `;
+      step.querySelector('#name-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const name = String(new FormData(event.currentTarget).get('name') || '').trim();
+        if (!name) {
+          showError('შეიყვანე სახელი.');
+          return;
+        }
+        const result = await saveDisplayName(name);
+        if (result.error) {
+          showError(result.error);
+          return;
+        }
+        showSuccess(name);
+      });
+      step.querySelector('[name="name"]').focus();
+    }
+
+    function showSuccess(name) {
+      step.innerHTML = `
+        <div class="offer-success">
+          <span class="offer-success-icon">${icons.check}</span>
+          <h2 class="modal-title">გამარჯობა${name ? `, ${escapeAttr(name)}` : ''}!</h2>
+          <p>შესვლა წარმატებულია.</p>
+          <button type="button" class="btn btn-primary" data-close>გასაგებია</button>
+        </div>
+      `;
     }
 
     bindPhoneStep();
@@ -1378,8 +1651,11 @@
     authReady,
     getAuthUser,
     onAuth,
-    requestEmailOtp,
-    verifyEmailOtp,
+    signInWithProvider,
+    normalizePhone,
+    requestPhoneOtp: requestOtp,
+    confirmPhoneOtp: confirmOtp,
+    AUTH_DEMO_CODE: DEMO_OTP_CODE,
     signOut,
     escapeAttr,
     buildModal,

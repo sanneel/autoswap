@@ -9,7 +9,7 @@ matched automatically, chat after an offer is accepted.
 | Layer      | Technology                                                            |
 | ---------- | --------------------------------------------------------------------- |
 | Database   | Supabase Postgres (tables, indexes, triggers, RPCs in `supabase/`)     |
-| Auth       | Supabase Auth — **email OTP** (6-digit one-time code, JWT + refresh)   |
+| Auth       | Supabase Auth — **Google OAuth + phone SMS OTP** (6-digit code, JWT + refresh) |
 | API        | PostgREST (RLS-guarded) + `SECURITY DEFINER` RPCs + Edge Functions (`back/`) |
 | Storage    | Supabase Storage — public `vehicle-photos` bucket, owner-only writes   |
 | Frontend   | Static, framework-free HTML/CSS/JS in `front/` (works in demo mode without a backend) |
@@ -43,20 +43,43 @@ upgrades existing deployments in place):
 3. `supabase/policies.sql`
 4. `supabase/storage.sql`
 5. `supabase/car_catalog.sql`
+6. `supabase/otp_rate_limit.sql`
 
-### 2. Auth (OTP)
+### 2. Auth (Google OAuth + phone SMS OTP)
 
-In the Supabase dashboard → Authentication:
+The phone number is the marketplace identity. Email auth is intentionally not
+used. In the Supabase dashboard → Authentication:
 
-- Enable the **Email** provider.
-- Set **Email OTP expiry** to `300` seconds (5 minutes).
-- Keep default rate limits (they throttle OTP spam per address/IP).
+- **Phone** provider: enable it and configure an SMS provider (Twilio, Vonage,
+  MessageBird…). Set the **Phone OTP expiry** to `300` seconds (5 minutes).
+- **Google** provider: enable it and add the deployed site URL to the allowed
+  **redirect URLs** (OAuth users are prompted to attach a phone right after).
+- **Keep Supabase's built-in auth rate limits enabled.** They are the hard
+  backstop against the raw `/auth/v1/otp` endpoint (see "OTP rate limiting").
 
-Supabase stores only the **hash** of the OTP, expires it, rate-limits requests,
-and issues the JWT access + refresh token pair that `supabase-js` rotates
-automatically. The login UI is `front/login.html`.
+Supabase stores only the **hash** of the OTP, expires it, and issues the JWT
+access + refresh token pair that `supabase-js` rotates automatically. The login
+UI is `front/login.html`; the in-app modal lives in `front/shared.js`.
 
-### 3. Car catalog (brands/models)
+Until an SMS provider is configured the app runs a clearly-labelled **demo**
+fallback (fixed code `1234`); demo sessions can browse but cannot write. Make
+sure the provider is live before launch so real users never see it.
+
+### 3. Edge Functions
+
+Deploy the functions in `back/` (offer accept/decline/counter, matching, and
+**`request-otp`**, the rate-limited OTP entry point):
+
+```bash
+supabase functions deploy request-otp
+# …plus accept-offer, decline-offer, counter-offer, mark-offer-viewed,
+#    run-matching-for-vehicle
+```
+
+`request-otp` uses the project's `SUPABASE_SERVICE_ROLE_KEY` (injected into
+Edge Functions automatically) to call the limiter; nothing extra to configure.
+
+### 4. Car catalog (brands/models)
 
 ```bash
 SUPABASE_URL="https://YOUR-PROJECT.supabase.co" \
@@ -76,11 +99,49 @@ select public.set_car_model_active(1234, true);  -- re-enable one model
 Deactivated rows stay hidden from clients (RLS) and are never resurrected by
 re-running the ingest.
 
-### 4. Frontend
+### 5. Frontend
 
-Copy `front/supabase-config.example.js` → `front/supabase-config.js` and fill
-in the project URL + **anon** key (never the service-role key). Serve `front/`
-from any static host. Without the config file, every page runs in demo mode.
+`front/supabase-config.js` (gitignored, environment-specific) holds the project
+URL + **anon** key. Two ways to produce it:
+
+- **Local dev:** copy `front/supabase-config.example.js` → `front/supabase-config.js`
+  and fill it in by hand.
+- **Deploy:** set `AUTO_SWAP_SUPABASE_URL` + `AUTO_SWAP_SUPABASE_ANON_KEY` as
+  build env vars and let the build command generate it:
+
+  ```bash
+  node scripts/gen-config.mjs   # writes front/supabase-config.js from env
+  ```
+
+  `netlify.toml` wires this up (`build.command` + `publish = "front"`). Serve
+  `front/` from any static host. Without the config file every page runs in demo
+  mode.
+
+## OTP rate limiting
+
+Login SMS codes are rate limited **server-side**, because the browser holds only
+the public anon key — a check living in client JS could simply be skipped. The
+authority is `public.otp_rate_check()` (`supabase/otp_rate_limit.sql`), called by
+the `request-otp` Edge Function before any SMS is dispatched:
+
+| Rule | Trigger | Action |
+| ---- | ------- | ------ |
+| Per-IP burst | > 2 sends from one IP within 60s | block that IP for 5 min |
+| Per-phone bombing | > 3 codes to one number within 10 min | block that number 15 min |
+| Distributed velocity | ≥ 4 distinct IPs within 30s (IP-rotation) | global cooldown 3 min |
+
+Thresholds are named constants at the top of `otp_rate_check`. The distributed
+rule is a short, self-healing cooldown on purpose — a long global ban would be a
+denial-of-service lever an attacker could trip deliberately.
+
+**Bypass note.** The Edge Function path covers the app and is the policy + UX
+layer, but a determined attacker could call `/auth/v1/otp` directly with the anon
+key. Two defenses close that:
+
+1. Keep Supabase's **built-in auth rate limits** enabled (hard backstop).
+2. For bypass-proof enforcement, register `otp_rate_check()` as a Supabase
+   **Send SMS** auth hook so it runs inside Supabase's own send pipeline
+   regardless of how the OTP was requested (see `supabase/SUPABASE_SETUP.md`).
 
 ## Environment variables
 
