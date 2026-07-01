@@ -329,7 +329,7 @@ svg {
   background-image:
     linear-gradient(180deg, rgba(244, 244, 239, 0.58), rgba(244, 244, 239, 0.32) 44%, rgba(244, 244, 239, 0.82) 100%),
     linear-gradient(90deg, rgba(244, 244, 239, 0.56), rgba(244, 244, 239, 0.16) 46%, rgba(244, 244, 239, 0.54)),
-    url("../assets/hero-road-bg.png");
+    url("assets/hero-road-bg.png");
   background-position: center;
   background-size: cover;
 }
@@ -1192,7 +1192,7 @@ svg {
   z-index: -1;
   background-image:
     linear-gradient(180deg, rgba(244, 244, 239, 0.86), rgba(244, 244, 239, 0.64) 48%, rgba(244, 244, 239, 0.9) 100%),
-    url("../assets/bg-hills.svg?v=2");
+    url("assets/bg-hills.svg?v=2");
   background-position: center;
   background-size: cover;
 }
@@ -1344,7 +1344,7 @@ svg {
   border-radius: var(--radius);
   background:
     linear-gradient(90deg, rgba(18, 53, 31, 0.95), rgba(18, 53, 31, 0.88)),
-    url("../assets/hero-road-bg.png") center 63% / cover;
+    url("assets/hero-road-bg.png") center 63% / cover;
   color: #fff;
 }
 
