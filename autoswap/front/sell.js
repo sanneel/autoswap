@@ -22,54 +22,41 @@ const editId = (() => {
 
 let existingPhotos = []; // [{id, url, position}] in edit mode
 let removedPhotoIds = new Set();
-let currentStep = 1;
+// Close (X) glyph for the cancel action — not in the shared icon set.
+const ICON_X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12"></path><path d="M18 6 6 18"></path></svg>';
 
-// Step icons not in the shared set.
-const ICON_DOC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"></path><path d="M14 3v4h4"></path><path d="M9 13h6M9 16.5h6"></path></svg>';
-const ICON_CAMERA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5a2 2 0 0 1 2-2h1.6L8 4.5h8l1.4 2H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path><circle cx="12" cy="12.8" r="3.4"></circle></svg>';
-const ICON_CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>';
-
-// The five steps — titles reuse existing in-app Georgian terms verbatim.
-const STEPS = [
-  { num: 1, title: 'ავტომობილი', icon: icons.car },
-  { num: 2, title: 'რა გინდა სანაცვლოდ', icon: icons.swap },
-  { num: 3, title: 'აღწერა', icon: ICON_DOC },
-  { num: 4, title: 'ფოტოები', icon: ICON_CAMERA },
-  { num: 5, title: 'გადახედვა', icon: icons.check },
+/* The three form sections, all visible at once. Titles reuse existing
+   in-app Georgian terms verbatim; each carries a copper step numeral and a
+   tinted icon badge (a real order: the car, the terms, the details). */
+const SECTIONS = [
+  { title: 'ავტომობილი', icon: icons.car },
+  { title: 'რა გინდა სანაცვლოდ', icon: icons.tag },
+  { title: 'დეტალები', icon: icons.doc },
 ];
 
-/* One step panel: a clickable header (badge · icon · title) over an
-   expandable body. The active step's body is open; the rest collapse. */
-function stepSection(step, bodyHTML, footHTML) {
+// A titled panel: copper numeral + title on the left, a tinted icon badge
+// on the right, then the section body.
+function sellSection(index, bodyHTML, extraClass = '') {
+  const s = SECTIONS[index];
   return `
-    <section class="sell-step${step.num === currentStep ? ' is-active' : ''}" data-step="${step.num}">
-      <button type="button" class="sell-step-head" data-step-go="${step.num}" aria-expanded="${step.num === currentStep}">
-        <span class="sell-step-badge">${step.num}</span>
-        <span class="sell-step-icon">${step.icon}</span>
-        <span class="sell-step-title">${step.title}</span>
-        <span class="sell-step-chevron">${ICON_CHEVRON}</span>
-      </button>
-      <div class="sell-step-body">
-        ${bodyHTML}
-        ${footHTML ? `<div class="sell-step-foot">${footHTML}</div>` : ''}
+    <section class="sell-section ${extraClass}">
+      <div class="sell-section-head">
+        <h2><span class="sell-section-num">0${index + 1}</span>${s.title}</h2>
+        <span class="sell-section-badge">${s.icon}</span>
       </div>
+      ${bodyHTML}
     </section>
   `;
 }
 
-// Step footer: back (previous step's title) on the left, continue (next
-// step's title) on the right. Both labels reuse existing step titles, so
-// no new copy is written. "continue" validates the current step first.
-function stepFoot(step) {
-  const prev = STEPS[step.num - 2];
-  const next = STEPS[step.num];
-  const back = prev
-    ? `<button type="button" class="btn btn-ghost step-back" data-step-go="${prev.num}">${icons.arrowRight} ${prev.title}</button>`
-    : '<span></span>';
-  if (step.num === STEPS.length) {
-    return `${back}<a class="btn btn-ghost" href="${editId ? 'account.html' : 'cars.html'}">გაუქმება</a>`;
-  }
-  return `${back}<button type="button" class="btn btn-primary step-next" data-step-go="${next.num}" data-from="${step.num}">${next.title} ${icons.arrowRight}</button>`;
+// A labelled field with a leading icon tucked inside the control.
+function iconField(icon, label, controlHTML, extraClass = '') {
+  return `
+    <label class="field field--icon ${extraClass}">
+      <span>${label}</span>
+      <span class="field-control">${icon}${controlHTML}</span>
+    </label>
+  `;
 }
 
 function fieldRows(vehicle, prefs, wantsValue) {
@@ -77,7 +64,17 @@ function fieldRows(vehicle, prefs, wantsValue) {
   const p = prefs || {};
   const sel = (value, current) => (String(value) === String(current ?? '') ? ' selected' : '');
 
-  const carBody = `
+  const cityOpts = CITIES.map((c) => `<option value="${c}"${sel(c, v.city)}>${c}</option>`).join('');
+  const fuelOpts = [['petrol', 'ბენზინი'], ['diesel', 'დიზელი'], ['hybrid', 'ჰიბრიდი'], ['electric', 'ელექტრო'], ['lpg', 'გაზი']]
+    .map(([value, label]) => `<option value="${value}"${sel(value, v.fuel_type)}>${label}</option>`).join('');
+  const transOpts = [['automatic', 'ავტომატიკა'], ['manual', 'მექანიკა'], ['tiptronic', 'ტიპტრონიკი'], ['variator', 'ვარიატორი']]
+    .map(([value, label]) => `<option value="${value}"${sel(value, v.transmission)}>${label}</option>`).join('');
+  const catOpts = [['sedan', 'სედანი'], ['suv', 'ჯიპი'], ['crossover', 'კროსოვერი'], ['hatchback', 'ჰეჩბექი'], ['coupe', 'კუპე'], ['minivan', 'მინივენი'], ['pickup', 'პიკაპი'], ['universal', 'უნივერსალი']]
+    .map(([value, label]) => `<option value="${value}"${sel(value, v.category)}>${label}</option>`).join('');
+  const cashOpts = [['none', 'თანხის გარეშე'], ['add_money', 'ვამატებ თანხას'], ['ask_money', 'ვითხოვ თანხას'], ['flexible', 'შეთანხმებით']]
+    .map(([value, label]) => `<option value="${value}"${sel(value, p.cash_mode)}>${label}</option>`).join('');
+
+  const voice = `
     <div class="voice-fill" id="voice-fill" hidden>
       <button type="button" class="voice-btn" id="voice-btn" aria-label="ხმით შევსება">${icons.mic}</button>
       <div class="voice-copy">
@@ -85,148 +82,105 @@ function fieldRows(vehicle, prefs, wantsValue) {
         <small id="voice-hint">დააჭირე მიკროფონს და თქვი: „BMW 530, 2020 წელი, 90 ათასი კმ, ბენზინი, ავტომატიკა, თბილისი“</small>
       </div>
     </div>
+  `;
 
-    <div class="sell-subgroup">
-      <h4 class="sell-subgroup-title">ძირითადი ინფორმაცია</h4>
-      <div class="sell-grid">
-        <label class="field"><span>მარკა *</span>
-          <input name="make" required placeholder="BMW" list="make-list" value="${escapeAttr(v.make || '')}" autocomplete="off">
-          <datalist id="make-list"></datalist></label>
-        <label class="field"><span>მოდელი *</span>
-          <input name="model" required placeholder="530i" list="model-list" value="${escapeAttr(v.model || '')}" autocomplete="off">
-          <datalist id="model-list"></datalist></label>
-        <label class="field"><span>წელი *</span><input name="year" type="number" min="1980" max="${THIS_YEAR + 1}" required placeholder="2020" value="${v.year ?? ''}"></label>
-        <label class="field"><span>ქალაქი *</span>
-          <select name="city">
-            ${CITIES.map((c) => `<option value="${c}"${sel(c, v.city)}>${c}</option>`).join('')}
-          </select>
-        </label>
-      </div>
+  const carBody = `
+    <div class="sell-grid">
+      ${iconField(icons.tag, 'მარკა *', `<input name="make" required placeholder="BMW" list="make-list" value="${escapeAttr(v.make || '')}" autocomplete="off"><datalist id="make-list"></datalist>`)}
+      ${iconField(icons.tag, 'მოდელი *', `<input name="model" required placeholder="530i" list="model-list" value="${escapeAttr(v.model || '')}" autocomplete="off"><datalist id="model-list"></datalist>`)}
+      ${iconField(icons.calendar, 'წელი *', `<input name="year" type="number" min="1980" max="${THIS_YEAR + 1}" required placeholder="2020" value="${v.year ?? ''}">`)}
+      ${iconField(icons.gauge, 'გარბენი (კმ) *', `<input name="mileage" type="number" min="0" max="2000000" required placeholder="90000" value="${v.mileage ?? ''}">`)}
+      ${iconField(icons.fuel, 'საწვავი *', `<select name="fuel" required>${fuelOpts}</select>`)}
+      ${iconField(icons.gear, 'ტრანსმისია *', `<select name="transmission" required>${transOpts}</select>`)}
+      ${iconField(icons.car, 'კატეგორია', `<select name="category">${catOpts}</select>`)}
+      ${iconField(icons.location, 'ქალაქი *', `<select name="city">${cityOpts}</select>`)}
+      ${iconField(icons.engine, 'ძრავი (ლ)', `<input name="engineSize" type="number" min="0.1" max="9.9" step="0.1" placeholder="2.0" value="${v.engine_size ?? ''}">`)}
     </div>
-
-    <div class="sell-subgroup">
-      <h4 class="sell-subgroup-title">ტექნიკური ინფორმაცია</h4>
-      <div class="sell-grid">
-        <label class="field"><span>გარბენი (კმ) *</span><input name="mileage" type="number" min="0" max="2000000" required placeholder="90000" value="${v.mileage ?? ''}"></label>
-        <label class="field"><span>საწვავი *</span>
-          <select name="fuel" required>
-            <option value="petrol"${sel('petrol', v.fuel_type)}>ბენზინი</option>
-            <option value="diesel"${sel('diesel', v.fuel_type)}>დიზელი</option>
-            <option value="hybrid"${sel('hybrid', v.fuel_type)}>ჰიბრიდი</option>
-            <option value="electric"${sel('electric', v.fuel_type)}>ელექტრო</option>
-            <option value="lpg"${sel('lpg', v.fuel_type)}>გაზი</option>
-          </select>
-        </label>
-        <label class="field"><span>ტრანსმისია *</span>
-          <select name="transmission" required>
-            <option value="automatic"${sel('automatic', v.transmission)}>ავტომატიკა</option>
-            <option value="manual"${sel('manual', v.transmission)}>მექანიკა</option>
-            <option value="tiptronic"${sel('tiptronic', v.transmission)}>ტიპტრონიკი</option>
-            <option value="variator"${sel('variator', v.transmission)}>ვარიატორი</option>
-          </select>
-        </label>
-        <label class="field"><span>ძრავი (ლ)</span>
-          <input name="engineSize" type="number" min="0.1" max="9.9" step="0.1" placeholder="2.0" value="${v.engine_size ?? ''}"></label>
-        <label class="field"><span>კატეგორია</span>
-          <select name="category">
-            <option value="sedan"${sel('sedan', v.category)}>სედანი</option>
-            <option value="suv"${sel('suv', v.category)}>ჯიპი</option>
-            <option value="crossover"${sel('crossover', v.category)}>კროსოვერი</option>
-            <option value="hatchback"${sel('hatchback', v.category)}>ჰეჩბექი</option>
-            <option value="coupe"${sel('coupe', v.category)}>კუპე</option>
-            <option value="minivan"${sel('minivan', v.category)}>მინივენი</option>
-            <option value="pickup"${sel('pickup', v.category)}>პიკაპი</option>
-            <option value="universal"${sel('universal', v.category)}>უნივერსალი</option>
-          </select>
-        </label>
-      </div>
-    </div>
-    <p class="auth-error sell-step-error" data-step-error="1" hidden></p>
     <input type="hidden" name="condition" value="${escapeAttr(v.condition || 'good')}">
   `;
 
   const termsBody = `
     <div class="sell-grid">
-      <label class="field"><span>სასურველი მანქანა</span>
-        <input name="desired" placeholder="Audi A6, Mercedes E-Class" value="${escapeAttr(wantsValue || '')}">
-      </label>
-      <label class="field"><span>თანხის სხვაობა</span>
-        <select name="cashMode">
-          <option value="none"${sel('none', p.cash_mode)}>თანხის გარეშე</option>
-          <option value="add_money"${sel('add_money', p.cash_mode)}>ვამატებ თანხას</option>
-          <option value="ask_money"${sel('ask_money', p.cash_mode)}>ვითხოვ თანხას</option>
-          <option value="flexible"${sel('flexible', p.cash_mode)}>შეთანხმებით</option>
-        </select>
-      </label>
-      <label class="field"><span>თანხა (₾)</span><input name="amount" type="number" min="0" placeholder="0" value="${p.cash_amount || ''}"></label>
+      ${iconField(icons.swap, 'სასურველი მანქანა', `<input name="desired" placeholder="Audi A6, Mercedes E-Class" value="${escapeAttr(wantsValue || '')}">`)}
+      ${iconField(icons.clock, 'თანხის სხვაობა', `<select name="cashMode">${cashOpts}</select>`)}
+      ${iconField(icons.tag, 'თანხა (₾)', `<input name="amount" type="number" min="0" placeholder="0" value="${p.cash_amount || ''}">`)}
     </div>
   `;
 
-  const descBody = `
-    <label class="field"><span>აღწერა</span><textarea name="description" rows="4" maxlength="2000" placeholder="მოკლე აღწერა მანქანის მდგომარეობაზე…">${escapeAttr(v.description || '')}</textarea></label>
-  `;
-
-  const photosBody = `
-    <div class="field">
-      ${existingPhotos.length ? `<div class="upload-previews upload-previews--existing" id="existing-photos">
+  const existingPhotosHTML = existingPhotos.length ? `<div class="upload-previews upload-previews--existing" id="existing-photos">
         ${existingPhotos.map((photo) => `
           <figure class="upload-preview" data-photo="${photo.id}">
             <img src="${escapeAttr(photo.url)}" alt="">
             <button type="button" class="upload-remove" data-remove-photo aria-label="ფოტოს წაშლა">&times;</button>
           </figure>`).join('')}
-      </div>` : ''}
+      </div>` : '';
+
+  const detailsBody = `
+    <label class="field field--full"><span>აღწერა</span>
+      <span class="field-control field-control--area">
+        <textarea name="description" rows="3" maxlength="2000" placeholder="მოკლე აღწერა მანქანის მდგომარეობაზე…">${escapeAttr(v.description || '')}</textarea>
+        <span class="field-counter" id="desc-counter" aria-hidden="true">${(v.description || '').length}/2000</span>
+      </span>
+    </label>
+    <div class="field field--full"><span>ფოტოები</span>
+      ${existingPhotosHTML}
       <label class="upload-zone" id="upload-zone">
         <input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple class="upload-input">
-        <span class="upload-icon">${icons.plus}</span>
+        <span class="upload-icon">${icons.upload}</span>
         <span class="upload-text"><strong>ატვირთე ფოტოები</strong><small>მაქს. ${MAX_PHOTOS} · JPG/PNG/WebP · ≤5MB · პირველი ხდება მთავარი</small></span>
       </label>
       <div class="upload-previews" id="upload-previews" hidden></div>
     </div>
   `;
 
-  const reviewBody = `
-    <p class="sell-review-note">${editId ? 'შეცვალე დეტალები — ცვლილებები მაშინვე გამოჩნდება ფიდში.' : 'აღწერე მანქანა და რა გინდა სანაცვლოდ — განცხადება გამოჩნდება გაცვლების ფიდში.'}</p>
+  return `
+    ${voice}
+    ${sellSection(0, carBody, 'sell-section--car')}
+    ${sellSection(1, termsBody, 'sell-section--terms')}
+    ${sellSection(2, detailsBody, 'sell-section--details')}
   `;
-
-  return [
-    stepSection(STEPS[0], carBody, stepFoot(STEPS[0])),
-    stepSection(STEPS[1], termsBody, stepFoot(STEPS[1])),
-    stepSection(STEPS[2], descBody, stepFoot(STEPS[2])),
-    stepSection(STEPS[3], photosBody, stepFoot(STEPS[3])),
-    stepSection(STEPS[4], reviewBody, stepFoot(STEPS[4])),
-  ].join('');
 }
 
-function StepNav() {
+// Decorative section legend in the hero — reuses the section titles, so no
+// new copy. aria-hidden: the form is all-visible, not a real wizard.
+function HeroSteps() {
   return `
-    <nav class="step-nav" aria-label="ნაბიჯები">
-      ${STEPS.map((s) => `
-        <button type="button" class="step-nav-item${s.num === currentStep ? ' is-active' : ''}" data-step-go="${s.num}">
-          <span class="step-nav-icon">${s.icon}</span>
-          <span class="step-nav-text"><b>${s.num}</b><span>${s.title}</span></span>
-        </button>`).join('')}
-    </nav>
+    <ol class="sell-steps" aria-hidden="true">
+      ${SECTIONS.map((s, i) => `
+        <li class="sell-step-pip${i === 0 ? ' is-active' : ''}">
+          <span class="sell-step-pip-num">${i + 1}</span>
+          <span class="sell-step-pip-label">${s.title}</span>
+        </li>`).join('')}
+    </ol>
   `;
 }
 
 function SellPage(vehicle, prefs, wantsValue) {
   return `
     ${Header({ active: 'sell' })}
-    <main class="sell-shell sell-shell--stepper">
-      <section class="container sell sell--stepper">
-        <a class="sell-back" href="${editId ? 'account.html' : 'cars.html'}">${icons.arrowRight}${editId ? 'ჩემი განცხადებები' : 'გაცვლები'}</a>
-        <div class="sell-headline">
-          <h1>${editId ? 'განცხადების რედაქტირება' : 'დაამატე შენი ავტომობილი'}</h1>
-          <p class="sell-sub">${editId ? 'შეცვალე დეტალები — ცვლილებები მაშინვე გამოჩნდება ფიდში.' : 'აღწერე მანქანა და რა გინდა სანაცვლოდ — განცხადება გამოჩნდება გაცვლების ფიდში.'}</p>
+    <main class="sell-shell sell-shell--v3">
+      <div class="sell-hero">
+        <div class="container sell-hero-inner">
+          <span class="sell-hero-icon">${icons.car}</span>
+          <div class="sell-head">
+            <h1>${editId ? 'განცხადების რედაქტირება' : 'დაამატე შენი ავტომობილი'}</h1>
+            <p class="sell-sub">${editId ? 'შეცვალე დეტალები — ცვლილებები მაშინვე გამოჩნდება ფიდში.' : 'აღწერე მანქანა და რა გინდა სანაცვლოდ — განცხადება გამოჩნდება გაცვლების ფიდში.'}</p>
+          </div>
+          ${HeroSteps()}
         </div>
-        <div class="sell-stepper-grid">
-          ${StepNav()}
+      </div>
+      <section class="container sell">
+        <div class="sell-layout">
           <form class="sell-form" id="sell-form" novalidate>
             ${fieldRows(vehicle, prefs, wantsValue)}
             <p class="auth-error" id="sell-error" role="alert" hidden></p>
+            <div class="sell-actions">
+              <a class="btn btn-ghost" href="${editId ? 'account.html' : 'cars.html'}">${ICON_X} გაუქმება</a>
+              <button class="btn btn-primary" type="submit" id="sell-submit">${icons.plus} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
+            </div>
           </form>
           <aside class="sell-preview" aria-label="განცხადების გადახედვა">
-            <p class="sell-preview-label">ასე გამოჩნდება ფიდში</p>
+            <p class="sell-preview-label">${icons.eye}<span>ასე გამოჩნდება ფიდში</span></p>
             <div id="sell-preview-card"></div>
           </aside>
         </div>
@@ -439,73 +393,15 @@ function updatePreview(form) {
 }
 
 /* ---- Step navigation: expand one step, collapse the rest ---- */
-function bindStepper(form) {
+// Live character count under the description field.
+function bindCounter(form) {
   if (!form) return;
-  const root = document.querySelector('.sell--stepper');
-  if (!root) return;
-  const steps = [...form.querySelectorAll('.sell-step')];
-
-  const setStep = (num) => {
-    currentStep = num;
-    steps.forEach((s) => {
-      const on = Number(s.dataset.step) === num;
-      s.classList.toggle('is-active', on);
-      s.querySelector('.sell-step-head')?.setAttribute('aria-expanded', String(on));
-    });
-    document.querySelectorAll('.step-nav-item').forEach((it) => {
-      const n = Number(it.dataset.stepGo);
-      it.classList.toggle('is-active', n === num);
-      it.classList.toggle('is-done', n < num);
-    });
-  };
-
-  // Required fields live entirely in step 1, so only "continue" out of
-  // step 1 needs a gate — it reuses the full validator's Georgian message.
-  const showStepError = (fromStep, message) => {
-    const box = form.querySelector(`[data-step-error="${fromStep}"]`);
-    if (!box) return;
-    box.textContent = message;
-    box.hidden = false;
-    box.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    const firstEmpty = ['make', 'model', 'year', 'mileage', 'fuel', 'transmission', 'city']
-      .map((n) => form.querySelector(`[name="${n}"]`))
-      .find((el) => el && !String(el.value).trim());
-    firstEmpty?.focus();
-  };
-  const clearStepError = (fromStep) => {
-    const box = form.querySelector(`[data-step-error="${fromStep}"]`);
-    if (box) box.hidden = true;
-  };
-
-  // Editing any field dismisses a showing step error — it stops nagging.
-  form.addEventListener('input', () => {
-    form.querySelectorAll('.sell-step-error:not([hidden])').forEach((box) => { box.hidden = true; });
-  });
-
-  root.addEventListener('click', (event) => {
-    const go = event.target.closest('[data-step-go]');
-    if (!go || !root.contains(go)) return;
-    event.preventDefault();
-
-    // Forward "continue" validates the step it leaves; back / rail jump free.
-    if (go.classList.contains('step-next')) {
-      const from = Number(go.dataset.from);
-      if (from === 1) {
-        const problem = validate(readForm(form));
-        if (problem) { showStepError(1, problem); return; }
-        clearStepError(1);
-      }
-    }
-
-    const num = Number(go.dataset.stepGo);
-    setStep(num);
-    const active = steps.find((s) => Number(s.dataset.step) === num);
-    if (active && !go.classList.contains('step-nav-item')) {
-      active.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  });
-
-  setStep(currentStep);
+  const counter = form.querySelector('#desc-counter');
+  const desc = form.querySelector('[name="description"]');
+  if (!counter || !desc) return;
+  const update = () => { counter.textContent = `${desc.value.length}/2000`; };
+  desc.addEventListener('input', update);
+  update();
 }
 
 function bindPreview(form) {
@@ -1102,7 +998,7 @@ async function renderReal(user) {
   bindCatalogSuggestions();
   bindVoiceFill(document.querySelector('#sell-form'));
   bindPreview(document.querySelector('#sell-form'));
-  bindStepper(document.querySelector('#sell-form'));
+  bindCounter(document.querySelector('#sell-form'));
 
   const form = document.querySelector('#sell-form');
   const errorBox = document.querySelector('#sell-error');
@@ -1143,7 +1039,7 @@ async function renderReal(user) {
 function renderLocked() {
   document.querySelector('#app').innerHTML = SellPage(null, null, '');
   updatePreview(document.querySelector('#sell-form'));
-  bindStepper(document.querySelector('#sell-form'));
+  bindCounter(document.querySelector('#sell-form'));
   const section = document.querySelector('.sell');
   section.classList.add('sell-locked');
   const overlay = document.createElement('div');
@@ -1168,7 +1064,7 @@ function renderDemo() {
   bindUploadZone();
   bindVoiceFill(document.querySelector('#sell-form'));
   bindPreview(document.querySelector('#sell-form'));
-  bindStepper(document.querySelector('#sell-form'));
+  bindCounter(document.querySelector('#sell-form'));
   document.querySelector('#sell-form')?.addEventListener('submit', (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
