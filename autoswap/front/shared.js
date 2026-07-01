@@ -7,20 +7,20 @@
 =================================================================== */
 (function () {
   const assets = {
-    road: '../assets/hero-road-bg.png',
-    logo: '../assets/autoswap-logo.png',
-    bmw: '../assets/hero-bmw-530i.png',
-    audi: '../assets/hero-audi-a6.png',
-    porsche: '../assets/hero-porsche-aligned.png?v=4',
+    road: 'assets/hero-road-bg.png',
+    logo: 'assets/autoswap-logo.png',
+    bmw: 'assets/hero-bmw-530i.png',
+    audi: 'assets/hero-audi-a6.png',
+    porsche: 'assets/hero-porsche-aligned.png?v=4',
     revs: {
-      bmw: '../assets/bmw-rev.mp3',
-      porsche: '../assets/porsche-rev.mp3',
+      bmw: 'assets/bmw-rev.mp3',
+      porsche: 'assets/porsche-rev.mp3',
     },
     cards: [
-      '../assets/swap-card-1.webp',
-      '../assets/swap-card-2.webp',
-      '../assets/swap-card-3.webp',
-      '../assets/swap-card-4.webp',
+      'assets/swap-card-1.webp',
+      'assets/swap-card-2.webp',
+      'assets/swap-card-3.webp',
+      'assets/swap-card-4.webp',
     ],
   };
 
