@@ -26,12 +26,13 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 24; // small, curated inventory — show it all, no fake pagination
 const STICKY_CTA_DISMISSED_KEY = 'autoswap_cta_dismissed';
 
 let allCars = DEMO_CARS.slice();
 let currentFilters = readFiltersFromURL();
 let pagesShown = 1;
+let currentView = 'list'; // 'list' (full-width rows) | 'grid' (2-up cards)
 
 const SORT_OPTIONS = [
   { value: 'match', label: 'ჩემი შესაბამისობით', needsCar: true },
@@ -137,8 +138,59 @@ function activeFilterCount() {
     .length;
 }
 
-/* ---- Filter sidebar: 3 swap-intent groups + a "more" fold ---- */
-function FiltersSidebar(count) {
+/* ---- Hero trust band: three real-owner assurances, reusing the
+   landing page's benefit copy verbatim (no new Georgian written). ---- */
+const HERO_TRUST = [
+  { icon: icons.shield, title: 'რეალური მფლობელები', text: 'გაცვლის შეთავაზებები მოდის ადამიანებისგან, რომლებიც მართლაც ეძებენ ახალ მანქანას.' },
+  { icon: icons.medal, title: 'პირობები წინასწარ ჩანს', text: 'რას ეძებს მფლობელი და რა თანხის სხვაობაა, ბარათზევე ჩანს.' },
+  { icon: icons.headset, title: 'ნაკლები შემთხვევითი ზარი', text: 'შეთავაზება უფრო ორგანიზებულია, ვიდრე ჩვეულებრივი განცხადებების ბაზარზე.' },
+];
+
+function HeroTrust() {
+  return `
+    <div class="catalog-hero-trust">
+      ${HERO_TRUST.map((item) => `
+        <div class="hero-trust-item">
+          <span class="hero-trust-icon">${item.icon}</span>
+          <div class="hero-trust-copy">
+            <strong>${item.title}</strong>
+            <small>${item.text}</small>
+          </div>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+/* ---- "My car" panel — the swap context, now docked at the top of the
+   filter rail (the page is still built around the viewer's car). ---- */
+function MyCarFilterPanel() {
+  const myCar = getMyCar();
+  if (!myCar) {
+    return `
+      <div class="mycar-rail" id="mycar-rail">
+        <button type="button" class="filter-mycar-add" data-mycar-edit>${icons.car} მიუთითე შენი მანქანა</button>
+        <p class="filter-mycar-hint">ნახე ვინ ეძებს მას — შეთავაზებები მოვა პირდაპირ შენთან.</p>
+      </div>
+    `;
+  }
+  const label = `${myCar.make} ${myCar.model || ''}`.trim() + (myCar.year ? ` · ${myCar.year}` : '');
+  const demand = demandCount();
+  return `
+    <div class="mycar-rail" id="mycar-rail">
+      <div class="filter-mycar">
+        ${icons.car}
+        <span id="mycar-demand-label">${escapeHtml(label)}</span>
+        <button type="button" class="filter-mycar-edit" data-mycar-edit>შეცვლა</button>
+      </div>
+      <p class="filter-mycar-hint" id="mycar-demand">${demand
+        ? `შენს მანქანას ეძებს <b>${demand}</b> განცხადება`
+        : 'ჯერ პირდაპირი მოთხოვნა არ ჩანს — ფილტრები მაინც შენზეა მორგებული'}</p>
+    </div>
+  `;
+}
+
+/* ---- Left filter rail: the full filter set, stacked vertically ---- */
+function FilterSidebar() {
   const categories = uniqueSorted(allCars.map((c) => c.category));
   const fuels = uniqueSorted(allCars.map((c) => c.fuelType));
   const transmissions = uniqueSorted(allCars.map((c) => c.transmission));
@@ -147,155 +199,100 @@ function FiltersSidebar(count) {
     .sort((a, b) => b - a);
   const f = currentFilters;
   const myCar = getMyCar();
-  const moreOpen = (f.transmission || f.fuel || f.mileageMin || f.mileageMax || f.valueMin || f.valueMax) ? ' open' : '';
 
   return `
-    <aside class="filters" aria-label="ფილტრები">
+    <aside class="filters" id="filters" aria-label="ფილტრები">
       <form class="filters-form" id="filters-form">
         <div class="filters-head">
           <span class="filters-title">${icons.filter} ფილტრები</span>
-          <button type="button" class="filters-close" id="filters-close" aria-label="ფილტრების დახურვა">&times;</button>
+          <button type="button" class="filters-reset" id="filters-reset">${icons.refresh} გასუფთავება</button>
+          <button type="button" class="filters-close" id="filters-close" aria-label="დახურვა">&times;</button>
         </div>
 
-        <fieldset class="filter-group">
-          <legend class="filter-group-title">რას ეძებ</legend>
+        ${MyCarFilterPanel()}
 
-          ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა…')}
-          ${comboField('model', 'მოდელი', f.model, 'მოძებნე მოდელი…', !f.makeId)}
-          ${selectField('category', 'მანქანის ტიპი', categories, f.category, 'ყველა ტიპი', CATEGORY_LABELS)}
+        <label class="filter-field">
+          <span class="filter-label">საძიებო სიტყვა</span>
+          <span class="filter-search">${icons.search}
+            <input type="search" name="query" value="${escapeHtml(f.query || '')}" placeholder="მარკა, მოდელი, ქალაქი…">
+          </span>
+        </label>
 
-          <div class="filter-field">
-            <span class="filter-label">წელი</span>
-            <div class="filter-range">
-              <select name="yearFrom"><option value="">მინ.</option>${optionTags(years, f.yearFrom)}</select>
-              <span class="filter-range-sep">—</span>
-              <select name="yearTo"><option value="">მაქს.</option>${optionTags(years, f.yearTo)}</select>
-            </div>
+        ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა…')}
+        ${comboField('model', 'მოდელი', f.model, 'მოძებნე მოდელი…', !f.makeId)}
+        ${selectField('category', 'მანქანის ტიპი', categories, f.category, 'ნებისმიერი ტიპი', CATEGORY_LABELS)}
+
+        <div class="filter-field">
+          <span class="filter-label">გამოშვების წელი</span>
+          <div class="filter-range">
+            <select name="yearFrom"><option value="">მინ.</option>${optionTags(years, f.yearFrom)}</select>
+            <span class="filter-range-sep">—</span>
+            <select name="yearTo"><option value="">მაქს.</option>${optionTags(years, f.yearTo)}</select>
           </div>
+        </div>
 
-          <details class="more-filters"${moreOpen}>
-            <summary>მეტი ფილტრი</summary>
-            <div class="more-filters-body">
-              <label class="filter-field">
-                <span class="filter-label">ძებნა</span>
-                <span class="filter-search">${icons.search}
-                  <input type="search" name="query" value="${escapeHtml(f.query || '')}" placeholder="მარკა, მოდელი, ქალაქი…">
-                </span>
-              </label>
-              ${selectField('transmission', 'გადაცემათა კოლოფი', transmissions, f.transmission, 'ყველა', TRANSMISSION_LABELS)}
-              ${selectField('fuel', 'საწვავი', fuels, f.fuel, 'ყველა', FUEL_LABELS)}
-              <div class="filter-field">
-                <span class="filter-label">გარბენი (კმ)</span>
-                <div class="filter-range">
-                  <input type="number" name="mileageMin" value="${f.mileageMin || ''}" placeholder="მინ." min="0" inputmode="numeric" aria-label="გარბენი დან">
-                  <span class="filter-range-sep">—</span>
-                  <input type="number" name="mileageMax" value="${f.mileageMax || ''}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="გარბენი მდე">
-                </div>
-              </div>
-              <div class="filter-field">
-                <span class="filter-label">ღირებულება (₾)</span>
-                <div class="filter-range">
-                  <input type="number" name="valueMin" value="${f.valueMin || ''}" placeholder="მინ." min="0" inputmode="numeric" aria-label="ღირებულება დან">
-                  <span class="filter-range-sep">—</span>
-                  <input type="number" name="valueMax" value="${f.valueMax || ''}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="ღირებულება მდე">
-                </div>
-              </div>
-            </div>
-          </details>
-        </fieldset>
+        <div class="filter-field">
+          <span class="filter-label">ღირებულება (₾)</span>
+          <div class="filter-range">
+            <input type="number" name="valueMin" value="${f.valueMin || ''}" placeholder="მინ." min="0" inputmode="numeric" aria-label="ღირებულება დან">
+            <span class="filter-range-sep">—</span>
+            <input type="number" name="valueMax" value="${f.valueMax || ''}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="ღირებულება მდე">
+          </div>
+        </div>
 
-        <fieldset class="filter-group">
-          <legend class="filter-group-title">შენი მხარე</legend>
-          ${myCar ? `
-            <p class="filter-mycar">${icons.car}<span>${escapeHtml(`${myCar.make} ${myCar.model || ''}`.trim())}${myCar.year ? ` · ${escapeHtml(myCar.year)}` : ''}</span><button type="button" class="filter-mycar-edit" data-mycar-edit>შეცვლა</button></p>
-            <label class="filter-check">
-              <input type="checkbox" name="onlyMatches" value="1"${f.onlyMatches ? ' checked' : ''}>
-              <span>მხოლოდ ვინც ჩემს მანქანას ეძებს</span>
-            </label>
-          ` : `
-            <button type="button" class="filter-mycar-add" data-mycar-edit>${icons.plus} მიუთითე შენი მანქანა</button>
-            <p class="filter-mycar-hint">გაიგებ ვის აინტერესებს ის — ფასის გამოქვეყნების გარეშე.</p>
-          `}
-        </fieldset>
+        <div class="filter-field">
+          <span class="filter-label">გარბენი (კმ)</span>
+          <div class="filter-range">
+            <input type="number" name="mileageMin" value="${f.mileageMin || ''}" placeholder="მინ." min="0" inputmode="numeric" aria-label="გარბენი დან">
+            <span class="filter-range-sep">—</span>
+            <input type="number" name="mileageMax" value="${f.mileageMax || ''}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="გარბენი მდე">
+          </div>
+        </div>
 
-        <fieldset class="filter-group">
-          <legend class="filter-group-title">გარიგების პირობები</legend>
+        ${selectField('transmission', 'გადაცემათა კოლოფი', transmissions, f.transmission, 'ნებისმიერი', TRANSMISSION_LABELS)}
+        ${selectField('fuel', 'საწვავი', fuels, f.fuel, 'ნებისმიერი', FUEL_LABELS)}
+        ${selectField('city', 'ქალაქი', cities, f.city, 'ნებისმიერი ქალაქი')}
 
-          <label class="filter-field">
-            <span class="filter-label">თანხის სხვაობა</span>
-            <select name="cash">
-              <option value="">ყველა</option>
-              <option value="none"${f.cash === 'none' ? ' selected' : ''}>თანაბარი გაცვლა</option>
-              <option value="add"${f.cash === 'add' ? ' selected' : ''}>ის ამატებს — მე ვიღებ თანხას</option>
-              <option value="ask"${f.cash === 'ask' ? ' selected' : ''}>ის ითხოვს — მე ვამატებ</option>
-              <option value="flexible"${f.cash === 'flexible' ? ' selected' : ''}>შეთანხმებით</option>
-            </select>
-          </label>
+        <label class="filter-field">
+          <span class="filter-label">თანხის სხვაობა</span>
+          <select name="cash">
+            <option value="">ნებისმიერი</option>
+            <option value="none"${f.cash === 'none' ? ' selected' : ''}>თანაბარი გაცვლა</option>
+            <option value="add"${f.cash === 'add' ? ' selected' : ''}>ის ამატებს — მე ვიღებ თანხას</option>
+            <option value="ask"${f.cash === 'ask' ? ' selected' : ''}>ის ითხოვს — მე ვამატებ</option>
+            <option value="flexible"${f.cash === 'flexible' ? ' selected' : ''}>შეთანხმებით</option>
+          </select>
+        </label>
 
-          ${selectField('city', 'ქალაქი', cities, f.city, 'ყველა ქალაქი')}
+        <label class="filter-field">
+          <span class="filter-label">განცხადების ასაკი</span>
+          <select name="fresh">
+            ${FRESH_OPTIONS.map((o) => `<option value="${o.value}"${o.value === f.fresh ? ' selected' : ''}>${o.label}</option>`).join('')}
+          </select>
+        </label>
 
-          <label class="filter-field">
-            <span class="filter-label">განცხადების ასაკი</span>
-            <select name="fresh">
-              ${FRESH_OPTIONS.map((o) => `<option value="${o.value}"${o.value === f.fresh ? ' selected' : ''}>${o.label}</option>`).join('')}
-            </select>
-          </label>
-
+        <div class="filter-checks">
+          ${myCar ? `<label class="filter-check">
+            <input type="checkbox" name="onlyMatches" value="1"${f.onlyMatches ? ' checked' : ''}>
+            <span>მხოლოდ ვინც ჩემს მანქანას ეძებს</span>
+          </label>` : ''}
           <label class="filter-check">
             <input type="checkbox" name="verified" value="1"${f.verified ? ' checked' : ''}>
             <span>მხოლოდ დადასტურებული მფლობელები</span>
           </label>
-        </fieldset>
+        </div>
 
-        <button type="button" class="filters-reset" id="filters-reset">${icons.refresh} ფილტრების გასუფთავება</button>
-        <button type="button" class="btn btn-primary filters-apply" id="filters-apply">ნახე <span id="apply-count">${count}</span> შედეგი</button>
+        <div class="filters-actions">
+          <button type="button" class="btn btn-primary filters-search" id="filters-search">${icons.search} ძებნა</button>
+        </div>
       </form>
     </aside>
   `;
 }
 
-/* ---- "My car" strip: the spine of the page ---- */
+/* ---- "My car" demand: how many listings want the viewer's car ---- */
 function demandCount() {
   return allCars.filter((car) => matchFor(car)).length;
-}
-
-function MyCarStrip() {
-  const myCar = getMyCar();
-  if (!myCar) {
-    return `
-      <section class="mycar-panel" id="mycar-strip">
-        <div class="mycar-cta">
-          <span class="mycar-icon">${icons.car}</span>
-          <div class="mycar-copy">
-            <strong>დაამატე შენი მანქანა — ნახე ვინ ეძებს მას</strong>
-            <small>60 წამი · ფასის დადება არ გჭირდება · შეთავაზებები მოდის პირდაპირ შენთან</small>
-          </div>
-          <button type="button" class="btn btn-accent mycar-btn" data-mycar-edit>${icons.plus} დამატება</button>
-        </div>
-      </section>
-    `;
-  }
-
-  const label = `${myCar.make} ${myCar.model || ''}`.trim() + (myCar.year ? ` · ${myCar.year}` : '');
-  const demand = demandCount();
-  return `
-    <section class="mycar-panel" id="mycar-strip">
-      <div class="mycar-active">
-        <span class="mycar-icon">${icons.car}</span>
-        <div class="mycar-copy">
-          <strong>${escapeHtml(label)}</strong>
-          <small id="mycar-demand">${demand
-            ? `შენს მანქანას ეძებს <b>${demand}</b> განცხადება`
-            : 'ჯერ პირდაპირი მოთხოვნა არ ჩანს — ფილტრები მაინც შენზეა მორგებული'}</small>
-        </div>
-        <label class="matches-toggle">
-          <input type="checkbox" id="matches-toggle"${currentFilters.onlyMatches ? ' checked' : ''}>
-          <span>მხოლოდ ჩემი მატჩები</span>
-        </label>
-        <button type="button" class="mycar-edit" data-mycar-edit>შეცვლა</button>
-      </div>
-    </section>
-  `;
 }
 
 // Compatibility badge — the product's differentiator, rendered in 20px.
@@ -340,23 +337,44 @@ function trustStrip(car) {
   return `<div class="trade-trust">${items.join('')}</div>`;
 }
 
-/* ---- Trade card: their car / the terms / the human ---- */
+/* Compact owner identity for the card aside (avatar + name + one signal). */
+function ownerLine(car) {
+  if (!car.ownerName) {
+    return car.freshness ? `<span class="aside-owner aside-owner--anon">${icons.user} განახლდა ${escapeHtml(car.freshness)}</span>` : '';
+  }
+  const signal = car.ownerVerified
+    ? `<span class="trust-item trust-item--ok">${icons.check} ტელეფონი</span>`
+    : (car.ownerActiveToday ? `<span class="trust-item trust-item--active">დღეს აქტიური</span>` : '');
+  return `
+    <span class="aside-owner">
+      <span class="trust-avatar">${escapeHtml(car.ownerName.charAt(0))}</span>
+      <span class="aside-owner-name">${escapeHtml(car.ownerName)}</span>
+      ${signal}
+    </span>
+  `;
+}
+
+/* ---- Trade card: their car (body) / the swap terms + the human (aside) ---- */
 function CarRow(car) {
   const match = matchFor(car);
-  // Essential specs only — body type is visible in the photo.
+  // Essential specs — four readout cells, body type from the catalog.
   const statRow = [
     car.mileage ? { label: 'გარბენი', value: car.mileage } : null,
     car.fuel ? { label: 'საწვავი', value: car.fuel } : null,
     car.transmissionLabel ? { label: 'გადაცემათა', value: car.transmissionLabel } : null,
-    car.estimatedValueLabel ? { label: 'ღირებულება', value: `~${car.estimatedValueLabel}` } : null,
+    car.category ? { label: 'ტიპი', value: labelFor(CATEGORY_LABELS, car.category) } : null,
   ].filter(Boolean)
     .map((s) => `<div class="stat-cell"><span>${s.label}</span><strong>${s.value}</strong></div>`)
     .join('');
 
   const detailHref = `vehicle.html?id=${encodeURIComponent(car.id)}`;
+  const wantsBlock = car.openToOffers
+    ? `<div class="trade-wants trade-wants--open"><span class="wanted-label">ეძებს</span><p class="deal-open">${escapeHtml(car.wants)}</p></div>`
+    : `<div class="trade-wants"><span class="wanted-label">ეძებს</span><div class="wants-chips">${wantsChips(car)}</div></div>`;
+
   return `
-    <article class="car-row trade-card${match ? ` is-${match}` : ''}" data-id="${car.id}">
-      <div class="car-row-media">
+    <article class="car-card trade-card${match ? ` is-${match}` : ''}" data-id="${car.id}">
+      <div class="car-card-media">
         <a class="car-row-media-link" href="${detailHref}" aria-label="${car.make} ${car.model} დეტალურად">
           <img src="${car.image}" alt="${car.make} ${car.model}" loading="lazy">
         </a>
@@ -364,30 +382,29 @@ function CarRow(car) {
         <button class="save-btn" type="button" aria-label="${car.make} ${car.model} შენახვა">${icons.heart}</button>
       </div>
 
-      <div class="car-row-body">
-        <div class="trade-head">
-          <div>
-            <h3 class="car-row-title"><a class="card-title-link" href="${detailHref}">${car.make} ${car.model}</a> <span class="car-row-year">${car.year}</span></h3>
-            <span class="listing-city">${icons.location}${car.city}</span>
-          </div>
-          ${matchBadge(match)}
+      <div class="car-card-body">
+        <div class="car-card-head">
+          <h3 class="car-row-title"><a class="card-title-link" href="${detailHref}">${car.make} ${car.model}</a> <span class="car-row-year">${car.year}</span></h3>
+          <span class="listing-city">${icons.location}${car.city}</span>
         </div>
         <div class="stat-row stat-row--card">${statRow}</div>
+        ${car.estimatedValueLabel ? `<div class="car-card-value"><span>შეფასებული ღირებულება</span><strong>~${car.estimatedValueLabel}</strong></div>` : ''}
       </div>
 
-      <div class="trade-deal">
-        ${car.openToOffers
-          ? `<div class="trade-wants trade-wants--open"><span class="wanted-label">ეძებს</span><p class="deal-open">${escapeHtml(car.wants)}</p></div>`
-          : `
-        <div class="trade-wants">
-          <span class="wanted-label">ეძებს</span>
-          <div class="wants-chips">${wantsChips(car)}</div>
-        </div>`}
-        ${cashLine(car)}
-        <button class="btn btn-primary car-row-offer" type="button" data-offer data-id="${car.id}" data-make="${car.make}" data-model="${car.model}">${icons.swap} შესთავაზე გაცვლა</button>
+      <div class="car-card-aside">
+        <div class="aside-head">
+          ${matchBadge(match)}
+          ${ownerLine(car)}
+        </div>
+        <div class="aside-deal">
+          ${wantsBlock}
+          ${cashLine(car)}
+        </div>
+        <div class="aside-actions">
+          <button class="btn btn-primary car-row-offer" type="button" data-offer data-id="${car.id}" data-make="${car.make}" data-model="${car.model}">${icons.swap} შესთავაზე გაცვლა</button>
+          <a class="btn btn-ghost car-card-detail" href="${detailHref}">დეტალურად</a>
+        </div>
       </div>
-
-      ${trustStrip(car)}
     </article>
   `;
 }
@@ -412,33 +429,29 @@ function loadMoreHTML(total) {
   return `<button type="button" class="btn btn-light load-more" id="load-more">მეტის ჩატვირთვა <span>(${remaining})</span></button>`;
 }
 
+const LIST_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"></path><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"></path></svg>';
+const GRID_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.4"></rect><rect x="14" y="3" width="7" height="7" rx="1.4"></rect><rect x="3" y="14" width="7" height="7" rx="1.4"></rect><rect x="14" y="14" width="7" height="7" rx="1.4"></rect></svg>';
+
 function ResultsHead(count) {
   const sort = effectiveSort();
   const hasCar = !!getMyCar();
   const options = SORT_OPTIONS.filter((o) => !o.needsCar || hasCar);
-  const filterCount = activeFilterCount();
   return `
     <div class="results-head">
-      <p class="results-count"><strong id="results-count">${count}</strong> შედეგი</p>
+      <p class="results-count"><strong id="results-count">${count}</strong> აქტიური გაცვლა</p>
       <div class="results-controls">
-        <button type="button" class="filters-toggle" id="filters-toggle">${icons.filter} ფილტრები${filterCount ? `<span class="filters-toggle-badge" id="filters-badge">${filterCount}</span>` : '<span class="filters-toggle-badge" id="filters-badge" hidden></span>'}</button>
+        <button type="button" class="filters-toggle" id="filters-toggle">${icons.filter} ფილტრები<span class="filters-toggle-badge" id="filters-badge" hidden></span></button>
         <label class="results-sort">
           <span class="filter-label">დალაგება</span>
           <select id="sort-select" name="sort">
             ${options.map((o) => `<option value="${o.value}"${o.value === sort ? ' selected' : ''}>${o.label}</option>`).join('')}
           </select>
         </label>
+        <div class="view-toggle" role="group" aria-label="ხედი">
+          <button type="button" class="view-btn${currentView === 'list' ? ' is-active' : ''}" data-view="list" aria-label="სია" aria-pressed="${currentView === 'list'}">${LIST_ICON}</button>
+          <button type="button" class="view-btn${currentView === 'grid' ? ' is-active' : ''}" data-view="grid" aria-label="ბადე" aria-pressed="${currentView === 'grid'}">${GRID_ICON}</button>
+        </div>
       </div>
-    </div>
-  `;
-}
-
-// One compact, factual line about the trust model. Not marketing — rules.
-function TrustNote() {
-  return `
-    <div class="trust-note">
-      ${icons.shield}
-      <p>აქ ნომრები ღია არ არის. აგზავნი სტრუქტურირებულ შეთავაზებას → მფლობელი ეთანხმება ან გპასუხობს → კონტაქტი იხსნება მხოლოდ ორმხრივი თანხმობისას.</p>
     </div>
   `;
 }
@@ -467,22 +480,22 @@ function CatalogPage() {
           <div class="catalog-hero-copy">
             <h1>გაცვალე შენი მანქანა სასურველზე</h1>
             <p>ნახე ვინ რას ცვლის, რა სხვაობით — და გაუგზავნე სტრუქტურირებული შეთავაზება.</p>
-            ${TrustNote()}
           </div>
-          ${MyCarStrip()}
+          ${HeroTrust()}
+          <a class="btn btn-accent catalog-hero-cta" href="sell.html">${icons.plus} დაამატე მანქანა</a>
         </div>
       </div>
       <section class="catalog container">
-        ${FiltersSidebar(filtered.length)}
-        <div class="filters-overlay" id="filters-overlay" hidden></div>
+        ${FilterSidebar()}
         <div class="results">
           ${ResultsHead(filtered.length)}
-          <div class="car-list" id="car-list">
+          <div class="car-list view-${currentView}" id="car-list">
             ${slice.length ? slice.map(CarRow).join('') : emptyStateHTML()}
           </div>
           <div class="load-more-wrap" id="load-more-wrap">${loadMoreHTML(filtered.length)}</div>
         </div>
       </section>
+      <div class="filters-overlay" id="filters-overlay" hidden></div>
       ${StickyCTA()}
     </main>
     ${Footer()}
@@ -990,12 +1003,6 @@ function initCombos() {
   });
 }
 
-function setFiltersOpen(open) {
-  document.body.classList.toggle('filters-open', open);
-  const overlay = document.querySelector('#filters-overlay');
-  if (overlay) overlay.hidden = !open;
-}
-
 function applyFormFilters(form) {
   currentFilters = readFiltersFromForm(form);
   pagesShown = 1;
@@ -1037,17 +1044,43 @@ function bindEvents() {
     update();
   });
 
-  // Mobile filter sheet open/close.
-  document.querySelector('#filters-toggle')?.addEventListener('click', () => setFiltersOpen(true));
-  document.querySelector('#filters-close')?.addEventListener('click', () => setFiltersOpen(false));
-  document.querySelector('#filters-overlay')?.addEventListener('click', () => setFiltersOpen(false));
-  document.querySelector('#filters-apply')?.addEventListener('click', () => setFiltersOpen(false));
+  // Mobile: open / close the filter rail as a bottom sheet.
+  const openFilters = () => {
+    document.body.classList.add('filters-open');
+    document.querySelector('#filters-overlay')?.removeAttribute('hidden');
+  };
+  const closeFilters = () => {
+    document.body.classList.remove('filters-open');
+    document.querySelector('#filters-overlay')?.setAttribute('hidden', '');
+  };
+  document.querySelector('#filters-toggle')?.addEventListener('click', openFilters);
+  document.querySelector('#filters-close')?.addEventListener('click', closeFilters);
+  document.querySelector('#filters-overlay')?.addEventListener('click', closeFilters);
 
-  // "Only my matches" toggle in the my-car strip mirrors the sidebar checkbox.
-  document.querySelector('#matches-toggle')?.addEventListener('change', (event) => {
-    currentFilters.onlyMatches = event.target.checked ? '1' : '';
-    pagesShown = 1;
-    update();
+  // The sidebar "ძებნა" button: re-apply, jump to results, and on mobile
+  // dismiss the sheet (filtering is already instant on every control change).
+  document.querySelector('#filters-search')?.addEventListener('click', () => {
+    applyFormFilters(form);
+    closeFilters();
+    if (window.matchMedia('(max-width: 980px)').matches) {
+      document.querySelector('.results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  // List / grid view toggle.
+  document.querySelectorAll('.view-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const view = btn.dataset.view;
+      if (view === currentView) return;
+      currentView = view;
+      document.querySelectorAll('.view-btn').forEach((b) => {
+        const active = b.dataset.view === currentView;
+        b.classList.toggle('is-active', active);
+        b.setAttribute('aria-pressed', String(active));
+      });
+      const list = document.querySelector('#car-list');
+      if (list) list.className = `car-list view-${currentView}`;
+    });
   });
 
   // Empty-state reset (re-rendered with the list, so delegate from the list).
