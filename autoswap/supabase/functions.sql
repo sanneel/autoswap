@@ -144,18 +144,102 @@ begin
 end;
 $$;
 
-grant execute on function public.find_mutual_matches_for_vehicle(uuid) to authenticated, service_role;
+-- The raw matcher is internal: triggers and run_matching_for_vehicle (both
+-- SECURITY DEFINER, owned by a privileged role) call it directly. Clients must
+-- go through the ownership-checked wrapper below, never this.
+revoke execute on function public.find_mutual_matches_for_vehicle(uuid) from public, authenticated, anon;
+grant execute on function public.find_mutual_matches_for_vehicle(uuid) to service_role;
 
 create or replace function public.run_matching_for_vehicle(p_vehicle_id uuid)
 returns int
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  select public.find_mutual_matches_for_vehicle(p_vehicle_id);
+begin
+  -- Only the vehicle's owner (or the service role, used by triggers and the
+  -- edge function) may kick off matching — otherwise anyone could spray
+  -- match_suggestions + notifications against arbitrary listings.
+  if coalesce(auth.role(), '') <> 'service_role'
+     and not exists (
+       select 1 from public.vehicles v
+       where v.id = p_vehicle_id and v.owner_id = auth.uid()
+     ) then
+    raise exception 'not authorized to run matching for this vehicle'
+      using errcode = '42501';
+  end if;
+  return public.find_mutual_matches_for_vehicle(p_vehicle_id);
+end;
 $$;
 
 grant execute on function public.run_matching_for_vehicle(uuid) to authenticated, service_role;
+
+-- -------------------------------------------------------------
+-- Guard: owners cannot reopen a completed swap or edit a listing
+-- that is under moderation. accept_offer (active -> completed) and admin/
+-- moderation flows run as service_role and are exempt.
+-- -------------------------------------------------------------
+create or replace function public.trg_vehicles_guard_status()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if coalesce(auth.role(), '') = 'service_role' then
+    return new;
+  end if;
+  -- A listing under review is frozen to its owner entirely.
+  if old.status = 'under_review' then
+    raise exception 'listing under review cannot be modified'
+      using errcode = 'check_violation';
+  end if;
+  -- A completed swap cannot be flipped back to active/paused/etc by its owner.
+  if old.status = 'completed' and new.status is distinct from old.status then
+    raise exception 'completed listing cannot be reopened'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists vehicles_guard_status on public.vehicles;
+create trigger vehicles_guard_status
+  before update on public.vehicles
+  for each row execute function public.trg_vehicles_guard_status();
+
+-- -------------------------------------------------------------
+-- Rate limit: cap outgoing offers per sender to blunt spam/abuse.
+-- Server-side backstop independent of any client throttle.
+-- -------------------------------------------------------------
+create or replace function public.trg_offers_rate_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  recent_count int;
+begin
+  if coalesce(auth.role(), '') = 'service_role' then
+    return new;
+  end if;
+  select count(*) into recent_count
+  from public.offers
+  where from_user_id = new.from_user_id
+    and created_at > now() - interval '1 hour';
+  if recent_count >= 30 then
+    raise exception 'too many offers in the last hour — please slow down'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists offers_rate_limit on public.offers;
+create trigger offers_rate_limit
+  before insert on public.offers
+  for each row execute function public.trg_offers_rate_limit();
 
 -- -------------------------------------------------------------
 -- Matching triggers: desires (insert/update), swap_preferences

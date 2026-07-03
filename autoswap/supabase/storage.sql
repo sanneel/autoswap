@@ -9,9 +9,19 @@
 -- Rules: public read, only the vehicle owner may upload / overwrite / delete.
 -- =============================================================
 
-insert into storage.buckets (id, name, public)
-values ('vehicle-photos', 'vehicle-photos', true)
-on conflict (id) do update set public = excluded.public;
+-- Bucket enforces size + MIME server-side (the 6-photo cap is still applied
+-- in the app; storage itself can't count objects per vehicle). This backs up
+-- the frontend limits so a crafted client can't upload huge/non-image blobs.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'vehicle-photos', 'vehicle-photos', true,
+  5242880,  -- 5 MB
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 -- Helper: is auth.uid() the owner of the vehicle referenced by this object path?
 create or replace function public.storage_owns_vehicle_object(object_name text)

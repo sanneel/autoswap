@@ -38,3 +38,9 @@ autoswap/tools/shots/
 .claude/
 .agents/
 .scratch/
+
+# Agent/skill tooling state (local only)
+.codex/
+.impeccable/
+.claude/
+skills-lock.json

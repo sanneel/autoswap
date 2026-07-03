@@ -305,7 +305,7 @@ function matchBadge(match) {
 // Cash sentence: icon + explicit subject, color by direction.
 function cashLine(car) {
   const iconMap = { add: icons.trendUp, ask: icons.trendDown, flexible: icons.swap, none: icons.equals };
-  return `<p class="trade-cash trade-cash--${car.cashType}">${iconMap[car.cashType] || icons.equals}<span>${escapeHtml(car.cash)}</span></p>`;
+  return `<p class="trade-cash trade-cash--${escapeHtml(car.cashType || 'none')}">${iconMap[car.cashType] || icons.equals}<span>${escapeHtml(car.cash)}</span></p>`;
 }
 
 function wantsChips(car) {
@@ -325,13 +325,13 @@ function wantsChips(car) {
 function trustStrip(car) {
   if (!car.ownerName) {
     // Live feed without the profiles join yet — show only what we know.
-    return car.freshness ? `<div class="trade-trust"><span class="trust-item">განახლდა ${car.freshness}</span></div>` : '';
+    return car.freshness ? `<div class="trade-trust"><span class="trust-item">განახლდა ${escapeHtml(car.freshness)}</span></div>` : '';
   }
   const items = [
     `<span class="trust-owner"><span class="trust-avatar">${escapeHtml(car.ownerName.charAt(0))}</span>${escapeHtml(car.ownerName)}</span>`,
     car.ownerVerified ? `<span class="trust-item trust-item--ok">${icons.check} ტელეფონი</span>` : '',
-    car.ownerSwaps > 0 ? `<span class="trust-item">${car.ownerSwaps} გაცვლა</span>` : '',
-    car.ownerResponseHours != null ? `<span class="trust-item">პასუხობს ~${car.ownerResponseHours} სთ-ში</span>` : '',
+    car.ownerSwaps > 0 ? `<span class="trust-item">${escapeHtml(car.ownerSwaps)} გაცვლა</span>` : '',
+    car.ownerResponseHours != null ? `<span class="trust-item">პასუხობს ~${escapeHtml(car.ownerResponseHours)} სთ-ში</span>` : '',
     car.ownerActiveToday ? `<span class="trust-item trust-item--active">დღეს აქტიური</span>` : '',
   ].filter(Boolean);
   return `<div class="trade-trust">${items.join('')}</div>`;
@@ -357,6 +357,11 @@ function ownerLine(car) {
 /* ---- Trade card: their car (body) / the swap terms + the human (aside) ---- */
 function CarRow(car) {
   const match = matchFor(car);
+  const name = escapeHtml(`${car.make} ${car.model}`);
+  const safeId = escapeHtml(car.id);
+  const safeMake = escapeHtml(car.make);
+  const safeModel = escapeHtml(car.model);
+  const safeMatch = match ? escapeHtml(match) : '';
   // Essential specs — four readout cells, body type from the catalog.
   const statRow = [
     car.mileage ? { label: 'გარბენი', value: car.mileage } : null,
@@ -364,7 +369,7 @@ function CarRow(car) {
     car.transmissionLabel ? { label: 'გადაცემათა', value: car.transmissionLabel } : null,
     car.category ? { label: 'ტიპი', value: labelFor(CATEGORY_LABELS, car.category) } : null,
   ].filter(Boolean)
-    .map((s) => `<div class="stat-cell"><span>${s.label}</span><strong>${s.value}</strong></div>`)
+    .map((s) => `<div class="stat-cell"><span>${escapeHtml(s.label)}</span><strong>${escapeHtml(s.value)}</strong></div>`)
     .join('');
 
   const detailHref = `vehicle.html?id=${encodeURIComponent(car.id)}`;
@@ -373,22 +378,22 @@ function CarRow(car) {
     : `<div class="trade-wants"><span class="wanted-label">ეძებს</span><div class="wants-chips">${wantsChips(car)}</div></div>`;
 
   return `
-    <article class="car-card trade-card${match ? ` is-${match}` : ''}" data-id="${car.id}">
+    <article class="car-card trade-card${safeMatch ? ` is-${safeMatch}` : ''}" data-id="${safeId}">
       <div class="car-card-media">
-        <a class="car-row-media-link" href="${detailHref}" aria-label="${car.make} ${car.model} დეტალურად">
-          <img src="${car.image}" alt="${car.make} ${car.model}" loading="lazy">
+        <a class="car-row-media-link" href="${detailHref}" aria-label="${name} დეტალურად">
+          <img src="${escapeHtml(car.image)}" alt="${name}" loading="lazy">
         </a>
-        ${car.freshness ? `<span class="fresh-tag">${car.freshness}</span>` : ''}
-        <button class="save-btn" type="button" aria-label="${car.make} ${car.model} შენახვა">${icons.heart}</button>
+        ${car.freshness ? `<span class="fresh-tag">${escapeHtml(car.freshness)}</span>` : ''}
+        <button class="save-btn" type="button" aria-label="${name} შენახვა">${icons.heart}</button>
       </div>
 
       <div class="car-card-body">
         <div class="car-card-head">
-          <h3 class="car-row-title"><a class="card-title-link" href="${detailHref}">${car.make} ${car.model}</a> <span class="car-row-year">${car.year}</span></h3>
-          <span class="listing-city">${icons.location}${car.city}</span>
+          <h3 class="car-row-title"><a class="card-title-link" href="${detailHref}">${name}</a> <span class="car-row-year">${escapeHtml(car.year)}</span></h3>
+          <span class="listing-city">${icons.location}${escapeHtml(car.city)}</span>
         </div>
         <div class="stat-row stat-row--card">${statRow}</div>
-        ${car.estimatedValueLabel ? `<div class="car-card-value"><span>შეფასებული ღირებულება</span><strong>~${car.estimatedValueLabel}</strong></div>` : ''}
+        ${car.estimatedValueLabel ? `<div class="car-card-value"><span>შეფასებული ღირებულება</span><strong>~${escapeHtml(car.estimatedValueLabel)}</strong></div>` : ''}
       </div>
 
       <div class="car-card-aside">
@@ -401,7 +406,7 @@ function CarRow(car) {
           ${cashLine(car)}
         </div>
         <div class="aside-actions">
-          <button class="btn btn-primary car-row-offer" type="button" data-offer data-id="${car.id}" data-make="${car.make}" data-model="${car.model}">${icons.swap} შესთავაზე გაცვლა</button>
+          <button class="btn btn-primary car-row-offer" type="button" data-offer data-id="${safeId}" data-make="${safeMake}" data-model="${safeModel}">${icons.swap} შესთავაზე გაცვლა</button>
           <a class="btn btn-ghost car-card-detail" href="${detailHref}">დეტალურად</a>
         </div>
       </div>

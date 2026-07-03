@@ -2,7 +2,8 @@
    Shared chrome, helpers and the Supabase read path live in shared.js
    (window.AutoSwap). This file renders the landing and links into the
    cars product page (cars.html). */
-const { assets, icons, Header, Footer } = window.AutoSwap;
+const { assets, icons, Header, Footer, escapeAttr } = window.AutoSwap;
+const esc = escapeAttr;
 
 const listings = [
   {
@@ -178,29 +179,32 @@ function trimTitle(title) {
 
 function ListingCard(car) {
   const detailHref = `vehicle.html?id=${encodeURIComponent(car.id)}`;
-  const title = trimTitle(`${car.make} ${car.model}`);
+  const name = esc(`${car.make} ${car.model}`);
+  const title = esc(trimTitle(`${car.make} ${car.model}`));
   // No concrete wants → no fake "ეძებს" line; the card stays quiet about it.
-  const wants = car.openToOffers ? '' : car.wants;
-  const meta = [car.year, car.mileage, car.fuel].filter(Boolean).join(' · ');
+  const wants = car.openToOffers ? '' : esc(car.wants);
+  const meta = esc([car.year, car.mileage, car.fuel].filter(Boolean).join(' · '));
+  const cashType = esc(car.cashType || 'none');
+  const cash = car.cashType === 'none' ? 'თანაბარი გაცვლა' : esc(car.cash);
   return `
-    <article class="listing-card" data-id="${car.id}">
+    <article class="listing-card" data-id="${esc(car.id)}">
       <div class="listing-media">
-        <button class="save-btn" type="button" aria-label="${car.make} ${car.model} შენახვა">${icons.heart}</button>
-        <a class="listing-media-link" href="${detailHref}" aria-label="${car.make} ${car.model} დეტალურად">
-          <img src="${car.image}" alt="${car.make} ${car.model}" loading="lazy">
+        <button class="save-btn" type="button" aria-label="${name} შენახვა">${icons.heart}</button>
+        <a class="listing-media-link" href="${detailHref}" aria-label="${name} დეტალურად">
+          <img src="${esc(car.image)}" alt="${name}" loading="lazy">
         </a>
       </div>
       <div class="listing-body">
         <div>
-          <h3><a class="card-title-link" href="${detailHref}" title="${car.make} ${car.model}">${title}</a></h3>
+          <h3><a class="card-title-link" href="${detailHref}" title="${name}">${title}</a></h3>
           <p>${meta}</p>
-          <span class="listing-city">${icons.location}${car.city}</span>
+          <span class="listing-city">${icons.location}${esc(car.city)}</span>
         </div>
         ${wants ? `
         <p class="listing-wants"><span>ეძებს</span>${wants}</p>` : ''}
-        <p class="trade-cash trade-cash--${car.cashType || 'none'}">${CASH_ICONS[car.cashType] || icons.equals}<span>${car.cashType === 'none' ? 'თანაბარი გაცვლა' : car.cash}</span></p>
+        <p class="trade-cash trade-cash--${cashType}">${CASH_ICONS[car.cashType] || icons.equals}<span>${cash}</span></p>
         <div class="listing-foot">
-          <button class="btn btn-accent listing-offer" type="button" data-offer data-id="${car.id}" data-make="${car.make}" data-model="${car.model}">შეთავაზება</button>
+          <button class="btn btn-accent listing-offer" type="button" data-offer data-id="${esc(car.id)}" data-make="${esc(car.make)}" data-model="${esc(car.model)}">შეთავაზება</button>
         </div>
       </div>
     </article>

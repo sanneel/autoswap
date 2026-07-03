@@ -442,11 +442,15 @@ create trigger offers_set_updated_at before update on public.offers
 
 -- =============================================================
 -- public_vehicle_feed  (guest-readable feed)
---   security_invoker => respects vehicles RLS (active-only is public).
+--   security_invoker = false (definer): runs with the view owner's rights so
+--   it can read owner trust aggregates from profiles even though callers can
+--   no longer read other users' profile rows directly (profiles_select is now
+--   own-row only). The WHERE clause restricts output to active listings, and
+--   the select list is curated — the raw phone number never appears here.
 --   Sort: boosted listings first (future), then newest active.
 -- =============================================================
 create or replace view public.public_vehicle_feed
-with (security_invoker = true)
+with (security_invoker = false)
 as
   select
     v.id,

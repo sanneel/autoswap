@@ -25,15 +25,27 @@ alter table public.listing_moderation_flags enable row level security;
 alter table public.listing_boosts_future    enable row level security;
 
 -- ----------------------------- profiles
+-- A user may read ONLY their own full profile row (which includes phone).
+-- Everyone else's public/trust info (name, phone_verified, completed swaps,
+-- active-today) is exposed exclusively through the curated, definer-rights
+-- public_vehicle_feed view — the raw phone never leaves this table.
 drop policy if exists profiles_select on public.profiles;
-create policy profiles_select on public.profiles for select using (true);
+create policy profiles_select on public.profiles for select using (id = auth.uid());
 
 drop policy if exists profiles_insert_self on public.profiles;
 create policy profiles_insert_self on public.profiles for insert with check (id = auth.uid());
 
+-- A user may update their own row, but the TRUST columns below are removed
+-- from their UPDATE privilege so they cannot self-verify their phone or
+-- inflate their swap count. Those columns are written only by security-definer
+-- functions (handle_new_user, accept_offer) which run with owner rights and
+-- are unaffected by these column grants.
 drop policy if exists profiles_update_self on public.profiles;
 create policy profiles_update_self on public.profiles for update
   using (id = auth.uid()) with check (id = auth.uid());
+
+revoke update (phone_verified, email_verified, completed_swaps_count, response_rate, last_active_at)
+  on public.profiles from anon, authenticated;
 
 -- ----------------------------- vehicles
 drop policy if exists vehicles_select_public on public.vehicles;
@@ -98,6 +110,10 @@ drop policy if exists offers_insert_sender on public.offers;
 create policy offers_insert_sender on public.offers for insert with check (
   from_user_id = auth.uid()
   and from_user_id <> to_user_id
+  -- A freshly created offer must start life as 'pending'. Without this a
+  -- sender could POST status = 'accepted'/'countered' and skip the workflow.
+  and status = 'pending'
+  and parent_offer_id is null
   and exists (select 1 from public.vehicles v
               where v.id = offered_vehicle_id and v.owner_id = auth.uid() and v.status = 'active')
   and exists (select 1 from public.vehicles v
