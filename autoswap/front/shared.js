@@ -314,7 +314,8 @@
           <nav class="footer-nav" aria-label="ფუტერის ნავიგაცია">
             <a href="cars.html">გაცვლები</a>
             <a href="sell.html">განცხადების დამატება</a>
-            <a href="vehicle.html?id=demo-bmw-530i">ნიმუშის ნახვა</a>
+            <a href="terms.html">წესები</a>
+            <a href="privacy.html">კონფიდენციალურობა</a>
             <a href="index.html#contact">კონტაქტი</a>
           </nav>
         </div>
