@@ -31,6 +31,9 @@ supabase/.env
 **/.static-server-*.log
 **/.chrome-verify-profile/
 
+# Design-review screenshots (regenerated on demand via tools/shoot*.mjs)
+autoswap/tools/shots/
+
 # Harness / preview scratch
 .claude/
 .agents/

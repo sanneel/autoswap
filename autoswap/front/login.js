@@ -1,12 +1,17 @@
-
+/* AutoSwap — login / registration page.
+   Sign-in methods: Google OAuth, or Georgian phone number with
+   a one-time SMS code (account auto-created on first login). Email auth is
+   intentionally removed — the number is the marketplace identity, and OAuth
+   users are asked to attach one right after (shared.js maybeRequirePhone).
+   ?next=<page> sends the user back where they came from. */
 const {
   Header, Footer, icons, sb, toast, escapeAttr, authReady,
-  signInWithProvider, normalizePhone, requestPhoneOtp, confirmPhoneOtp,
+  signInWithProvider, normalizePhone, requestPhoneOtp, confirmPhoneOtp, AUTH_DEMO_CODE,
 } = window.AutoSwap;
 
 const RESEND_COOLDOWN_S = 60;
 
-
+// Only same-directory pages are valid redirect targets.
 function nextTarget() {
   const raw = new URLSearchParams(window.location.search).get('next') || '';
   if (!raw || raw.includes('//') || raw.includes('..') || !/^[\w.-]+\.html(\?[^#]*)?(#[\w/-]*)?$/.test(raw)) {
@@ -31,7 +36,7 @@ function PhoneStep(phone, error) {
   return Shell(`
     <span class="auth-icon">${icons.swap}</span>
     <h1>შესვლა ან რეგისტრაცია</h1>
-    <p class="auth-sub">გააგრძელე Google-ით ან შეიყვანე ნომერი. გამოგიგზავნით ერთჯერად SMS კოდს.</p>
+    <p class="auth-sub">გააგრძელე Google-ით, ან შეიყვანე ნომერი — გამოგიგზავნით ერთჯერად SMS კოდს.</p>
     <div class="auth-providers">
       <button type="button" class="btn-provider btn-google" data-provider="google">${icons.google}<span>Google-ით გაგრძელება</span></button>
     </div>
@@ -53,7 +58,7 @@ function CodeStep(phone, isDemo, error) {
   return Shell(`
     <span class="auth-icon">${icons.check}</span>
     <h1>შეიყვანე კოდი</h1>
-    <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ' შეიყვანე მიღებული კოდი.' : ' კოდი მოქმედებს 5 წუთის განმავლობაში.'}</p>
+    <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი — შეიყვანე კოდი <strong>${AUTH_DEMO_CODE}</strong>.` : ' კოდი მოქმედებს 5 წუთის განმავლობაში.'}</p>
     ${error ? `<p class="auth-error" role="alert">${escapeAttr(error)}</p>` : ''}
     <form class="auth-form" id="code-form" novalidate>
       <label class="field">
@@ -77,12 +82,12 @@ let resendTimer = null;
 function friendlyError(message) {
   const msg = String(message || '');
   if (/rate limit|too many|security purposes/i.test(msg)) {
-    return 'ძალიან ბევრი მცდელობაა. დაიცადე ცოტა ხანი და სცადე თავიდან.';
+    return 'ძალიან ბევრი მცდელობა — დაიცადე ცოტა ხანი და სცადე თავიდან.';
   }
   if (/expired|invalid/i.test(msg)) {
-    return 'კოდი არასწორია ან ვადა გაუვიდა. სცადე თავიდან.';
+    return 'კოდი არასწორია ან ვადა გაუვიდა — სცადე თავიდან.';
   }
-  return msg || 'რაღაც შეცდომა მოხდა. სცადე თავიდან.';
+  return msg || 'რაღაც შეცდომა მოხდა — სცადე თავიდან.';
 }
 
 function startResendCooldown() {
@@ -113,7 +118,7 @@ function bindProviders() {
         btn.disabled = false;
         renderPhoneStep(friendlyError(error));
       }
-      
+      // On success the browser navigates away to the provider.
     });
   });
 }
@@ -132,8 +137,8 @@ function renderPhoneStep(error) {
       return;
     }
     form.querySelector('[type="submit"]').disabled = true;
-    
-    
+    // Account is auto-created on first login; the name popup follows the
+    // first verified sign-in (shared.js maybeRequireProfile).
     const result = await requestPhoneOtp(phone);
     if (result.error) {
       currentPhone = raw;
@@ -166,8 +171,8 @@ function renderCodeStep(error) {
       return;
     }
     toast('შესვლა წარმატებულია');
-    
-    
+    // Demo sessions can browse but not write — gated pages would bounce
+    // them straight back here, so land on the catalog instead.
     window.location.replace(currentIsDemo ? 'cars.html' : nextTarget());
   });
 
@@ -197,8 +202,8 @@ async function init() {
     window.location.replace(nextTarget());
     return;
   }
-  
-  
+  // Without Supabase the phone flow still works in the labelled demo mode,
+  // so the page renders either way.
   renderPhoneStep();
 }
 

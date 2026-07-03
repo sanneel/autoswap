@@ -1,18 +1,2 @@
-# Netlify deploy config for the AutoSwap static frontend.
-# Publish the front/ directory as-is (plain HTML/CSS/JS, no build step).
 [build]
-  publish = "autoswap/front"
-  command = ""
-
-# Security headers (mirrors autoswap/front/_headers; kept here so they apply
-# even if the publish dir changes). CSP allows only the Supabase API/realtime
-# and the pinned jsDelivr script; everything else is same-origin.
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; form-action 'self'"
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), payment=()"
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+  base = "autoswap"
