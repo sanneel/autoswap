@@ -75,7 +75,9 @@ await page.waitForTimeout(300);
 if (!await page.evaluate(() => !!document.querySelector('.modal-overlay'))) errs.push('offer modal did not open');
 await page.keyboard.press('Escape');
 
-// Filters + sort are mirrored into the URL (filters live in the left rail).
+// Filters + sort are mirrored into the URL. The value inputs sit behind
+// the filter panel's lite toggle, so flip it to full mode first.
+await page.click('.filter-lite-toggle').catch(() => {});
 await page.fill('[name="valueMin"]', '40000').catch(() => errs.push('valueMin input missing'));
 await page.dispatchEvent('[name="valueMin"]', 'change');
 await page.selectOption('#sort-select', 'value_desc').catch(() => errs.push('value sort missing'));

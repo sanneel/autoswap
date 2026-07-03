@@ -16,15 +16,15 @@
     </linearGradient>
   </defs>
 
-  <!-- sky + sun -->
+
   <rect width="1600" height="560" fill="url(#sky)"/>
   <rect width="1600" height="560" fill="url(#sun)"/>
   <circle cx="1152" cy="150" r="70" fill="#F6E7D8" opacity="0.85"/>
 
-  <!-- layered ridges, far (pale sage) to near (panel green) -->
+
   <path d="M0,196 C260,176 520,192 800,184 C1080,176 1340,194 1600,182 L1600,560 L0,560 Z" fill="#DCE2D1"/>
   <path d="M0,240 C280,220 540,242 820,232 C1100,222 1360,244 1600,234 L1600,560 L0,560 Z" fill="#C2CEB1"/>
-  <!-- horizon haze for depth -->
+
   <rect x="0" y="188" width="1600" height="120" fill="url(#haze)"/>
   <path d="M0,288 C260,270 520,292 800,282 C1080,272 1340,294 1600,284 L1600,560 L0,560 Z" fill="#9DB293"/>
   <path d="M0,342 C300,326 560,348 840,338 C1120,328 1380,350 1600,340 L1600,560 L0,560 Z" fill="#5F8268"/>
