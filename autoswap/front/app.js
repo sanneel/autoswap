@@ -4,17 +4,23 @@ const { assets, icons, Header, Footer, DEMO_CARS, escapeAttr } = window.AutoSwap
 // through this. Escapes & < > " so listing data can't inject markup.
 const esc = escapeAttr;
 
-// Monochrome brand marks — recognizable by silhouette, tinted with the
-// chip's own color so they stay quiet until hover (one-accent rule).
-const brandLogos = {
-  BMW: `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21"/><circle cx="24" cy="24" r="13"/><path d="M24 11v26M11 24h26"/></svg>`,
-  'Mercedes-Benz': `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="2.4"/><g stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M24 24V6"/><path d="M24 24 8.4 33"/><path d="M24 24 39.6 33"/></g></svg>`,
-  Audi: `<svg viewBox="0 0 76 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="15" cy="24" r="11"/><circle cx="30" cy="24" r="11"/><circle cx="45" cy="24" r="11"/><circle cx="60" cy="24" r="11"/></g></svg>`,
-  Toyota: `<svg viewBox="0 0 60 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.4"><ellipse cx="30" cy="24" rx="26" ry="15"/><ellipse cx="30" cy="17" rx="8.5" ry="6"/><ellipse cx="30" cy="27.5" rx="15" ry="9.5"/></g></svg>`,
-  Volkswagen: `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M13 14l5 12 3-7 3 7 3-7 3 7 5-12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`,
-  Hyundai: `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="24" rx="21" ry="14" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15 30c2-7 16-7 18 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`,
-  Lexus: `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="24" rx="21" ry="15" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M24 12 12 33h9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>`,
+// Real brand logos (self-hosted from the MIT-licensed car-logos-dataset,
+// under assets/logos/<slug>.png). BRAND_SLUGS maps a make name to its file.
+const BRAND_SLUGS = {
+  BMW: 'bmw', 'Mercedes-Benz': 'mercedes-benz', Audi: 'audi', Toyota: 'toyota',
+  Volkswagen: 'volkswagen', Hyundai: 'hyundai', Lexus: 'lexus', Kia: 'kia',
+  Honda: 'honda', Ford: 'ford', Nissan: 'nissan', Chevrolet: 'chevrolet',
+  Volvo: 'volvo', Mazda: 'mazda', Subaru: 'subaru', Mitsubishi: 'mitsubishi',
+  Jeep: 'jeep', Porsche: 'porsche', Opel: 'opel', Skoda: 'skoda',
+  Renault: 'renault', Peugeot: 'peugeot',
 };
+
+function brandLogo(make) {
+  const slug = BRAND_SLUGS[make];
+  return slug
+    ? `<img class="brand-logo-img" src="assets/logos/${slug}.png" alt="${esc(make)}" loading="lazy" width="34" height="34">`
+    : icons.car;
+}
 
 const legacyListings = [
   {
@@ -367,7 +373,7 @@ function BrowseStrip() {
         <div class="browse-pills" data-drag-scroll>
           ${brands.map((brand) => `
             <a class="brand-chip" href="cars.html?make=${encodeURIComponent(brand.make)}" aria-label="${brand.label || brand.make} — გაცვლები">
-              <span class="brand-mark">${brandLogos[brand.make] || icons.car}</span>
+              <span class="brand-mark">${brandLogo(brand.make)}</span>
               <span class="brand-chip-text">
                 <strong>${brand.label || brand.make}</strong>
                 <small>${countByMake(brand.make)} მანქანა</small>

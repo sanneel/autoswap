@@ -2332,10 +2332,12 @@ svg {
   padding: 4px;
   list-style: none;
   overflow-y: auto;
-  background: var(--card-white);
-  border: 1px solid var(--border);
+  /* Solid fill — a translucent dropdown let the filter labels behind it
+     bleed through and made the list unreadable. */
+  background: #ffffff;
+  border: 1px solid rgba(30, 77, 52, 0.18);
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-subtle);
+  box-shadow: 0 16px 40px -12px rgba(16, 20, 15, 0.28);
 }
 
 .combo-option {
@@ -10072,19 +10074,28 @@ body {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(20, 26, 20, 0.05);
+  background: #fff;
+  border: 1px solid rgba(20, 26, 20, 0.08);
   color: var(--graphite);
-  transition: background 180ms ease, color 180ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .brand-chip:hover .brand-mark {
-  background: var(--accent-soft);
-  color: var(--copper);
+  border-color: rgba(30, 77, 52, 0.28);
+  box-shadow: 0 4px 12px -6px rgba(20, 26, 20, 0.3);
 }
 
+/* Real brand logos: contained, full color on a white tile. */
+.brand-mark .brand-logo-img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+/* Fallback icon for makes without a bundled logo. */
 .brand-mark svg {
-  width: 27px;
-  height: 23px;
+  width: 24px;
+  height: 24px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2.2;
