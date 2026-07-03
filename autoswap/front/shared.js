@@ -102,9 +102,9 @@
     const money = `${(Number(amount) || 0).toLocaleString('en-US')} ₾`;
     switch (mode) {
       case 'add_money':
-        return { cash: `ის ამატებს ${money}`, cashType: 'add' };
+        return { cash: `ამატებს ${money}`, cashType: 'add' };
       case 'ask_money':
-        return { cash: `ის ითხოვს ${money}`, cashType: 'ask' };
+        return { cash: `ითხოვს ${money}`, cashType: 'ask' };
       case 'flexible':
         return { cash: 'სხვაობა შეთანხმებით', cashType: 'flexible' };
       default:

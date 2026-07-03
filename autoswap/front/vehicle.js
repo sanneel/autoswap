@@ -48,10 +48,12 @@ function Gallery(car, photos) {
         `).join('')}
       </div>`
     : '';
+  const count = `<span class="detail-photo-count">${icons.image || ''}${sources.length} ${sources.length === 1 ? 'ფოტო' : 'ფოტო'}</span>`;
   return `
     <div class="detail-gallery">
       <div class="detail-main-media">
         <img id="detail-main-img" src="${esc(sources[0])}" alt="${name}">
+        ${count}
       </div>
       ${thumbs}
     </div>
@@ -78,7 +80,7 @@ function DetailPage(car, photos) {
     ${Header({ active: 'listings' })}
     <main class="detail-shell">
       <section class="container detail">
-        <a class="detail-back" href="cars.html">${icons.arrowRight}<span>გაცვლებზე დაბრუნება</span></a>
+        <a class="detail-back" href="cars.html">${icons.arrowRight}<span>უკან განცხადებებზე</span></a>
         <div class="detail-grid">
           ${Gallery(car, photos)}
           <aside class="detail-panel">
@@ -96,10 +98,11 @@ function DetailPage(car, photos) {
             </div>
             <div class="detail-owner">
               <span class="owner-avatar">${esc((car.ownerName || car.make || 'A').charAt(0))}</span>
-              <div>
+              <div class="detail-owner-info">
                 <strong>${car.ownerName ? esc(car.ownerName) : 'კერძო მფლობელი'}</strong>
                 <small>${esc(car.city)}${car.ownerSwaps ? ` · ${esc(String(car.ownerSwaps))} გაცვლა` : ''}</small>
               </div>
+              ${car.ownerId ? `<a class="owner-more" href="cars.html?owner=${encodeURIComponent(car.ownerId)}">სხვა განცხადებები ${icons.arrowRight}</a>` : ''}
             </div>
           </aside>
         </div>

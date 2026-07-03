@@ -52,7 +52,7 @@ function emptyFilters() {
     query: '', make: '', makeId: '', category: '', model: '', modelGroup: '', transmission: '', fuel: '',
     city: '', cash: '', yearFrom: '', yearTo: '', mileageMin: '', mileageMax: '',
     valueMin: '', valueMax: '',
-    onlyMatches: '', verified: '', fresh: '',
+    onlyMatches: '', verified: '', fresh: '', owner: '',
     modelTerms: [],
     sort: '',
   };
@@ -373,14 +373,13 @@ function CarRow(car) {
         <a class="car-row-media-link" href="${detailHref}" aria-label="${name} დეტალურად">
           <img src="${escapeHtml(car.image)}" alt="${name}" loading="lazy">
         </a>
-        ${car.freshness ? `<span class="fresh-tag">${escapeHtml(car.freshness)}</span>` : ''}
         <button class="save-btn" type="button" aria-label="${name} შენახვა">${icons.heart}</button>
       </div>
 
       <div class="car-card-body">
         <div class="car-card-head">
           <h3 class="car-row-title"><a class="card-title-link" href="${detailHref}">${name}</a> <span class="car-row-year">${escapeHtml(car.year)}</span></h3>
-          <span class="listing-city">${icons.location}${escapeHtml(car.city)}</span>
+          <span class="listing-city">${icons.location}${escapeHtml(car.city)}${car.freshness ? `<span class="listing-age">· ${escapeHtml(car.freshness)}</span>` : ''}</span>
         </div>
         <p class="car-card-specs">${escapeHtml(specs)}</p>
         <p class="car-card-wants"><span>ეძებს</span>${escapeHtml(wants)}</p>
@@ -572,6 +571,7 @@ function applyFilters(cars, f) {
     if (query && !haystack.includes(query)) return false;
     
     
+    if (f.owner && car.ownerId !== f.owner) return false;
     if (f.make && !car.make.toLowerCase().includes(f.make.toLowerCase())) return false;
     if (f.category && car.category !== f.category) return false;
     if (f.model && !modelMatchesFilter(car.model, f)) return false;
