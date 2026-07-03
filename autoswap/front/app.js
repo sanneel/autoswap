@@ -1,10 +1,22 @@
-/* AutoSwap — landing page.
-   Shared chrome, helpers and the Supabase read path live in shared.js
-   (window.AutoSwap). This file renders the landing and links into the
-   cars product page (cars.html). */
-const { assets, icons, Header, Footer } = window.AutoSwap;
 
-const listings = [
+const { assets, icons, Header, Footer, DEMO_CARS, escapeAttr } = window.AutoSwap;
+// Short alias — every user-controlled string rendered into innerHTML goes
+// through this. Escapes & < > " so listing data can't inject markup.
+const esc = escapeAttr;
+
+// Monochrome brand marks — recognizable by silhouette, tinted with the
+// chip's own color so they stay quiet until hover (one-accent rule).
+const brandLogos = {
+  BMW: `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21"/><circle cx="24" cy="24" r="13"/><path d="M24 11v26M11 24h26"/></svg>`,
+  'Mercedes-Benz': `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="2.4"/><g stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M24 24V6"/><path d="M24 24 8.4 33"/><path d="M24 24 39.6 33"/></g></svg>`,
+  Audi: `<svg viewBox="0 0 76 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="15" cy="24" r="11"/><circle cx="30" cy="24" r="11"/><circle cx="45" cy="24" r="11"/><circle cx="60" cy="24" r="11"/></g></svg>`,
+  Toyota: `<svg viewBox="0 0 60 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.4"><ellipse cx="30" cy="24" rx="26" ry="15"/><ellipse cx="30" cy="17" rx="8.5" ry="6"/><ellipse cx="30" cy="27.5" rx="15" ry="9.5"/></g></svg>`,
+  Volkswagen: `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M13 14l5 12 3-7 3 7 3-7 3 7 5-12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`,
+  Hyundai: `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="24" rx="21" ry="14" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15 30c2-7 16-7 18 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`,
+  Lexus: `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="24" rx="21" ry="15" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M24 12 12 33h9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>`,
+};
+
+const legacyListings = [
   {
     id: 'bmw-530i',
     badge: 'TOP შეთავაზება',
@@ -67,18 +79,20 @@ const listings = [
   },
 ];
 
-// The grid renders from this mutable list. It starts with the demo listings
-// above and is replaced with live Supabase data once the feed loads.
+const listings = DEMO_CARS.slice(0, 4);
+
+
+
 let activeListings = listings.slice();
 
 function Hero() {
   return `
-    <section class="hero" id="home" aria-labelledby="hero-title">
+    <section class="hero hero--garage" id="home" aria-labelledby="hero-title">
       <div class="hero-backdrop" aria-hidden="true"></div>
       <div class="container hero-inner">
         <div class="hero-copy">
-          <h1 id="hero-title">შეცვალე მანქანა გაყიდვის გარეშე</h1>
-          <p>იპოვე შესაბამისი გაცვლა რეალურ მფლობელებთან და ნახე პირობები წინასწარ.</p>
+          <h1 id="hero-title">მანქანები გაცვლისთვის</h1>
+          <p>აირჩიე მანქანა, ნახე პირობები და გაგზავნე შეთავაზება.</p>
         </div>
 
         <div class="swap-stage" aria-label="BMW და Audi გაცვლის შედარება">
@@ -102,7 +116,7 @@ function Hero() {
           </div>
 
           <article class="hero-car hero-car-right">
-            <img src="${assets.porsche}" alt="Porsche 718 Spyder" width="817" height="396" decoding="async" fetchpriority="high" onerror="this.onerror=null;this.src='${assets.audi}';">
+            <img src="${assets.porsche}" alt="Porsche 718 Spyder" width="817" height="396" decoding="async" fetchpriority="high" data-fallback="${assets.audi}">
             <button class="sound-btn" type="button" data-rev="porsche" aria-label="Porsche 718 Spyder ძრავის ხმა">${icons.sound}</button>
             <div class="hero-car-caption">
               <strong>Porsche 718 Spyder</strong>
@@ -123,27 +137,21 @@ function Hero() {
 
 function SearchBar() {
   return `
-    <form class="search-bar swap-search" id="search-form" action="cars.html" method="get" aria-label="გაცვლის ძებნა">
+    <form class="garage-search" id="search-form" action="cars.html" method="get" aria-label="გაცვლის ძებნა">
       <div class="swap-search-top">
         <label class="search-field">
           <span>${icons.car}</span>
-          <input name="have" type="text" placeholder="რა მანქანა გყავს?" autocomplete="off">
+          <input name="have" type="text" placeholder="რა მანქანა გყავს?" autocomplete="off" list="have-suggest">
+          <datalist id="have-suggest"></datalist>
         </label>
         <span class="swap-search-icon" aria-hidden="true">${icons.swap}</span>
         <label class="search-field">
           <span>${icons.search}</span>
-          <input name="want" type="search" placeholder="რას ეძებ?" autocomplete="off">
+          <input name="want" type="search" placeholder="რას ეძებ?" autocomplete="off" list="want-suggest">
+          <datalist id="want-suggest"></datalist>
         </label>
       </div>
       <div class="swap-search-bottom">
-        <div class="search-slider">
-          <div class="slider-track">
-            <span class="slider-end">ითხოვს</span>
-            <input name="cashSlider" class="cash-slider" type="range" min="-5000" max="5000" step="500" value="0" aria-label="თანხის სხვაობა">
-            <span class="slider-end">ამატებს</span>
-          </div>
-          <span class="slider-value" id="slider-value">თანხის გარეშე</span>
-        </div>
         <label class="search-field">
           <span>${icons.location}</span>
           <select name="city">
@@ -153,7 +161,9 @@ function SearchBar() {
             <option value="ქუთაისი">ქუთაისი</option>
           </select>
         </label>
-        <button class="btn btn-accent search-submit" type="submit">შესაბამისი გაცვლების ნახვა</button>
+        <input name="cashSlider" class="cash-slider garage-cash-slider" type="range" min="-5000" max="5000" step="500" value="0" aria-label="თანხის სხვაობა">
+        <span class="slider-value garage-slider-value" id="slider-value">თანხის გარეშე</span>
+        <button class="btn btn-primary btn-liquid search-submit" type="submit">${icons.search} ძებნა</button>
       </div>
     </form>
   `;
@@ -161,13 +171,67 @@ function SearchBar() {
 
 const CASH_ICONS = { add: icons.trendUp, ask: icons.trendDown, flexible: icons.swap, none: icons.equals };
 
-// The landing shows a teaser of the freshest listings; the full catalog
-// lives on cars.html.
+
+
 const LANDING_CARD_COUNT = 4;
 const landingCards = (cars) => cars.slice(0, LANDING_CARD_COUNT).map(ListingCard).join('');
 
-// Long feed titles ("Toyota Camry LE 4dr Sedan Automatic") get cut at a word
-// boundary so cards stay symmetric; the full name lives on the detail page.
+// Hero search typeahead: contains-match against the car catalog
+// (Supabase car_makes/car_models with ilike, bundled fallback offline).
+// Typing "bmw 530" offers "BMW 530i", "BMW 530d", ...
+let heroMakesPromise = null;
+function heroMakes() {
+  if (!heroMakesPromise) {
+    heroMakesPromise = window.AutoSwap.searchMakes('', 500).catch(() => []);
+  }
+  return heroMakesPromise;
+}
+
+async function heroSuggestions(term) {
+  const query = String(term || '').trim();
+  if (query.length < 2) return [];
+  const [first, ...restTokens] = query.split(/\s+/);
+  const rest = restTokens.join(' ');
+  const makes = await heroMakes();
+  const q = first.toLowerCase();
+  const make = makes.find((m) => m.name.toLowerCase() === q)
+    || makes.find((m) => m.name.toLowerCase().startsWith(q))
+    || makes.find((m) => m.name.toLowerCase().includes(q));
+
+  if (make) {
+    const models = await window.AutoSwap.searchModels(rest, make.id, 10).catch(() => []);
+    const rows = models.length ? models : await window.AutoSwap.searchModels('', make.id, 10).catch(() => []);
+    return rows.map((m) => `${make.name} ${m.name}`);
+  }
+
+  // No make hit: the term itself may be a model ("530", "camry").
+  const byName = new Map(makes.map((m) => [String(m.id), m.name]));
+  const models = await window.AutoSwap.searchModels(query, null, 10).catch(() => []);
+  return models
+    .map((m) => `${byName.get(String(m.make_id)) || ''} ${m.name}`.trim())
+    .filter(Boolean);
+}
+
+function bindHeroSuggest(input, listId) {
+  const list = document.querySelector(`#${listId}`);
+  if (!input || !list) return;
+  let timer = null;
+  let seq = 0;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const stamp = ++seq;
+    timer = setTimeout(async () => {
+      const items = await heroSuggestions(input.value);
+      if (stamp !== seq) return; // a newer keystroke won
+      list.innerHTML = items
+        .map((label) => `<option value="${window.AutoSwap.escapeAttr(label)}"></option>`)
+        .join('');
+    }, 150);
+  });
+}
+
+
+
 const TITLE_MAX_CHARS = 26;
 function trimTitle(title) {
   if (title.length <= TITLE_MAX_CHARS) return title;
@@ -178,32 +242,69 @@ function trimTitle(title) {
 
 function ListingCard(car) {
   const detailHref = `vehicle.html?id=${encodeURIComponent(car.id)}`;
-  const title = trimTitle(`${car.make} ${car.model}`);
-  // No concrete wants → no fake "ეძებს" line; the card stays quiet about it.
-  const wants = car.openToOffers ? '' : car.wants;
-  const meta = [car.year, car.mileage, car.fuel].filter(Boolean).join(' · ');
+  const name = esc(`${car.make} ${car.model}`);
+  const title = esc(trimTitle(`${car.make} ${car.model}`));
+  const wants = car.openToOffers ? '' : esc(car.wants);
+  const meta = esc([car.year, car.mileage, car.fuel].filter(Boolean).join(' · '));
   return `
-    <article class="listing-card" data-id="${car.id}">
+    <article class="listing-card" data-id="${esc(car.id)}">
       <div class="listing-media">
-        <button class="save-btn" type="button" aria-label="${car.make} ${car.model} შენახვა">${icons.heart}</button>
-        <a class="listing-media-link" href="${detailHref}" aria-label="${car.make} ${car.model} დეტალურად">
-          <img src="${car.image}" alt="${car.make} ${car.model}" loading="lazy">
+        <button class="save-btn" type="button" aria-label="${name} შენახვა">${icons.heart}</button>
+        <a class="listing-media-link" href="${detailHref}" aria-label="${name} დეტალურად">
+          <img src="${esc(car.image)}" alt="${name}" loading="lazy">
         </a>
       </div>
       <div class="listing-body">
         <div>
-          <h3><a class="card-title-link" href="${detailHref}" title="${car.make} ${car.model}">${title}</a></h3>
+          <h3><a class="card-title-link" href="${detailHref}" title="${name}">${title}</a></h3>
           <p>${meta}</p>
-          <span class="listing-city">${icons.location}${car.city}</span>
+          <span class="listing-city">${icons.location}${esc(car.city)}</span>
         </div>
         ${wants ? `
-        <p class="listing-wants"><span>ეძებს</span>${wants}</p>` : ''}
-        <p class="trade-cash trade-cash--${car.cashType || 'none'}">${CASH_ICONS[car.cashType] || icons.equals}<span>${car.cashType === 'none' ? 'თანაბარი გაცვლა' : car.cash}</span></p>
+        <p class="listing-wants"><span class="wanted-label">${icons.search}<b>ეძებს</b></span>${wants}</p>` : ''}
+        <p class="trade-cash trade-cash--${esc(car.cashType || 'none')}">${CASH_ICONS[car.cashType] || icons.equals}<span>${car.cashType === 'none' ? 'თანაბარი გაცვლა' : esc(car.cash)}</span></p>
         <div class="listing-foot">
-          <button class="btn btn-accent listing-offer" type="button" data-offer data-id="${car.id}" data-make="${car.make}" data-model="${car.model}">შეთავაზება</button>
+          <button class="btn btn-accent listing-offer" type="button" data-offer data-id="${esc(car.id)}" data-make="${esc(car.make)}" data-model="${esc(car.model)}">შეთავაზება</button>
         </div>
       </div>
     </article>
+  `;
+}
+
+function FeaturedSwap(car) {
+  const detailHref = `vehicle.html?id=${encodeURIComponent(car.id)}`;
+  const name = esc(`${car.make} ${car.model}`);
+  const meta = esc([car.year, car.mileage, car.fuel].filter(Boolean).join(' · '));
+  const wants = car.openToOffers ? 'ღიაა შეთავაზებებზე' : esc(car.wants);
+  return `
+    <article class="featured-swap" data-id="${esc(car.id)}">
+      <a class="featured-media" href="${detailHref}" aria-label="${name} დეტალურად">
+        <img src="${esc(car.image)}" alt="${name}" loading="lazy">
+        <span class="featured-flag">დღის გაცვლა</span>
+      </a>
+      <div class="featured-body">
+        <h3><a class="card-title-link" href="${detailHref}">${name}</a></h3>
+        <p class="featured-meta">${meta}</p>
+        <span class="listing-city">${icons.location}${esc(car.city)}</span>
+        <p class="featured-wants"><b>ეძებს:</b> ${wants}</p>
+        <p class="trade-cash trade-cash--${esc(car.cashType || 'none')}">${CASH_ICONS[car.cashType] || icons.equals}<span>${car.cashType === 'none' ? 'თანაბარი გაცვლა' : esc(car.cash)}</span></p>
+      </div>
+      <div class="featured-aside">
+        <button class="btn btn-accent btn-liquid" type="button" data-offer data-id="${esc(car.id)}" data-make="${esc(car.make)}" data-model="${esc(car.model)}">${icons.swap}<span>შესთავაზე გაცვლა</span></button>
+        <a class="btn btn-secondary" href="${detailHref}">დეტალურად</a>
+      </div>
+    </article>
+  `;
+}
+
+function LandingListings(cars) {
+  if (!cars.length) return '<p class="empty-state">ამ ფილტრებით შეთავაზება ვერ მოიძებნა.</p>';
+  const [first, ...rest] = cars;
+  return `
+    ${FeaturedSwap(first)}
+    <div class="listing-grid listing-grid--trio">
+      ${rest.slice(0, 3).map(ListingCard).join('')}
+    </div>
   `;
 }
 
@@ -213,102 +314,137 @@ function ListingsSection(cars = activeListings) {
       <div class="container">
         <div class="section-head">
           <div>
-            <h2 id="listings-title">რეალური ავტომობილები გაცვლისთვის</h2>
+            <h2 id="listings-title">იცვლება</h2>
           </div>
-          <a class="text-link" href="cars.html">ყველა ავტომობილის ნახვა ${icons.arrowRight}</a>
+          <a class="text-link" href="cars.html">ყველა განცხადება ${icons.arrowRight}</a>
         </div>
-        <div class="listing-grid" id="listing-grid">
-          ${landingCards(cars)}
-        </div>
-        <div class="listings-more">
-          <a class="btn btn-secondary" href="cars.html">ყველა ავტომობილის ნახვა</a>
+        <div id="landing-listings">
+          ${LandingListings(cars)}
         </div>
       </div>
     </section>
   `;
 }
 
-function ProcessSection() {
-  const steps = [
-    { icon: icons.car, title: 'დაამატე შენი ავტომობილი', text: 'აღწერე მანქანა, გარბენი, ფასი და სასურველი გაცვლა.' },
-    { icon: icons.swap, title: 'იპოვე შესაბამისი გაცვლა', text: 'ნახე რას ეძებენ მფლობელები და რა თანხის სხვაობაა.' },
-    { icon: icons.message, title: 'გაგზავნე შეთავაზება', text: 'შესთავაზე შენი მანქანა და შეთანხმდი პირდაპირ მფლობელთან.' },
+function ClosingStrip() {
+  return `
+    <section class="closing-strip">
+      <div class="container closing-strip-inner">
+        <p>შენი მანქანა შეიძლება უკვე ვიღაცას უნდა — განცხადება ორ წუთში ემატება.</p>
+        <a class="btn btn-accent btn-liquid" href="sell.html">${icons.plus}<span>დაამატე მანქანა</span></a>
+      </div>
+    </section>
+  `;
+}
+
+function BrowseStrip() {
+  const countByMake = (make) => DEMO_CARS.filter((car) => car.make === make).length;
+  // Brands shown as logos; only render a make that actually has listings.
+  const brands = [
+    { make: 'BMW' },
+    { make: 'Mercedes-Benz', label: 'Mercedes' },
+    { make: 'Audi' },
+    { make: 'Toyota' },
+    { make: 'Volkswagen', label: 'VW' },
+    { make: 'Hyundai' },
+    { make: 'Lexus' },
+  ].filter((b) => countByMake(b.make) > 0).slice(0, 5);
+
+  const filters = [
+    { label: 'სედანი', href: 'cars.html?category=sedan', meta: `${DEMO_CARS.filter((car) => car.category === 'sedan').length} განცხადება` },
+    { label: 'ქროსოვერი', href: 'cars.html?category=crossover', meta: `${DEMO_CARS.filter((car) => car.category === 'crossover').length} განცხადება` },
+    { label: 'თანხის გარეშე', href: 'cars.html?cash=none', meta: `${DEMO_CARS.filter((car) => car.cashType === 'none').length} განცხადება` },
   ];
 
   return `
-    <section class="process-section" id="sections" aria-labelledby="process-title">
-      <div class="container split-section">
-        <div>
-          <h2 id="process-title">გაცვლა რამდენიმე მკაფიო ნაბიჯად</h2>
-        </div>
-        <div class="process-grid">
-          ${steps.map((step, index) => `
-            <article class="process-card">
-              <span class="process-icon">${step.icon}</span>
-              <span class="step-index">${index + 1}</span>
-              <h3>${step.title}</h3>
-              <p>${step.text}</p>
-            </article>
+    <section class="browse-strip browse-strip--garage" aria-label="დაათვალიერე მარკის მიხედვით">
+      <div class="container browse-strip-inner">
+        <a class="brand-chip brand-chip--all" href="cars.html">
+          <strong>ყველა</strong>
+          <small>${DEMO_CARS.length} განცხადება</small>
+        </a>
+        <button class="rail-arrow rail-arrow--prev" type="button" data-rail-prev aria-label="წინა">${icons.arrowRight}</button>
+        <div class="browse-pills" data-drag-scroll>
+          ${brands.map((brand) => `
+            <a class="brand-chip" href="cars.html?make=${encodeURIComponent(brand.make)}" aria-label="${brand.label || brand.make} — გაცვლები">
+              <span class="brand-mark">${brandLogos[brand.make] || icons.car}</span>
+              <span class="brand-chip-text">
+                <strong>${brand.label || brand.make}</strong>
+                <small>${countByMake(brand.make)} მანქანა</small>
+              </span>
+            </a>
+          `).join('')}
+          <span class="brand-chip-sep" aria-hidden="true"></span>
+          ${filters.map((route) => `
+            <a class="browse-pill" href="${route.href}">
+              <span>${route.label}</span>
+              <small>${route.meta}</small>
+            </a>
           `).join('')}
         </div>
-      </div>
-    </section>
-  `;
-}
-
-function BenefitsSection() {
-  const benefits = [
-    { icon: icons.shield, title: 'რეალური მფლობელები', text: 'გაცვლის შეთავაზებები მოდის ადამიანებისგან, რომლებიც მართლაც ეძებენ ახალ მანქანას.' },
-    { icon: icons.medal, title: 'პირობები წინასწარ ჩანს', text: 'რას ეძებს მფლობელი და რა თანხის სხვაობაა, ბარათზევე ჩანს.' },
-    { icon: icons.headset, title: 'ნაკლები შემთხვევითი ზარი', text: 'შეთავაზება უფრო ორგანიზებულია, ვიდრე ჩვეულებრივი განცხადებების ბაზარზე.' },
-  ];
-
-  return `
-    <section class="benefits-section" aria-labelledby="benefits-title">
-      <div class="container">
-        <div class="section-head compact">
-          <div>
-            <h2 id="benefits-title">ნაკლები ხმაური, მეტი ნდობა</h2>
-          </div>
-        </div>
-        <div class="benefits-grid">
-          ${benefits.map((item) => `
-            <article class="benefit-card">
-              <span>${item.icon}</span>
-              <h3>${item.title}</h3>
-              <p>${item.text}</p>
-            </article>
-          `).join('')}
-        </div>
-      </div>
-    </section>
-  `;
-}
-
-function CTASection() {
-  return `
-    <section class="cta-section" aria-labelledby="cta-title">
-      <div class="container cta-panel">
-        <div>
-          <h2 id="cta-title">მზად ხარ შემდეგი მანქანის შესაცვლელად?</h2>
-          <p>შექმენი განცხადება და იპოვე გაცვლა, რომელიც რეალურად შეესაბამება შენს ავტომობილს.</p>
-        </div>
-        <div class="cta-actions">
-          <a class="btn btn-light" href="cars.html">შეთავაზებების ნახვა</a>
-          <a class="btn btn-accent" href="sell.html">ჩემი მანქანის დამატება</a>
-        </div>
+        <button class="rail-arrow" type="button" data-rail-next aria-label="შემდეგი">${icons.arrowRight}</button>
       </div>
     </section>
   `;
 }
 
 function renderListingGrid(cars) {
-  const grid = document.querySelector('#listing-grid');
-  if (!grid) return;
+  const wrap = document.querySelector('#landing-listings');
+  if (!wrap) return;
+  wrap.innerHTML = LandingListings(cars);
+}
 
-  grid.innerHTML = cars.length
-    ? landingCards(cars)
-    : '<p class="empty-state">ამ ფილტრებით შეთავაზება ვერ მოიძებნა.</p>';
+function bindDragRails(root = document) {
+  root.querySelectorAll('[data-drag-scroll]').forEach((rail) => {
+    let active = false;
+    let startX = 0;
+    let startLeft = 0;
+    let moved = false;
+
+    rail.addEventListener('pointerdown', (event) => {
+      active = true;
+      moved = false;
+      startX = event.clientX;
+      startLeft = rail.scrollLeft;
+      rail.classList.add('is-dragging');
+      rail.setPointerCapture?.(event.pointerId);
+    });
+
+    rail.addEventListener('pointermove', (event) => {
+      if (!active) return;
+      const delta = event.clientX - startX;
+      if (Math.abs(delta) > 4) moved = true;
+      rail.scrollLeft = startLeft - delta;
+    });
+
+    const stop = (event) => {
+      if (!active) return;
+      active = false;
+      rail.classList.remove('is-dragging');
+      rail.releasePointerCapture?.(event.pointerId);
+      if (moved) {
+        rail.dataset.dragged = '1';
+        window.setTimeout(() => delete rail.dataset.dragged, 0);
+      }
+    };
+
+    rail.addEventListener('pointerup', stop);
+    rail.addEventListener('pointercancel', stop);
+    rail.addEventListener('click', (event) => {
+      if (!rail.dataset.dragged) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+  });
+
+  root.querySelectorAll('[data-rail-prev], [data-rail-next]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const rail = button.parentElement?.querySelector('[data-drag-scroll]');
+      if (!rail) return;
+      const direction = button.hasAttribute('data-rail-prev') ? -1 : 1;
+      rail.scrollBy({ left: direction * Math.max(220, rail.clientWidth * 0.7), behavior: 'smooth' });
+    });
+  });
 }
 
 function bindInteractions() {
@@ -327,7 +463,19 @@ function bindInteractions() {
     if (sliderValue) sliderValue.textContent = formatDiff(slider.value);
   });
 
-  // Hero rev buttons: one rev at a time; clicking the active one stops it.
+  bindHeroSuggest(form?.querySelector('[name="have"]'), 'have-suggest');
+  bindHeroSuggest(form?.querySelector('[name="want"]'), 'want-suggest');
+
+  // Image fallback wired in JS (not an inline onerror handler) so the strict
+  // CSP can keep script-src free of 'unsafe-inline'.
+  document.querySelectorAll('img[data-fallback]').forEach((img) => {
+    img.addEventListener('error', function onError() {
+      img.removeEventListener('error', onError);
+      img.src = img.dataset.fallback;
+    });
+  });
+
+  
   let revAudio = null;
   let activeRevBtn = null;
 
@@ -354,8 +502,8 @@ function bindInteractions() {
     });
   });
 
-  // The hero search links into the product page (cars.html), translating the
-  // swap intent (have / want / cash slider / city) into feed filters.
+  
+  
   form?.addEventListener('submit', (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -372,25 +520,23 @@ function bindInteractions() {
     const qs = params.toString();
     window.location.href = qs ? `cars.html?${qs}` : 'cars.html';
   });
-  // Save (heart) toggle is a single global listener in shared.js.
+  
+  bindDragRails();
 }
 
 function App() {
   return `
-    ${Header({ active: 'listings' })}
-    <main>
+    ${Header()}
+    <main class="home-main">
       ${Hero()}
+      ${BrowseStrip()}
       ${ListingsSection()}
-      ${ProcessSection()}
-      ${BenefitsSection()}
-      ${CTASection()}
+      ${ClosingStrip()}
     </main>
     ${Footer()}
   `;
 }
 
-// Replaces the demo grid with the live public_vehicle_feed when Supabase is
-// configured; otherwise the demo listings above stay on screen.
 async function hydrateFromSupabase() {
   const mapped = await window.AutoSwap.fetchFeed();
   if (mapped !== null) {

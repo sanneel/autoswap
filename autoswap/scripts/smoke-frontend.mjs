@@ -70,20 +70,21 @@ await page.goto(`${BASE}/cars.html`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(400);
 
 // Offer modal (demo gate) opens from a listing card.
-await page.click('.car-row [data-offer]').catch(() => errs.push('offer button missing'));
+await page.click('.car-card [data-offer]').catch(() => errs.push('offer button missing'));
 await page.waitForTimeout(300);
 if (!await page.evaluate(() => !!document.querySelector('.modal-overlay'))) errs.push('offer modal did not open');
 await page.keyboard.press('Escape');
 
-// Filters + sort are mirrored into the URL.
-await page.click('.more-filters summary');
+// Filters + sort are mirrored into the URL. The value inputs sit behind
+// the filter panel's lite toggle, so flip it to full mode first.
+await page.click('.filter-lite-toggle').catch(() => {});
 await page.fill('[name="valueMin"]', '40000').catch(() => errs.push('valueMin input missing'));
 await page.dispatchEvent('[name="valueMin"]', 'change');
 await page.selectOption('#sort-select', 'value_desc').catch(() => errs.push('value sort missing'));
 await page.waitForTimeout(300);
 const url = page.url();
 if (!url.includes('valueMin=40000') || !url.includes('sort=value_desc')) errs.push(`URL not synced: ${url}`);
-if (!await page.locator('.car-row').count()) errs.push('value filter wiped all demo rows');
+if (!await page.locator('.car-card').count()) errs.push('value filter wiped all demo rows');
 
 console.log(errs.length ? `✖ interactions:\n  ${errs.join('\n  ')}` : '✓ interactions (offer modal, filters→URL, value sort)');
 failures += errs.length ? 1 : 0;

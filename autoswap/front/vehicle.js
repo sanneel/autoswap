@@ -1,14 +1,14 @@
-/* AutoSwap — vehicle detail page.
-   Reads ?id=, finds the car in DEMO_CARS (or public_vehicle_feed when Supabase
-   is configured), and renders the full listing. Offer + save are handled by the
-   global delegated listeners in shared.js. */
-const { Header, Footer, icons, DEMO_CARS, fetchVehicleById, fetchVehiclePhotos } = window.AutoSwap;
+
+const { Header, Footer, icons, DEMO_CARS, fetchVehicleById, fetchVehiclePhotos, escapeAttr } = window.AutoSwap;
+// Escapes & < > " — every user-controlled listing string goes through this
+// before being placed into innerHTML.
+const esc = escapeAttr;
 
 function getId() {
   return new URLSearchParams(window.location.search).get('id') || '';
 }
 
-// Mirrors the cars.js cash badge mapping (sender's perspective).
+
 function carCash(car) {
   switch (car.cashType) {
     case 'add':
@@ -23,26 +23,27 @@ function carCash(car) {
 }
 
 function descriptionFor(car) {
-  // The owner's own words win; the generated line is only a fallback.
+  
   if (car.description) return car.description;
   const parts = [car.transmissionLabel, car.categoryLabel].filter(Boolean).join(' · ');
   const intent = car.openToOffers
     ? 'მფლობელი ღიაა გაცვლის შემოთავაზებებისთვის.'
     : `მფლობელი ეძებს გაცვლას: ${car.wants}.`;
-  return `${car.make} ${car.model}, ${car.year} წ. — ${car.mileage}, ${car.fuel}${parts ? `, ${parts}` : ''}. `
+  return `${car.make} ${car.model}, ${car.year} წ. ${car.mileage}, ${car.fuel}${parts ? `, ${parts}` : ''}. `
     + `${intent} ავტომობილი დათვალიერებადია ${car.city}-ში, დოკუმენტები წესრიგშია.`;
 }
 
-// Only this vehicle's own photos — no shared filler images. With a single
-// photo the thumbnail row is omitted entirely.
+
+
 function Gallery(car, photos) {
   const sources = (photos && photos.length ? photos : [car.image]).filter(Boolean);
+  const name = esc(`${car.make} ${car.model}`);
   const thumbs = sources.length > 1
     ? `
       <div class="detail-thumbs">
         ${sources.map((src, i) => `
-          <button type="button" class="detail-thumb${i === 0 ? ' is-active' : ''}" data-src="${src}" aria-label="ფოტო ${i + 1}">
-            <img src="${src}" alt="">
+          <button type="button" class="detail-thumb${i === 0 ? ' is-active' : ''}" data-src="${esc(src)}" aria-label="ფოტო ${i + 1}">
+            <img src="${esc(src)}" alt="">
           </button>
         `).join('')}
       </div>`
@@ -50,7 +51,7 @@ function Gallery(car, photos) {
   return `
     <div class="detail-gallery">
       <div class="detail-main-media">
-        <img id="detail-main-img" src="${sources[0]}" alt="${car.make} ${car.model}">
+        <img id="detail-main-img" src="${esc(sources[0])}" alt="${name}">
       </div>
       ${thumbs}
     </div>
@@ -59,7 +60,7 @@ function Gallery(car, photos) {
 
 function DetailPage(car, photos) {
   const cash = carCash(car);
-  // Instrument-cluster stat row: caption label above a mono value, 1px dividers.
+  
   const stats = [
     car.year ? { label: 'წელი', value: car.year } : null,
     car.mileage ? { label: 'გარბენი', value: car.mileage } : null,
@@ -69,9 +70,10 @@ function DetailPage(car, photos) {
     car.estimatedValueLabel ? { label: 'ღირებულება', value: `~${car.estimatedValueLabel}` } : null,
   ].filter(Boolean);
   const statRow = stats
-    .map((s) => `<div class="stat-cell"><span>${s.label}</span><strong>${s.value}</strong></div>`)
+    .map((s) => `<div class="stat-cell"><span>${s.label}</span><strong>${esc(s.value)}</strong></div>`)
     .join('');
 
+  const name = esc(`${car.make} ${car.model}`);
   return `
     ${Header({ active: 'listings' })}
     <main class="detail-shell">
@@ -80,30 +82,30 @@ function DetailPage(car, photos) {
         <div class="detail-grid">
           ${Gallery(car, photos)}
           <aside class="detail-panel">
-            <h1 class="detail-title">${car.make} ${car.model} <span>${car.year}</span></h1>
-            <span class="listing-city">${icons.location}${car.city}</span>
+            <h1 class="detail-title">${name} <span>${esc(car.year)}</span></h1>
+            <span class="listing-city">${icons.location}${esc(car.city)}</span>
             <div class="stat-row" role="list">${statRow}</div>
-            <div class="car-row-cash ${cash.cls} detail-cash">${cash.icon}<span>${cash.text}</span></div>
+            <div class="car-row-cash ${cash.cls} detail-cash">${cash.icon}<span>${esc(cash.text)}</span></div>
             <div class="car-row-wants detail-wants">
               <span>ეძებს</span>
-              <strong>${car.wants}</strong>
+              <strong>${esc(car.wants)}</strong>
             </div>
             <div class="detail-actions">
-              <button class="btn btn-primary detail-offer" type="button" data-offer data-id="${car.id}" data-make="${car.make}" data-model="${car.model}">${icons.swap} შესთავაზე გაცვლა</button>
-              <button class="save-btn detail-save" type="button" data-id="${car.id}" aria-label="${car.make} ${car.model} შენახვა">${icons.heart}</button>
+              <button class="btn btn-primary detail-offer" type="button" data-offer data-id="${esc(car.id)}" data-make="${esc(car.make)}" data-model="${esc(car.model)}">${icons.swap} შესთავაზე გაცვლა</button>
+              <button class="save-btn detail-save" type="button" data-id="${esc(car.id)}" aria-label="${name} შენახვა">${icons.heart}</button>
             </div>
             <div class="detail-owner">
-              <span class="owner-avatar">${(car.ownerName || car.make || 'A').charAt(0)}</span>
+              <span class="owner-avatar">${esc((car.ownerName || car.make || 'A').charAt(0))}</span>
               <div>
-                <strong>${car.ownerName || 'კერძო მფლობელი'}</strong>
-                <small>${car.city}${car.ownerSwaps ? ` · ${car.ownerSwaps} გაცვლა` : ''}</small>
+                <strong>${car.ownerName ? esc(car.ownerName) : 'კერძო მფლობელი'}</strong>
+                <small>${esc(car.city)}${car.ownerSwaps ? ` · ${esc(String(car.ownerSwaps))} გაცვლა` : ''}</small>
               </div>
             </div>
           </aside>
         </div>
         <section class="detail-about">
           <h2>აღწერა</h2>
-          <p>${descriptionFor(car)}</p>
+          <p>${esc(descriptionFor(car))}</p>
         </section>
       </section>
     </main>
@@ -145,7 +147,7 @@ async function render() {
   const isDemo = !!car;
   if (!car && id) car = await fetchVehicleById(id);
 
-  // Demo cars have a single bundled cover; live cars load their own photos.
+  
   const photos = car && !isDemo ? await fetchVehiclePhotos(car.id) : [];
 
   document.querySelector('#app').innerHTML = car ? DetailPage(car, photos) : NotFound();

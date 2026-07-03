@@ -42,10 +42,24 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Validate the vehicle exists before running matching.
+  // Require a signed-in caller. The service-role key gives this function full
+  // DB access, so we must authenticate the request ourselves and confirm the
+  // caller owns the vehicle before doing any work (prevents abuse / notif spam).
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!token) {
+    return jsonResponse({ error: "Missing Authorization bearer token" }, 401);
+  }
+
+  const { data: userData, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !userData?.user) {
+    return jsonResponse({ error: "Invalid or expired token" }, 401);
+  }
+
+  // Validate the vehicle exists AND belongs to the caller before matching.
   const { data: vehicle, error: lookupError } = await supabase
     .from("vehicles")
-    .select("id")
+    .select("id, owner_id")
     .eq("id", vehicleId)
     .maybeSingle();
 
@@ -54,6 +68,9 @@ Deno.serve(async (req) => {
   }
   if (!vehicle) {
     return jsonResponse({ error: "Vehicle not found" }, 404);
+  }
+  if (vehicle.owner_id !== userData.user.id) {
+    return jsonResponse({ error: "Not authorized for this vehicle" }, 403);
   }
 
   const { data, error } = await supabase.rpc("find_mutual_matches_for_vehicle", {

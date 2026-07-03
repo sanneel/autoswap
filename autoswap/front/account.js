@@ -1,7 +1,4 @@
-/* AutoSwap — account hub (auth required).
-   Hash-routed tabs: #garage (my listings), #sent / #received (offers),
-   #favorites, #messages, #profile. Every write goes through RLS or a
-   SECURITY DEFINER RPC — this page never trusts itself. */
+
 const {
   Header, Footer, icons, sb, toast, escapeAttr, isUuid,
   authReady, getAuthUser, signOut, freshnessLabel, bustListingCaches,
@@ -94,7 +91,7 @@ function statusBadge(map, status) {
   return `<span class="status-badge status-badge--${escapeAttr(status)}">${map[status] || status}</span>`;
 }
 
-/* ============================== GARAGE ============================== */
+
 
 async function renderGarage(body) {
   const { data, error } = await sb
@@ -105,7 +102,7 @@ async function renderGarage(body) {
     .order('created_at', { ascending: false });
 
   if (error) {
-    body.innerHTML = emptyHTML('განცხადებების ჩატვირთვა ვერ მოხერხდა — სცადე თავიდან.');
+    body.innerHTML = emptyHTML('განცხადებების ჩატვირთვა ვერ მოხერხდა. სცადე თავიდან.');
     return;
   }
   if (!data.length) {
@@ -165,8 +162,8 @@ async function renderGarage(body) {
     if (updateError) {
       btn.disabled = false;
       toast(updateError.message.includes('vehicles_active_requirements')
-        ? 'გასააქტიურებლად საჭიროა ქალაქი და მდგომარეობა — შეავსე რედაქტირებაში'
-        : 'ვერ შეიცვალა — სცადე თავიდან', 'error');
+        ? 'გასააქტიურებლად საჭიროა ქალაქი და მდგომარეობა. შეავსე რედაქტირებაში'
+        : 'ვერ შეიცვალა. სცადე თავიდან', 'error');
       return;
     }
     bustListingCaches();
@@ -175,7 +172,7 @@ async function renderGarage(body) {
   });
 }
 
-/* ============================== OFFERS ============================== */
+
 
 const OFFER_EMBED = `
   id, status, cash_mode, cash_amount, message, created_at,
@@ -232,7 +229,7 @@ async function renderOffers(body, direction) {
   if (!data.length) {
     body.innerHTML = direction === 'sent'
       ? emptyHTML('ჯერ არ გაგიგზავნია შეთავაზება.', 'cars.html', 'ნახე გაცვლები')
-      : emptyHTML('ჯერ არ მიგიღია შეთავაზება — აქტიური განცხადება ზრდის შანსს.', 'sell.html', 'დაამატე განცხადება');
+      : emptyHTML('ჯერ არ მიგიღია შეთავაზება. აქტიური განცხადება ზრდის შანსს.', 'sell.html', 'დაამატე განცხადება');
     return;
   }
 
@@ -241,7 +238,7 @@ async function renderOffers(body, direction) {
     <div class="account-list">${data.map((o) => offerCard(o, direction)).join('')}</div>
   `;
 
-  // Let senders see their pending offers were seen.
+  
   if (direction === 'received') {
     data.filter((o) => o.status === 'pending')
       .forEach((o) => sb.rpc('mark_offer_viewed', { offer_id_input: o.id }).then(() => {}));
@@ -263,15 +260,15 @@ async function renderOffers(body, direction) {
     if (rpcError) {
       btn.disabled = false;
       toast(/active to complete/.test(rpcError.message)
-        ? 'ერთ-ერთი მანქანა აღარ არის აქტიური — შეთავაზება ვეღარ მიიღება'
-        : 'მოქმედება ვერ შესრულდა — სცადე თავიდან', 'error');
+        ? 'ერთ-ერთი მანქანა აღარ არის აქტიური. შეთავაზება ვეღარ მიიღება'
+        : 'მოქმედება ვერ შესრულდა. სცადე თავიდან', 'error');
       console.error(`AutoSwap: ${rpcName} failed`, rpcError.message);
       return;
     }
 
     bustListingCaches();
     if (action === 'accept') {
-      toast('გილოცავ — გაცვლა შედგა! ჩატი უკვე ღიაა.');
+      toast('გილოცავ, გაცვლა შედგა. ჩატი უკვე ღიაა.');
       window.location.hash = isUuid(result) ? `messages/${result}` : 'messages';
       return;
     }
@@ -280,7 +277,7 @@ async function renderOffers(body, direction) {
   });
 }
 
-/* ============================= FAVORITES ============================ */
+
 
 async function renderFavorites(body) {
   const { data, error } = await sb
@@ -294,7 +291,7 @@ async function renderFavorites(body) {
     return;
   }
   if (!data.length) {
-    body.innerHTML = emptyHTML('ფავორიტები ჯერ ცარიელია — შეინახე მოწონებული მანქანები ♥ ღილაკით.', 'cars.html', 'ნახე გაცვლები');
+    body.innerHTML = emptyHTML('ფავორიტები ჯერ ცარიელია. შეინახე მოწონებული მანქანები გულის ღილაკით.', 'cars.html', 'ნახე გაცვლები');
     return;
   }
 
@@ -338,7 +335,7 @@ async function renderFavorites(body) {
   });
 }
 
-/* ============================= MESSAGES ============================= */
+
 
 function leaveThread() {
   if (activeThreadChannel) {
@@ -431,10 +428,10 @@ async function renderThread(body, conversationId) {
   body.innerHTML = `
     <a class="detail-back" href="#messages">${icons.arrowRight}<span>ყველა ჩატი</span></a>
     <div class="msg-thread" id="msg-thread">
-      ${messages.length ? messages.map(messageBubble).join('') : '<p class="msg-empty">დაიწყე საუბარი — შეთანხმდით სად და როდის ნახავთ მანქანებს.</p>'}
+      ${messages.length ? messages.map(messageBubble).join('') : '<p class="msg-empty">დაიწყე საუბარი. შეთანხმდით სად და როდის ნახავთ მანქანებს.</p>'}
     </div>
     <form class="msg-form" id="msg-form">
-      <input type="text" name="body" maxlength="2000" autocomplete="off" placeholder="დაწერე შეტყობინება..." required>
+      <input type="text" name="body" maxlength="2000" autocomplete="off" placeholder="დაწერე შეტყობინება…" required>
       <button class="btn btn-primary" type="submit">გაგზავნა</button>
     </form>
   `;
@@ -442,7 +439,7 @@ async function renderThread(body, conversationId) {
   const thread = body.querySelector('#msg-thread');
   thread.scrollTop = thread.scrollHeight;
 
-  // Mark the other side's messages as read.
+  
   sb.from('messages')
     .update({ read_at: new Date().toISOString() })
     .eq('conversation_id', conversationId)
@@ -450,7 +447,7 @@ async function renderThread(body, conversationId) {
     .is('read_at', null)
     .then(() => {});
 
-  // Live incoming messages (Realtime publication already includes messages).
+  
   activeThreadChannel = sb
     .channel(`thread-${conversationId}`)
     .on('postgres_changes', {
@@ -492,12 +489,49 @@ async function renderThread(body, conversationId) {
   });
 }
 
-/* ============================== PROFILE ============================= */
+
+
+// Telegram notifications: shown only when a bot username is configured in
+// supabase-config.js (window.AUTO_SWAP_TELEGRAM_BOT). Connecting writes a
+// one-time link code to the user's own profile, then opens the bot deep link;
+// the telegram-bot Edge Function stores the chat id and clears the code.
+function telegramBotName() {
+  return typeof window !== 'undefined' ? (window.AUTO_SWAP_TELEGRAM_BOT || '') : '';
+}
+
+function telegramRow(profile) {
+  if (!telegramBotName()) return '';
+  if (profile.telegram_chat_id) {
+    return '<p class="tg-status"><strong>Telegram:</strong> ✅ დაკავშირებულია</p>';
+  }
+  return `
+    <p class="tg-status"><strong>Telegram:</strong> არ არის დაკავშირებული</p>
+    <button class="btn btn-secondary" id="tg-connect" type="button">Telegram-ის დაკავშირება</button>`;
+}
+
+function bindTelegramConnect(body, profile) {
+  const btn = body.querySelector('#tg-connect');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const bot = telegramBotName();
+    if (!bot) return;
+    btn.disabled = true;
+    const code = (crypto.randomUUID().replace(/-/g, '') + Date.now().toString(36)).slice(0, 24);
+    const { error } = await sb.from('profiles').update({ telegram_link_code: code }).eq('id', me.id);
+    if (error) {
+      btn.disabled = false;
+      toast('დაკავშირება ვერ მოხერხდა. სცადე თავიდან', 'error');
+      return;
+    }
+    window.open(`https://t.me/${encodeURIComponent(bot)}?start=${encodeURIComponent(code)}`, '_blank', 'noopener');
+    toast('გახსენი Telegram და დააჭირე „Start“-ს', 'success');
+  });
+}
 
 async function renderProfile(body) {
   const { data: profile, error } = await sb
     .from('profiles')
-    .select('display_name, city, phone, preferred_contact_method, completed_swaps_count, created_at')
+    .select('display_name, city, phone, preferred_contact_method, completed_swaps_count, created_at, telegram_chat_id')
     .eq('id', me.id)
     .maybeSingle();
 
@@ -523,13 +557,16 @@ async function renderProfile(body) {
         <button class="btn btn-primary auth-submit" type="submit">შენახვა</button>
       </form>
       <aside class="profile-aside">
-        <p><strong>ელფოსტა:</strong> ${escapeAttr(me.email || '—')}</p>
+        <p><strong>ელფოსტა:</strong> ${escapeAttr(me.email || '-')}</p>
         <p><strong>დასრულებული გაცვლები:</strong> ${profile.completed_swaps_count || 0}</p>
-        <p><strong>წევრი:</strong> ${freshnessLabel(profile.created_at) || '—'}</p>
+        <p><strong>წევრი:</strong> ${freshnessLabel(profile.created_at) || '-'}</p>
+        ${telegramRow(profile)}
         <button class="btn btn-danger" id="logout-btn" type="button">გასვლა</button>
       </aside>
     </div>
   `;
+
+  bindTelegramConnect(body, profile);
 
   body.querySelector('#profile-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -553,7 +590,7 @@ async function renderProfile(body) {
   });
 }
 
-/* =============================== ROUTER ============================= */
+
 
 async function renderTab() {
   document.querySelector('#app').innerHTML = Shell(loadingHTML());
@@ -577,7 +614,7 @@ async function init() {
     document.querySelector('#app').innerHTML = `
       ${Header({ active: 'account' })}
       <main class="account-shell"><section class="container account">
-        ${emptyHTML('ანგარიში ხელმისაწვდომი გახდება Supabase-ის კონფიგურაციის შემდეგ (იხ. supabase-config.example.js).', 'cars.html', 'გაცვლების ნახვა')}
+        ${emptyHTML('ანგარიში დროებით მიუწვდომელია. მანამდე შეგიძლია გაცვლების ნახვა.', 'cars.html', 'გაცვლების ნახვა')}
       </section></main>
       ${Footer()}
     `;
