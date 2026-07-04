@@ -12,6 +12,7 @@ const {
   searchMakes,
   searchModels,
   getMyCar,
+  setMyCar,
   openMyCarModal,
   matchLevel,
   daysSince,
@@ -23,8 +24,110 @@ function escapeHtml(value) {
 
 const PAGE_SIZE = 24;
 const STICKY_CTA_DISMISSED_KEY = 'autoswap_cta_dismissed';
+const NUMERIC_FILTER_KEYS = ['yearFrom', 'yearTo', 'mileageMin', 'mileageMax', 'valueMin', 'valueMax'];
 
+// Car brand logos from car-logos-dataset via jsdelivr CDN
+const MAKE_LOGOS = {
+  'BMW': 'bmw.png',
+  'Mercedes-Benz': 'mercedes-benz.png',
+  'Audi': 'audi.png',
+  'Volkswagen': 'volkswagen.png',
+  'Porsche': 'porsche.png',
+  'Toyota': 'toyota.png',
+  'Lexus': 'lexus.png',
+  'Honda': 'honda.png',
+  'Hyundai': 'hyundai.png',
+  'Kia': 'kia.png',
+};
+const LOGO_CDN = 'https://cdn.jsdelivr.net/gh/filippofilip95/car-logos-dataset@master/logos/optimized/';
+
+const URL_MAKE_ALIASES = {
+  alfa: 'Alfa Romeo',
+  'alfa romeo': 'Alfa Romeo',
+  alpha: 'Alfa Romeo',
+  'alpha romeo': 'Alfa Romeo',
+  benz: 'Mercedes-Benz',
+  mercedes: 'Mercedes-Benz',
+  'mercedes benz': 'Mercedes-Benz',
+  vw: 'Volkswagen',
+  volkswagen: 'Volkswagen',
+  volks: 'Volkswagen',
+  chevy: 'Chevrolet',
+};
+
+function normalizeVehicleSearchText(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function urlKnownMakes() {
+  return Array.from(new Set([
+    'Alfa Romeo', 'Audi', 'BMW', 'Cadillac', 'Chevrolet', 'Chrysler', 'Mercedes-Benz',
+    'Toyota', 'Volkswagen', 'Hyundai', 'Kia', 'Lexus', 'Honda', 'Ford', 'Nissan', 'Mazda', 'Porsche',
+    ...DEMO_CARS.map((car) => car.make).filter(Boolean),
+  ]));
+}
+
+function displayURLMake(make) {
+  if (make === 'Mercedes-Benz') return 'Mercedes';
+  if (make === 'Volkswagen') return 'VW';
+  return make;
+}
+
+function resolveURLMake(text) {
+  const normalized = normalizeVehicleSearchText(text);
+  if (!normalized) return '';
+  const firstToken = normalized.split(' ')[0];
+  if (URL_MAKE_ALIASES[normalized]) return URL_MAKE_ALIASES[normalized];
+  if (URL_MAKE_ALIASES[firstToken]) return URL_MAKE_ALIASES[firstToken];
+  const rows = urlKnownMakes().map((make) => ({
+    make,
+    key: normalizeVehicleSearchText(make),
+    labelKey: normalizeVehicleSearchText(displayURLMake(make)),
+  }));
+  const exact = rows.find((row) => normalized === row.key
+    || normalized === row.labelKey
+    || normalized.startsWith(`${row.key} `)
+    || normalized.startsWith(`${row.labelKey} `));
+  if (exact) return exact.make;
+  const prefix = rows.filter((row) => firstToken.length >= 3
+    && (row.key.startsWith(firstToken) || row.labelKey.startsWith(firstToken)));
+  return prefix.length === 1 ? prefix[0].make : '';
+}
+
+function stripURLMake(text, make) {
+  const raw = String(text || '').trim();
+  if (!raw || !make) return raw;
+  const aliases = Object.entries(URL_MAKE_ALIASES)
+    .filter(([, target]) => target === make)
+    .map(([alias]) => alias);
+  const labels = Array.from(new Set([make, displayURLMake(make), ...aliases].filter(Boolean)))
+    .sort((a, b) => b.length - a.length);
+  for (const label of labels) {
+    const parts = String(label).split(/[\s-]+/).filter(Boolean).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    if (!parts.length) continue;
+    const pattern = new RegExp(`^${parts.join('[\\s-]+')}[\\s-]*`, 'i');
+    const next = raw.replace(pattern, '').trim();
+    if (next !== raw) return next;
+  }
+  return raw;
+}
+
+function seedMyCarFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const have = String(params.get('have') || '').trim();
+  if (!have) return;
+  const make = resolveURLMake(have);
+  if (!make) return;
+  const wantLabel = String(params.get('query') || params.get('make') || '').trim();
+  setMyCar({
+    make,
+    model: stripURLMake(have, make),
+    wants: wantLabel ? [wantLabel] : [],
+    source: 'hero-search-url',
+  });
+}
 let allCars = DEMO_CARS.slice();
+seedMyCarFromURL();
 let currentFilters = readFiltersFromURL();
 let pagesShown = 1;
 let currentView = 'list';
@@ -57,8 +160,6 @@ function emptyFilters() {
     sort: '',
   };
 }
-
-const NUMERIC_FILTER_KEYS = ['yearFrom', 'yearTo', 'mileageMin', 'mileageMax', 'valueMin', 'valueMax'];
 
 function readFiltersFromURL() {
   const p = new URLSearchParams(window.location.search);
@@ -169,7 +270,6 @@ function MyCarFilterPanel() {
     `;
   }
   const label = `${myCar.make} ${myCar.model || ''}`.trim() + (myCar.year ? ` · ${myCar.year}` : '');
-  const demand = demandCount();
   return `
     <div class="mycar-rail" id="mycar-rail">
       <div class="filter-mycar">
@@ -177,9 +277,6 @@ function MyCarFilterPanel() {
         <span id="mycar-demand-label">${escapeHtml(label)}</span>
         <button type="button" class="filter-mycar-edit" data-mycar-edit>შეცვლა</button>
       </div>
-      <p class="filter-mycar-hint" id="mycar-demand">${demand
-        ? `შენს მანქანას ეძებს <b>${demand}</b> განცხადება`
-        : 'ჯერ პირდაპირი მოთხოვნა არ ჩანს. ფილტრები მაინც შენზეა მორგებული'}</p>
     </div>
   `;
 }
@@ -200,9 +297,9 @@ function FilterSidebar() {
       <form class="filters-form${filtersLite ? ' is-lite' : ''}" id="filters-form">
         <div class="filters-head">
           <div class="filters-title-row">
-            <span class="filters-title">${icons.filter} ფილტრები</span>
-            <button type="button" class="filter-lite-toggle${filtersLite ? ' is-on' : ''}" id="filter-lite-toggle" aria-pressed="${filtersLite}">
-              <span>LITE</span>
+            <span class="filters-title">${icons.filter} ფილტრები<span class="filters-count" id="apply-count">${getFiltered().length}</span></span>
+            <button type="button" class="filter-lite-toggle${filtersLite ? ' is-on' : ''}" id="filter-lite-toggle" aria-pressed="${filtersLite}" aria-label="მხოლოდ ძირითადი ფილტრები" data-tooltip="მხოლოდ ძირითადი ფილტრები" title="მხოლოდ ძირითადი ფილტრები">
+              <span>მარტივი</span>
               <i aria-hidden="true"></i>
             </button>
           </div>
@@ -214,9 +311,12 @@ function FilterSidebar() {
 
         <label class="filter-field">
           <span class="filter-label">საძიებო სიტყვა</span>
-          <span class="filter-search">${icons.search}
-            <input type="search" name="query" value="${escapeHtml(f.query || '')}" placeholder="მარკა, მოდელი, ქალაქი…">
-          </span>
+          <div class="combo" data-query-suggest>
+            <span class="filter-search combo-control">${icons.search}
+              <input type="search" name="query" value="${escapeHtml(f.query || '')}" placeholder="მარკა, მოდელი, ქალაქი…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="query-suggest-list">
+            </span>
+            <ul class="combo-list" id="query-suggest-list" role="listbox" hidden></ul>
+          </div>
         </label>
 
         ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა…')}
@@ -284,16 +384,11 @@ function FilterSidebar() {
         </div>
 
         <div class="filters-actions">
-          <button type="button" class="btn btn-primary filters-search" id="filters-search">${icons.search} ძებნა <span id="apply-count">${getFiltered().length}</span></button>
+          <button type="button" class="btn btn-primary filters-search" id="filters-search">${icons.search} შედეგების ნახვა</button>
         </div>
       </form>
     </aside>
   `;
-}
-
-
-function demandCount() {
-  return allCars.filter((car) => matchFor(car)).length;
 }
 
 
@@ -364,8 +459,6 @@ function CarRow(car) {
     car.transmissionLabel,
     car.category ? labelFor(CATEGORY_LABELS, car.category) : null,
   ].filter(Boolean).join(' · ');
-  const wants = car.openToOffers ? 'ღიაა ნებისმიერ შეთავაზებაზე' : car.wants;
-
   const name = escapeHtml(`${car.make} ${car.model}`);
   return `
     <article class="car-card" data-id="${escapeHtml(car.id)}">
@@ -382,7 +475,9 @@ function CarRow(car) {
           <span class="listing-city">${icons.location}${escapeHtml(car.city)}${car.freshness ? `<span class="listing-age">· ${escapeHtml(car.freshness)}</span>` : ''}</span>
         </div>
         <p class="car-card-specs">${escapeHtml(specs)}</p>
-        <p class="car-card-wants"><span>ეძებს</span>${escapeHtml(wants)}</p>
+        ${car.openToOffers
+          ? '<p class="car-card-wants car-card-wants--open">ღიაა ნებისმიერ შეთავაზებაზე</p>'
+          : `<p class="car-card-wants"><span>ეძებს</span>${escapeHtml(car.wants)}</p>`}
       </div>
 
       <div class="car-card-aside">
@@ -454,25 +549,66 @@ function StickyCTA() {
   `;
 }
 
+const QUICK_BRAND_SLUGS = {
+  BMW: 'bmw',
+  'Mercedes-Benz': 'mercedes-benz',
+  Audi: 'audi',
+  Toyota: 'toyota',
+  Volkswagen: 'volkswagen',
+  Hyundai: 'hyundai',
+  Lexus: 'lexus',
+};
+
+function quickBrandLogo(make) {
+  const url = window.AutoSwap.getLogoUrl(make);
+  return url
+    ? `<img src="${url}" alt="${make}" class="quick-chip-brand-logo" loading="lazy" onerror="this.style.display='none'">`
+    : `<span class="quick-chip-icon">${icons.car}</span>`;
+}
+
+function quickChip({ href, label, count, icon = '', active = false, extraClass = '' }) {
+  return `
+    <a class="quick-chip${active ? ' is-active' : ''}${extraClass ? ` ${extraClass}` : ''}" href="${href}">
+      ${icon}
+      <span class="quick-chip-label">${label}</span>
+      <span class="quick-chip-count">${count}</span>
+    </a>
+  `;
+}
+
 function CatalogQuickBar(count) {
-  const chips = [
-    { label: 'BMW', href: 'cars.html?make=BMW' },
-    { label: 'Toyota', href: 'cars.html?make=Toyota' },
-    { label: 'სედანი', href: 'cars.html?category=sedan' },
-    { label: 'ქროსოვერი', href: 'cars.html?category=crossover' },
-    { label: 'თანხის გარეშე', href: 'cars.html?cash=none' },
-    { label: 'დღეს', href: 'cars.html?fresh=0' },
+  const countByMake = (make) => allCars.filter((car) => car.make === make).length;
+  const countByCategory = (category) => allCars.filter((car) => car.category === category).length;
+  const countByCash = (cash) => allCars.filter((car) => car.cashType === cash).length;
+  const brandChips = [
+    { make: 'BMW' },
+    { make: 'Mercedes-Benz', label: 'Mercedes' },
+    { make: 'Audi' },
+    { make: 'Toyota' },
+    { make: 'Volkswagen', label: 'VW' },
+  ].filter((brand) => countByMake(brand.make) > 0);
+  const routeChips = [
+    { label: 'სედანი', href: 'cars.html?category=sedan', count: countByCategory('sedan'), active: currentFilters.category === 'sedan', icon: `<span class="quick-chip-icon">${icons.car}</span>` },
+    { label: 'ქროსოვერი', href: 'cars.html?category=crossover', count: countByCategory('crossover'), active: currentFilters.category === 'crossover', icon: `<span class="quick-chip-icon">${icons.car}</span>` },
+    { label: 'გარეშე', href: 'cars.html?cash=none', count: countByCash('none'), active: currentFilters.cash === 'none', icon: '<span class="quick-chip-symbol">₾</span>' },
   ];
+  const noQuickFilter = !currentFilters.make && !currentFilters.category && !currentFilters.cash;
 
   return `
     <div class="catalog-quickbar" aria-label="სწრაფი ფილტრები">
-      <div class="catalog-quickbar-count">
-        <strong>${count}</strong>
-        <span>აქტიური გაცვლა</span>
-      </div>
       <button class="rail-arrow rail-arrow--prev" type="button" data-rail-prev aria-label="წინა">${icons.arrowRight}</button>
-      <nav class="catalog-quickbar-pills" data-drag-scroll>
-        ${chips.map((chip) => `<a href="${chip.href}">${chip.label}</a>`).join('')}
+      <nav class="catalog-quickbar-pills quick-chip-strip" data-drag-scroll>
+        ${quickChip({ href: 'cars.html', label: 'ყველა', count: allCars.length, active: noQuickFilter, extraClass: 'quick-chip--all' })}
+        <span class="quick-chip-divider" aria-hidden="true"></span>
+        ${brandChips.map((brand) => quickChip({
+          href: `cars.html?make=${encodeURIComponent(brand.make)}`,
+          label: brand.label || brand.make,
+          count: countByMake(brand.make),
+          active: currentFilters.make.toLowerCase() === brand.make.toLowerCase(),
+          icon: quickBrandLogo(brand.make),
+        })).join('')}
+        <span class="quick-chip-divider" aria-hidden="true"></span>
+        ${routeChips.map((chip) => quickChip(chip)).join('')}
       </nav>
       <button class="rail-arrow" type="button" data-rail-next aria-label="შემდეგი">${icons.arrowRight}</button>
     </div>
@@ -494,6 +630,7 @@ function CatalogPage() {
           <a class="btn btn-primary catalog-topbar-cta" href="sell.html">${icons.plus} დაამატე მანქანა</a>
         </div>
       </header>
+      ${CatalogQuickBar()}
       <section class="catalog container">
         ${FilterSidebar()}
         <div class="results">
@@ -556,8 +693,17 @@ function sortCars(list, sort) {
   }
 }
 
+// Unicode-aware (Georgian city names must survive), unlike
+// normalizeVehicleSearchText which keeps latin/digits only.
+function queryHaystackText(value) {
+  return String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
 function applyFilters(cars, f) {
-  const query = (f.query || '').toLowerCase();
+  // Token match so "BMW 5 Series" (a family suggestion) finds "BMW 530i":
+  // every query token must appear somewhere in the haystack, which also
+  // carries the model's family label ("530i" → "5 Series").
+  const queryTokens = queryHaystackText(f.query).split(' ').filter(Boolean);
   const yearFrom = Number(f.yearFrom) || null;
   const yearTo = Number(f.yearTo) || null;
   const mileageMin = Number(f.mileageMin) || null;
@@ -567,8 +713,9 @@ function applyFilters(cars, f) {
   const maxDays = f.fresh === '' ? null : Number(f.fresh);
 
   const filtered = cars.filter((car) => {
-    const haystack = `${car.make} ${car.model} ${car.year} ${car.city} ${car.wants}`.toLowerCase();
-    if (query && !haystack.includes(query)) return false;
+    const family = familyLabelForModel(car.model, car.make);
+    const haystack = queryHaystackText(`${car.make} ${car.model} ${family} ${car.year} ${car.city} ${car.wants}`);
+    if (queryTokens.length && !queryTokens.every((token) => haystack.includes(token))) return false;
     
     
     if (f.owner && car.ownerId !== f.owner) return false;
@@ -651,13 +798,6 @@ function update() {
   const sidebarToggle = document.querySelector('#filters-form [name="onlyMatches"]');
   if (sidebarToggle) sidebarToggle.checked = !!currentFilters.onlyMatches;
 
-  const demand = document.querySelector('#mycar-demand');
-  if (demand && getMyCar()) {
-    const n = demandCount();
-    demand.innerHTML = n
-      ? `შენს მანქანას ეძებს <b>${n}</b> განცხადება`
-      : 'ჯერ პირდაპირი მოთხოვნა არ ჩანს. ფილტრები მაინც შენზეა მორგებული';
-  }
 }
 
 function readFiltersFromForm(form) {
@@ -943,8 +1083,99 @@ function chooseComboOption(combo, option) {
   setComboValue(kind, name, item ? item.id : option.dataset.id, item);
 }
 
+// Free-text query suggestions (same idea as the hero search): contains-match
+// against the make/model catalog so "bmw 5" offers "BMW 5 Series", "BMW X5"…
+let queryMakesPromise = null;
+function queryMakesCatalog() {
+  if (!queryMakesPromise) queryMakesPromise = searchMakes('', 500).catch(() => []);
+  return queryMakesPromise;
+}
+
+async function querySuggestions(term) {
+  const query = String(term || '').trim();
+  if (query.length < 2) return [];
+  const [first, ...restTokens] = query.split(/\s+/);
+  const rest = restTokens.join(' ');
+  const makes = await queryMakesCatalog();
+  const q = first.toLowerCase();
+  const make = makes.find((m) => m.name.toLowerCase() === q)
+    || makes.find((m) => m.name.toLowerCase().startsWith(q))
+    || makes.find((m) => m.name.toLowerCase().includes(q));
+
+  if (make) {
+    const models = await searchModels(rest, make.id, 8).catch(() => []);
+    const rows = models.length ? models : await searchModels('', make.id, 8).catch(() => []);
+    return [make.name, ...rows.map((m) => `${make.name} ${m.name}`)];
+  }
+
+  const byId = new Map(makes.map((m) => [String(m.id), m.name]));
+  const models = await searchModels(query, null, 8).catch(() => []);
+  return models
+    .map((m) => {
+      const makeName = byId.get(String(m.make_id)) || '';
+      return makeName ? `${makeName} ${m.name}` : '';
+    })
+    .filter(Boolean);
+}
+
+function bindQuerySuggest() {
+  const wrap = document.querySelector('[data-query-suggest]');
+  if (!wrap) return;
+  const input = wrap.querySelector('input[name="query"]');
+  const list = wrap.querySelector('.combo-list');
+  const form = input?.closest('form');
+  if (!input || !list || !form) return;
+  let timer = null;
+  let seq = 0;
+
+  const close = () => {
+    list.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+  };
+
+  const run = async () => {
+    const stamp = ++seq;
+    const items = await querySuggestions(input.value);
+    if (stamp !== seq) return;
+    if (!items.length) {
+      close();
+      return;
+    }
+    list.innerHTML = items
+      .map((label) => `<li class="combo-option" role="option"><span>${escapeHtml(label)}</span></li>`)
+      .join('');
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+  };
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    if (input.value.trim().length < 2) {
+      close();
+      return;
+    }
+    timer = setTimeout(run, 200);
+  });
+
+  list.addEventListener('mousedown', (event) => {
+    const option = event.target.closest('.combo-option');
+    if (!option) return;
+    event.preventDefault();
+    seq += 1; // drop any in-flight suggestion render
+    clearTimeout(timer);
+    input.value = option.textContent.trim();
+    close();
+    applyFormFilters(form);
+  });
+
+  input.addEventListener('blur', () => setTimeout(close, 140));
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') close();
+  });
+}
+
 function initCombos() {
-  document.querySelectorAll('.combo').forEach((combo) => {
+  document.querySelectorAll('.combo[data-combo]').forEach((combo) => {
     const kind = combo.dataset.combo;
     const input = combo.querySelector('.combo-input');
     const list = combo.querySelector('.combo-list');
@@ -1097,7 +1328,8 @@ function bindEvents() {
   document.querySelector('#filters-reset')?.addEventListener('click', () => {
     currentFilters = emptyFilters();
     pagesShown = 1;
-    renderAll(); 
+    syncFiltersToURL(); // otherwise a refresh re-applies the cleared filters
+    renderAll();
   });
 
   document.querySelector('#sort-select')?.addEventListener('change', (event) => {
@@ -1156,6 +1388,7 @@ function bindEvents() {
     if (!event.target.closest('#empty-reset')) return;
     currentFilters = emptyFilters();
     pagesShown = 1;
+    syncFiltersToURL();
     renderAll();
   });
 
@@ -1184,6 +1417,7 @@ function renderAll() {
   document.querySelector('#app').innerHTML = CatalogPage();
   bindEvents();
   initCombos();
+  bindQuerySuggest();
 }
 
 async function hydrateFromSupabase() {
