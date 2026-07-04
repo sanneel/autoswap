@@ -960,13 +960,6 @@ svg {
     margin-top: 4px;
   }
 
-  .hero-car-left img,
-  .hero-car-right img {
-    width: 100%;
-    max-width: 380px;
-    transform: none;
-  }
-
   .hero-car::before {
     bottom: 40px;
   }
@@ -9886,12 +9879,22 @@ body {
   }
 
   .hero--garage .swap-stage {
-    min-height: 260px;
+    min-height: clamp(200px, 42vw, 300px);
     grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
   }
 
+  /* Anchor each car to the centre gap (like desktop) instead of letting a
+     legacy ≤680 rule flip them so they bleed into each other and overlap. */
+  .hero--garage .hero-car-left {
+    justify-items: end;
+  }
+
+  .hero--garage .hero-car-right {
+    justify-items: start;
+  }
+
   .hero--garage .hero-car img {
-    width: min(160%, 360px);
+    width: min(122%, 320px);
   }
 
   .hero--garage .swap-icon {
