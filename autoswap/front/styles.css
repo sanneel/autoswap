@@ -9916,9 +9916,22 @@ body {
   }
 
   .hero--garage .sound-btn {
-    bottom: 52px;
+    bottom: auto;
+    top: 42%;
     width: 36px;
     height: 36px;
+  }
+
+  /* Cars are justified toward the centre gap, so their visible bodies sit
+     off the column centre. Nudge each sound button onto its own car. */
+  .hero--garage .hero-car-left .sound-btn {
+    left: 42%;
+    transform: translate(-50%, -50%);
+  }
+
+  .hero--garage .hero-car-right .sound-btn {
+    left: 58%;
+    transform: translate(-50%, -50%);
   }
 
   .garage-search {
