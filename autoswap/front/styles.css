@@ -39,6 +39,7 @@
 
   --font: "Noto Sans Georgian", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: "Noto Sans Georgian", system-ui, sans-serif;
+  --font-serif: "Noto Serif Georgian", "Noto Sans Georgian", Georgia, serif;
   --font-mono: "JetBrains Mono", "Noto Sans Georgian", ui-monospace, monospace;
 }
 
@@ -3101,6 +3102,15 @@ body.modal-open {
   gap: 12px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
+  text-decoration: none;
+}
+
+.detail-owner--link {
+  cursor: pointer;
+}
+
+.detail-owner--link:hover .owner-more {
+  color: var(--copper-hover);
 }
 
 .owner-avatar {
@@ -5394,6 +5404,28 @@ a.header-user:hover {
   text-align: center;
 }
 
+.sell-locked-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f8faf6;
+  color: var(--graphite);
+}
+
+.sell-locked-close:hover {
+  background: #e8eee6;
+}
+
+.sell-locked-close svg {
+  width: 18px;
+  height: 18px;
+}
+
 .sell-locked-card h2 {
   margin: 0 0 6px;
   font-size: 19px;
@@ -5778,6 +5810,15 @@ a.header-user:hover {
 .mycar-rail {
   display: grid;
   gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(45, 106, 79, 0.32);
+}
+
+.filter-separator {
+  height: 0;
+  margin: 0 0 4px;
+  border-top: 1px solid rgba(45, 106, 79, 0.36);
+  background: transparent;
 }
 
 .filter-checks {
@@ -6765,9 +6806,17 @@ a.header-user:hover {
 
 .sell-shell--lite .sell-hero-icon,
 .sell-shell--lite .sell-steps,
-.sell-shell--lite .voice-fill,
 .sell-shell--lite .sell-preview {
   display: none;
+}
+
+/* Voice fill stays in the lite shell — it is the fastest way to fill the
+   form, not decoration. */
+.sell-shell--lite .voice-fill {
+  margin-bottom: 4px;
+  border: 1px solid rgba(30, 77, 52, 0.16);
+  border-radius: 12px;
+  background: #eef4ef;
 }
 
 .sell-shell--lite .sell-head {
@@ -7018,15 +7067,17 @@ a.header-user:hover {
 
   .sell-shell--lite .sell-form {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "car"
-      "terms"
-      "details"
-      "error"
-      "actions";
+    grid-template-areas: none;
     gap: 0;
     max-width: 880px;
     margin: 0 auto;
+  }
+  /* Reset the full-mode grid-area placements so every block stacks in the
+     single lite column. Without this, .voice-fill's orphaned "voice" area
+     spawns phantom columns and collapses each section to ~58px wide. */
+  .sell-shell--lite .sell-form > * {
+    grid-area: auto;
+    grid-column: 1 / -1;
   }
 }
 
@@ -8962,6 +9013,7 @@ body {
 }
 
 .filter-lite-toggle {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -8976,12 +9028,54 @@ body {
   font-weight: 800;
 }
 
+.filter-lite-toggle::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 80;
+  width: max-content;
+  max-width: 190px;
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: #161a15;
+  color: #fff;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.filter-lite-toggle:hover::after,
+.filter-lite-toggle:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .filter-lite-toggle i {
   position: relative;
   width: 32px;
   height: 18px;
   border-radius: 999px;
   background: #d2d9d0;
+}
+
+.filter-lite-help {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(20, 26, 20, 0.12);
+  color: var(--v4-green);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .filter-lite-toggle i::after {
@@ -9189,6 +9283,22 @@ body {
   }
 }
 
+/* The catalog sidebar returns at >1180px, but the 3-column car card needs
+   ~880px on its own. Between 1181px and 1280px the sidebar leaves the list
+   column too narrow, so the third column used to overflow and the aside
+   spilled past the card edge. Keep the stacked-aside layout until all three
+   columns genuinely fit. */
+@media (min-width: 1181px) and (max-width: 1280px) {
+  .car-card {
+    grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1fr);
+  }
+
+  .car-card-aside {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--market-line);
+  }
+}
+
 html,
 body {
   max-width: 100%;
@@ -9202,9 +9312,16 @@ body {
 }
 
 .hero--garage {
+  position: relative;
+  /* Above the browse strip / listings so the search dropdown that hangs
+     below the hero paints over them, not under. */
+  z-index: 20;
   min-height: auto;
   padding: 8px 0 0;
-  overflow: clip;
+  /* Clip only sideways (the hero cars bleed 126% wide); vertical must stay
+     visible so the search dropdown can extend below the hero. */
+  overflow-x: clip;
+  overflow-y: visible;
   border-bottom: 0;
   background: #f2f6f1;
 }
@@ -9303,10 +9420,10 @@ body {
   width: min(100%, 1160px);
   margin: -52px auto 0;
   padding: 12px;
-  /* Crisp white panel with a defined green edge + accent bar so it clearly
-     floats above the sage background instead of blending into it. */
+  /* Crisp white panel with a defined green edge so it clearly floats above
+     the sage background instead of blending into it. The accent stays
+     reserved for actions, so no decorative bar here. */
   border: 1px solid rgba(30, 77, 52, 0.22);
-  border-top: 3px solid var(--copper);
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 22px 50px -28px rgba(20, 26, 20, 0.45);
@@ -9354,7 +9471,8 @@ body {
 }
 
 .garage-search .search-field input::placeholder {
-  color: rgba(48, 58, 48, 0.6);
+  /* ≥4.5:1 on the sage field — 0.6 alpha sat at ~3.5:1 */
+  color: rgba(48, 58, 48, 0.78);
 }
 
 .garage-search .search-field option {
@@ -9739,7 +9857,7 @@ body {
   }
 }
 
-@media (min-width: 1181px) {
+@media (min-width: 1281px) {
   .car-card {
     grid-template-columns: minmax(350px, 0.95fr) minmax(250px, 1fr) 278px;
   }
@@ -10086,10 +10204,19 @@ body {
 }
 
 /* Real brand logos: contained, full color on a white tile. */
-.brand-mark .brand-logo-img {
+.brand-mark .brand-logo-img,
+.brand-mark .brand-logo {
   width: 30px;
   height: 30px;
   object-fit: contain;
+}
+
+/* Quick-filter brand logos (cars sidebar) */
+.quick-chip-brand-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  margin-right: 6px;
 }
 
 /* Fallback icon for makes without a bundled logo. */
@@ -10332,15 +10459,73 @@ body {
 .browse-pill span,
 .browse-pill small { white-space: nowrap; }
 
-/* (#3) featured "დღის გაცვლა" badge more prominent + accent ring on the card */
-.featured-flag {
-  padding: 6px 13px;
-  font-size: 12px;
-  letter-spacing: 0.01em;
-  box-shadow: 0 6px 16px -6px rgba(30, 77, 52, 0.55);
+/* Offer CTA: give the swap glyph clear breathing room from the label. */
+.featured-aside .btn-accent,
+.car-row-offer,
+.detail-offer {
+  gap: 12px;
+}
+
+.featured-aside .btn-accent svg,
+.car-row-offer svg,
+.detail-offer svg {
+  margin-right: 4px;
 }
 .featured-swap {
-  border: 1px solid rgba(30, 77, 52, 0.22);
+  border: 3px solid #2d6a4f;
+  outline: 4px solid rgba(45, 106, 79, 0.12);
+  outline-offset: 0;
+  box-shadow:
+    0 3px 8px -6px rgba(45, 106, 79, 0.75),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.86);
+}
+
+/* Sell page: active step is unmistakably filled and labeled. */
+.sell-shell--v3 .sell-step-pip-num {
+  border: 1px solid rgba(20, 26, 20, 0.22);
+  background: #f8faf6;
+  color: rgba(20, 26, 20, 0.58);
+}
+
+.sell-shell--v3 .sell-step-pip-label {
+  color: rgba(20, 26, 20, 0.6);
+  font-weight: 700;
+}
+
+.sell-shell--v3 .sell-step-pip.is-active .sell-step-pip-num {
+  border-color: var(--deep-green);
+  background: var(--deep-green);
+  color: #fff;
+  font-weight: 800;
+}
+
+.sell-shell--v3 .sell-step-pip.is-active .sell-step-pip-label {
+  color: var(--graphite);
+  font-weight: 900;
+}
+
+.sell-mode-chip.is-active {
+  color: var(--graphite);
+  font-weight: 900;
+}
+
+.sell-mode-chip.is-active span {
+  background: var(--deep-green);
+  color: #fff;
+}
+
+/* Vehicle detail: keep the footer tight to the content on short pages. */
+#app:has(.detail-shell) {
+  min-height: 0;
+  display: block;
+}
+
+#app:has(.detail-shell) .detail-shell {
+  flex: none;
+}
+
+#app:has(.detail-shell) .detail {
+  padding-bottom: 16px;
 }
 
 /* (#8) photo-count pill on the detail hero image */
@@ -10378,3 +10563,948 @@ body {
 }
 .owner-more svg { width: 15px; height: 15px; }
 .owner-more:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Modal/filter readability pass: solid surfaces + cleaner Georgian type. */
+.modal {
+  border-color: rgba(20, 26, 20, 0.16);
+  background: #fff;
+  box-shadow: 0 18px 44px -28px rgba(16, 20, 15, 0.55);
+}
+
+.modal-title {
+  color: var(--graphite);
+  font-family: var(--font-serif);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.28;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.modal-eyebrow {
+  color: rgba(30, 77, 52, 0.9);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.offer-gate-text,
+.mycar-note {
+  color: rgba(22, 26, 21, 0.74);
+}
+
+.filters-form {
+  border-color: rgba(20, 26, 20, 0.15);
+  background: #fff;
+  box-shadow: 0 18px 40px -36px rgba(20, 26, 20, 0.52);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.filters-form select,
+.filters-form input,
+.filter-search,
+.filter-mycar,
+.field input,
+.field select,
+.field textarea {
+  background: #f8faf6;
+}
+
+.filters-form input::placeholder,
+.filter-search input::placeholder,
+.field input::placeholder,
+.field textarea::placeholder {
+  color: rgba(48, 58, 48, 0.72);
+  opacity: 1;
+}
+
+.combo.is-disabled .combo-control {
+  opacity: 1;
+  filter: none;
+  background: #eef3ec;
+  color: rgba(48, 58, 48, 0.78);
+}
+
+.filter-label,
+.filter-mycar-hint {
+  color: rgba(48, 58, 48, 0.78);
+}
+
+.car-card-specs {
+  color: rgba(22, 26, 21, 0.76);
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.car-row-year {
+  border-color: rgba(20, 26, 20, 0.14);
+  background: #eef3ec;
+  color: var(--graphite);
+  font-family: var(--font);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.listing-city,
+.listing-age {
+  color: rgba(22, 26, 21, 0.74);
+  font-family: var(--font);
+  font-weight: 700;
+}
+
+/* Car cards: requested visible font change across the full listing card. */
+.car-card {
+  background: #fff;
+}
+
+.car-card,
+.car-card .car-row-title,
+.car-card .card-title-link,
+.car-card .car-row-year,
+.car-card .listing-city,
+.car-card .listing-age,
+.car-card .car-card-specs,
+.car-card .car-card-wants,
+.car-card .trade-cash,
+.car-card .trade-cash span,
+.car-card .btn {
+  font-family: var(--font-serif);
+  letter-spacing: 0;
+}
+
+.car-card .car-row-title {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.car-card .car-row-year {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.car-card .listing-city,
+.car-card .listing-age,
+.car-card .car-card-specs,
+.car-card .car-card-wants {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.car-card .car-card-wants span,
+.car-card .trade-cash,
+.car-card .btn {
+  font-weight: 700;
+}
+
+/* Homepage search: searchable brand picker with auto-selection. */
+.garage-search .search-brand-field {
+  position: relative;
+  overflow: visible;
+  padding-right: 44px;
+  z-index: 30;
+}
+
+.brand-picker-selected-logo {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(20, 26, 20, 0.14);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.brand-picker-selected-logo[hidden] {
+  display: none;
+}
+
+.brand-picker-selected-logo .brand-logo-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.brand-picker-selected-logo svg {
+  width: 18px;
+  height: 18px;
+  color: var(--copper);
+}
+.garage-search .have-search-field.has-selection,
+.garage-search .search-brand-field.has-selection {
+  border-color: rgba(30, 77, 52, 0.5);
+  background: #fff;
+}
+
+/* Have field: mirror the brand picker so both open the same custom dropdown */
+.garage-search .have-search-field {
+  position: relative;
+  overflow: visible;
+  z-index: 29;
+}
+
+.garage-search .have-search-field.is-open,
+.garage-search .search-brand-field.is-open {
+  z-index: 60;
+}
+
+/* Keep the slider/city row behind an open panel so the dropdown doesn't
+   visually collide with those controls. */
+.garage-search .swap-search-bottom {
+  position: relative;
+  z-index: 10;
+}
+
+.garage-search .have-search-field input {
+  min-width: 0;
+  flex: 1 1 auto;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.garage-search .search-brand-field input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+  appearance: none;
+}
+
+.brand-picker-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(22, 26, 21, 0.72);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.brand-picker-clear:hover {
+  background: rgba(30, 77, 52, 0.1);
+  color: var(--graphite);
+}
+
+.brand-picker-clear:not([hidden]) {
+  transform: translateY(-50%);
+}
+
+/* display:grid above would otherwise defeat the hidden attribute */
+.brand-picker-clear[hidden] {
+  display: none;
+}
+
+.brand-picker-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 10px;
+  border: 1px solid rgba(20, 26, 20, 0.14);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 18px 34px -22px rgba(20, 26, 20, 0.45);
+}
+
+.brand-picker-panel[hidden] {
+  display: none;
+}
+
+.brand-picker-list {
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.brand-picker-option {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--graphite);
+  text-align: left;
+}
+
+.brand-picker-option:hover,
+.brand-picker-option:focus-visible,
+.brand-picker-option.is-active {
+  background: #f2f6f1;
+}
+
+/* "მარკები" / "მოდელები" section headers inside the suggestion list */
+.brand-picker-group {
+  padding: 8px 8px 3px;
+  color: var(--market-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.brand-picker-logo {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 34px;
+  border: 1px solid rgba(20, 26, 20, 0.14);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.brand-picker-logo .brand-logo-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.brand-picker-logo svg {
+  width: 18px;
+  height: 18px;
+  color: var(--copper);
+}
+
+.brand-picker-name {
+  overflow: hidden;
+  color: var(--graphite);
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brand-picker-panel.is-empty .brand-picker-list {
+  display: none;
+}
+
+.brand-picker-panel.is-empty::before {
+  content: "ვერ მოიძებნა";
+  display: block;
+  padding: 12px 8px 14px;
+  color: rgba(48, 58, 48, 0.72);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Desktop: drop DOWN like a normal combobox (myauto-style); the field's
+   z-index keeps the panel above the city/slider row below it. */
+
+@media (max-width: 680px) {
+  /* Mobile: the two search fields stack, so let the dropdown float above
+     the field below with a strong shadow instead of pushing it away. Outside
+     tap dismisses the panel. */
+  .garage-search .have-search-field,
+  .garage-search .search-brand-field {
+    position: relative;
+    overflow: visible;
+  }
+
+  .garage-search .have-search-field.is-open,
+  .garage-search .search-brand-field.is-open {
+    z-index: 40;
+  }
+
+  .garage-search .brand-picker-panel {
+    box-shadow: 0 24px 44px -18px rgba(20, 26, 20, 0.55);
+  }
+
+  .brand-picker-list {
+    max-height: 224px;
+  }
+}
+
+/* ─── Browse strip v2: no "all" chip, no counts — bold CTA-style pills ── */
+.browse-strip--garage .browse-strip-inner {
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+}
+
+.brand-chip {
+  gap: 10px;
+  min-height: 48px;
+  padding: 5px 20px 5px 7px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+}
+
+.brand-chip-text strong {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.browse-pill {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 20px;
+  border: 1px solid var(--market-line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+.browse-pill span {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+/* Quiet hover: no lift, no fill animation — just a clear green border. */
+.brand-chip:hover,
+.brand-chip:focus-visible,
+.browse-pill:hover,
+.browse-pill:focus-visible {
+  transform: none;
+  border-color: var(--copper);
+  background: #fff;
+}
+
+.brand-chip:hover .brand-chip-text strong,
+.brand-chip:focus-visible .brand-chip-text strong,
+.browse-pill:hover span,
+.browse-pill:focus-visible span {
+  color: var(--copper);
+}
+
+@media (max-width: 980px) {
+  .browse-strip--garage .browse-strip-inner {
+    grid-template-columns: minmax(0, 1fr) 34px;
+  }
+}
+
+/* When the rail has nothing to scroll, drop the arrows and their columns. */
+.browse-strip--garage .browse-strip-inner.rail-no-overflow {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.rail-no-overflow .rail-arrow {
+  display: none;
+}
+
+/* ─── Styled select popup (replaces the OS dropdown on fine pointers) ── */
+/* Layer: above modals (220), below toasts (2000). */
+.aselect-panel {
+  position: fixed;
+  z-index: 1500;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(20, 26, 20, 0.14);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 18px 34px -18px rgba(20, 26, 20, 0.45);
+}
+
+.aselect-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--graphite);
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.aselect-option:hover,
+.aselect-option.is-active {
+  background: #f2f6f1;
+}
+
+.aselect-option.is-selected {
+  color: var(--copper);
+  font-weight: 800;
+}
+
+.aselect-option svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+}
+
+.aselect-option[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* The trigger keeps native styling; just make the open state visible. */
+select[data-aselect][aria-expanded="true"] {
+  border-color: rgba(30, 77, 52, 0.45);
+}
+
+/* ─── Touch comfort: extend small controls' hit areas, keep visuals ── */
+.sound-btn::after,
+.save-btn::after,
+.brand-picker-clear::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.combo-clear {
+  position: relative;
+}
+
+.combo-clear::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.text-link {
+  padding-block: 10px;
+  margin-block: -10px;
+}
+
+/* Sell form: anchor for the vehicle-search suggestion dropdown */
+.field--vehicle-search {
+  position: relative;
+}
+
+/* Even heading rag in Georgian, which wraps long compound words */
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+/* ─── Home: liquidity proof line + how-it-works sequence ── */
+.hero-proof {
+  order: 3; /* .hero-inner is ordered flex; keep the proof under the search */
+  margin: 12px auto 0;
+  width: min(100%, 1160px);
+  color: var(--market-muted);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.hero-proof:empty {
+  display: none;
+}
+
+.how-strip {
+  padding: 48px 0 26px;
+  background: var(--market-bg);
+}
+
+.how-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(20px, 4vw, 48px);
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.how-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.how-num {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--copper);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.how-copy strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--market-ink);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.how-copy p {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--market-muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+  .how-steps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .how-strip {
+    padding: 34px 0 14px;
+  }
+}
+
+/* ─── Header tools: unmistakable active nav, currency, notifications ── */
+.site-nav a {
+  padding: 8px 14px;
+  border-radius: 999px;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.site-nav a.is-active {
+  background: #e5eee3;
+  color: var(--market-ink);
+  font-weight: 800;
+}
+
+.site-nav a.is-active::after {
+  display: none; /* the pill replaces the old underline */
+}
+
+.currency-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 3px;
+  border: 1px solid var(--market-line);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.currency-switch button {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 30px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--market-muted);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.currency-switch button.is-active {
+  background: var(--copper);
+  color: #fff;
+}
+
+.notify-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.notify-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--market-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--market-ink);
+  cursor: pointer;
+}
+
+.notify-btn:hover {
+  border-color: rgba(30, 77, 52, 0.4);
+}
+
+.notify-btn svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.notify-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--copper);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
+.notify-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 120; /* above the sticky header, below select popups */
+  width: min(340px, calc(100vw - 28px));
+  padding: 6px;
+  border: 1px solid rgba(20, 26, 20, 0.14);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 22px 44px -22px rgba(20, 26, 20, 0.5);
+}
+
+.notify-head {
+  padding: 10px 12px 8px;
+  color: var(--market-ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.notify-empty {
+  margin: 0;
+  padding: 4px 12px 12px;
+  color: var(--market-muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.notify-cta {
+  width: calc(100% - 24px);
+  margin: 0 12px 12px;
+}
+
+.notify-item {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.notify-item:hover {
+  background: #f2f6f1;
+}
+
+.notify-item-title {
+  color: var(--market-ink);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.notify-item-meta {
+  color: var(--market-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.notify-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 10px;
+  border-top: 1px solid var(--market-line);
+  color: var(--copper);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.notify-all svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 680px) {
+  /* Free header space: the add-CTA collapses to its "+" glyph, which is the
+     standard marketplace pattern, so the currency switch stays available. */
+  .header-cta span {
+    display: none;
+  }
+
+  .header-cta {
+    min-width: 44px;
+    padding-inline: 12px;
+  }
+
+  .currency-switch {
+    padding: 2px;
+  }
+
+  .currency-switch button {
+    min-width: 30px;
+    height: 28px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 520px) {
+  /* Anchored dropdown would run off the left edge on phones — pin the panel
+     to the viewport just below the header instead. */
+  .notify-panel {
+    position: fixed;
+    top: 66px;
+    right: 14px;
+    left: 14px;
+    width: auto;
+    max-height: min(70vh, 420px);
+    overflow: auto;
+  }
+}
+
+/* Demo account entry in the auth modal — quiet text button, not a CTA */
+.auth-demo-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--market-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.auth-demo-btn:hover {
+  color: var(--copper);
+  background: #f2f6f1;
+}
+
+@media (max-width: 480px) {
+  /* With currency + bell in the row the wordmark no longer fits — keep the
+     brand tile, drop the word, make the CTA icon-only, and never let the
+     tile get flex-squeezed. */
+  .site-header .brand {
+    flex: 0 0 auto;
+  }
+
+  .site-header .brand-word {
+    display: none;
+  }
+
+  .header-cta::after {
+    content: none;
+  }
+
+  .header-cta {
+    min-width: 44px;
+    padding-inline: 0;
+  }
+}
+
+/* ─── Filters: count beside the heading, plain action button ── */
+.filters-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 22px;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--copper);
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.car-card-wants--open {
+  color: var(--market-muted);
+  font-weight: 700;
+}
+
+/* ─── About page ── */
+.about-hero {
+  padding: 56px 0 20px;
+  background: var(--market-bg);
+}
+
+.about-hero h1 {
+  max-width: 22ch;
+  font-size: clamp(28px, 4.4vw, 44px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.about-hero p {
+  max-width: 58ch;
+  margin-top: 12px;
+  color: var(--market-muted);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.about-body {
+  display: grid;
+  gap: 34px;
+  padding: 26px 0 56px;
+}
+
+.about-block h2 {
+  margin-bottom: 8px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.about-block p {
+  max-width: 68ch;
+  color: var(--market-muted);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.65;
+}
+
+.about-mail {
+  color: var(--copper);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Keyboard focus must be visible on every form control (accent halo,
+   per the design system's input focus treatment). */
+select[data-aselect]:focus-visible,
+.filters-form select:focus-visible,
+.filters-form input:focus-visible,
+.field select:focus-visible,
+.field input:focus-visible,
+.field textarea:focus-visible,
+.results-sort select:focus-visible {
+  outline: none;
+  border-color: rgba(30, 77, 52, 0.45);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
