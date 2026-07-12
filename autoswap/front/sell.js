@@ -82,7 +82,7 @@ function fieldRows(vehicle, prefs, wantsValue) {
 
   const carBody = `
     <div class="sell-grid">
-      ${iconField(icons.search, 'მარკა და მოდელი *', `<input name="vehicleSearch" required placeholder="BMW 530i" list="vehicle-search-list" value="${escapeAttr(vehicleSearchValue)}" autocomplete="off"><datalist id="vehicle-search-list"></datalist><input type="hidden" name="make" value="${escapeAttr(v.make || '')}"><input type="hidden" name="model" value="${escapeAttr(v.model || '')}">`, 'field--wide field--vehicle-search')}
+      ${iconField(icons.search, 'მარკა და მოდელი *', `<input name="vehicleSearch" required placeholder="BMW 530i" value="${escapeAttr(vehicleSearchValue)}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="vehicle-search-list"><ul class="combo-list" id="vehicle-search-list" role="listbox" hidden></ul><input type="hidden" name="make" value="${escapeAttr(v.make || '')}"><input type="hidden" name="model" value="${escapeAttr(v.model || '')}">`, 'field--wide field--vehicle-search')}
       ${iconField(icons.calendar, 'წელი *', `<input name="year" type="number" min="1980" max="${THIS_YEAR + 1}" required placeholder="2020" value="${v.year ?? ''}">`)}
       ${iconField(icons.gauge, 'გარბენი (კმ) *', `<input name="mileage" type="number" min="0" max="2000000" required placeholder="90000" value="${v.mileage ?? ''}">`)}
       ${iconField(icons.fuel, 'საწვავი *', `<select name="fuel" required>${fuelOpts}</select>`)}
@@ -157,7 +157,7 @@ function isLiteMode() {
 function ModeBar() {
   return `
     <div class="sell-mode-bar" aria-label="ფორმის ნაწილები">
-      ${SECTIONS.map((s, i) => `<a class="sell-mode-chip" href="#sell-section-${i + 1}"><span>0${i + 1}</span>${s.title}</a>`).join('')}
+      ${SECTIONS.map((s, i) => `<a class="sell-mode-chip${i === 0 ? ' is-active' : ''}" href="#sell-section-${i + 1}"><span>0${i + 1}</span>${s.title}</a>`).join('')}
     </div>
   `;
 }
@@ -357,9 +357,29 @@ function bindCatalogSuggestions() {
     return output.filter((item, index, arr) => item.label && arr.findIndex((x) => x.label.toLowerCase() === item.label.toLowerCase()) === index).slice(0, 12);
   };
 
+  let activeIndex = -1;
+
+  const closeList = () => {
+    list.hidden = true;
+    activeIndex = -1;
+    searchInput.setAttribute('aria-expanded', 'false');
+  };
+
+  const renderList = () => {
+    if (!lastSuggestions.length || document.activeElement !== searchInput) {
+      closeList();
+      return;
+    }
+    list.innerHTML = lastSuggestions
+      .map((item, index) => `<li class="combo-option${index === activeIndex ? ' is-active' : ''}" role="option" data-index="${index}"><span>${escapeAttr(item.label)}</span></li>`)
+      .join('');
+    list.hidden = false;
+    searchInput.setAttribute('aria-expanded', 'true');
+  };
+
   const refresh = async () => {
     lastSuggestions = await suggestionsFor(searchInput.value);
-    list.innerHTML = lastSuggestions.map((item) => `<option value="${escapeAttr(item.label)}"></option>`).join('');
+    renderList();
     const exact = lastSuggestions.find((item) => item.label.toLowerCase() === searchInput.value.trim().toLowerCase());
     if (exact) {
       setVehicle(exact.make, exact.model);
@@ -376,9 +396,42 @@ function bindCatalogSuggestions() {
     setVehicle('', '');
   };
 
+  const pick = (index) => {
+    const item = lastSuggestions[Number(index)];
+    if (!item) return;
+    clearTimeout(timer);
+    setVehicle(item.make, item.model, item.label);
+    closeList();
+  };
+
   searchInput.addEventListener('input', () => {
     clearTimeout(timer);
     timer = setTimeout(refresh, 160);
+  });
+  searchInput.addEventListener('focus', () => {
+    if (searchInput.value.trim()) refresh();
+  });
+  searchInput.addEventListener('blur', () => setTimeout(closeList, 140));
+  searchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (list.hidden) return;
+      event.preventDefault();
+      const count = lastSuggestions.length;
+      activeIndex = ((activeIndex + (event.key === 'ArrowDown' ? 1 : -1)) % count + count) % count;
+      renderList();
+      list.querySelector('.combo-option.is-active')?.scrollIntoView({ block: 'nearest' });
+    } else if (event.key === 'Enter' && !list.hidden && activeIndex >= 0) {
+      event.preventDefault();
+      pick(activeIndex);
+    } else if (event.key === 'Escape') {
+      closeList();
+    }
+  });
+  list.addEventListener('mousedown', (event) => {
+    const option = event.target.closest('.combo-option');
+    if (!option) return;
+    event.preventDefault();
+    pick(option.dataset.index);
   });
   searchInput.addEventListener('change', () => {
     const exact = lastSuggestions.find((item) => item.label.toLowerCase() === searchInput.value.trim().toLowerCase());
@@ -1181,12 +1234,19 @@ function renderLocked() {
   updatePreview(document.querySelector('#sell-form'));
   bindCashAmount(document.querySelector('#sell-form'));
   bindCounter(document.querySelector('#sell-form'));
+  // The overlay blocks the pointer, but keyboard focus could still reach the
+  // form behind it — and an Enter there did a native GET submit that dumped
+  // the whole form into the URL. inert + a guarded submit close both holes.
+  const lockedForm = document.querySelector('#sell-form');
+  lockedForm?.setAttribute('inert', '');
+  lockedForm?.addEventListener('submit', (event) => event.preventDefault());
   const section = document.querySelector('.sell');
   section.classList.add('sell-locked');
   const overlay = document.createElement('div');
   overlay.className = 'sell-locked-overlay';
   overlay.innerHTML = `
     <div class="sell-locked-card">
+      <a class="sell-locked-close" href="cars.html" aria-label="დახურვა">${ICON_X}</a>
       <span class="sell-locked-lock">${icons.shield}</span>
       <h2>დაამატე მანქანა ერთ ნაბიჯში</h2>
       <p>შეთავაზებები პირდაპირ შენთან მოვა.</p>

@@ -785,6 +785,7 @@ function update() {
     badge.hidden = !n;
   }
 
+
   const list = document.querySelector('#car-list');
   if (list) {
     list.innerHTML = slice.length ? slice.map(CarRow).join('') : emptyStateHTML();
@@ -1305,6 +1306,7 @@ function applyFormFilters(form) {
 
 function bindEvents() {
   const form = document.querySelector('#filters-form');
+
 
   
   form?.addEventListener('change', (event) => {

@@ -1,3 +1,34 @@
+/* FiraGO — self-hosted, subset to Latin + Georgian (SIL OFL). The primary UI
+   typeface; Noto Sans Georgian stays as the fallback for any missing glyphs. */
+@font-face {
+  font-family: "FiraGO";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/firago-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "FiraGO";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/firago-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "FiraGO";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/firago-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "FiraGO";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/firago-700.woff2") format("woff2");
+}
+
 :root {
   /* Glass / soft-futurism system — see DESIGN.md. Legacy names kept as
      aliases so every existing usage picks up the new palette. */
@@ -37,8 +68,8 @@
   --radius-sm: 12px;
   --container: 1280px;
 
-  --font: "Noto Sans Georgian", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: "Noto Sans Georgian", system-ui, sans-serif;
+  --font: "FiraGO", "Noto Sans Georgian", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "FiraGO", "Noto Sans Georgian", system-ui, sans-serif;
   --font-serif: "Noto Serif Georgian", "Noto Sans Georgian", Georgia, serif;
   --font-mono: "JetBrains Mono", "Noto Sans Georgian", ui-monospace, monospace;
 }
@@ -5381,6 +5412,10 @@ a.header-user:hover {
   justify-content: center;
   align-items: flex-start;
   pointer-events: none;
+  /* Scrim so the locked form behind is muted instead of showing through. */
+  background: rgba(242, 246, 241, 0.74);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
 }
 
 .sell-locked-card {
@@ -5390,10 +5425,10 @@ a.header-user:hover {
   margin-top: 140px;
   max-width: 360px;
   padding: 24px 26px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card-white);
-  box-shadow: 0 2px 8px rgba(15, 20, 15, 0.1);
+  border: 1px solid rgba(20, 26, 20, 0.16);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px -26px rgba(16, 20, 15, 0.5);
   text-align: center;
 }
 
@@ -10686,7 +10721,7 @@ body {
 .car-card .trade-cash,
 .car-card .trade-cash span,
 .car-card .btn {
-  font-family: var(--font-serif);
+  font-family: var(--font);
   letter-spacing: 0;
 }
 

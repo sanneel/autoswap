@@ -26,6 +26,7 @@
 
   const icons = {
     arrowRight: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>',
+    bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9Z"></path><path d="M10 20a2.2 2.2 0 0 0 4 0"></path></svg>',
     car: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h14"></path><path d="M6 17v2"></path><path d="M18 17v2"></path><path d="M4 13l2.1-5.1A3 3 0 0 1 8.9 6h6.2a3 3 0 0 1 2.8 1.9L20 13"></path><path d="M5 13h14v4H5z"></path><path d="M7.5 15h.1"></path><path d="M16.4 15h.1"></path></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg>',
     heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg>',
@@ -96,6 +97,21 @@
     return labelFor(FUEL_LABELS, value);
   }
 
+  // Get brand logo image URL from the car-logos-dataset (387 brands via jsdelivr CDN).
+  // Converts "Mercedes-Benz" → "mercedes-benz.png" → CDN URL.
+  // Fallback: returns the make name as text if logo unavailable.
+  function getLogoUrl(make) {
+    if (!make) return null;
+    // Convert make name to filename: "Alfa Romeo" → "alfa-romeo", "BMW" → "bmw"
+    const filename = String(make)
+      .toLowerCase()
+      .replace(/\s+/g, '-')      // spaces → hyphens
+      .replace(/[^\w\-]/g, '')   // remove special chars
+      .replace(/--+/g, '-')      // collapse multiple hyphens
+      + '.png';
+    return `https://cdn.jsdelivr.net/gh/filippofilip95/car-logos-dataset@master/logos/optimized/${filename}`;
+  }
+
   // Cash sentence with an explicit subject ("ის" = the listing owner) so the
   // reader never has to compute who pays whom.
   function formatCash(mode, amount) {
@@ -152,7 +168,7 @@
 
     return {
       id: row.id,
-      ownerId: row.owner_id || '',
+      ownerId: row.owner_id || row.owner_name || '',
       badge: row.is_boosted ? 'TOP შეთავაზება' : 'ახალი',
       boosted: !!row.is_boosted,
 
@@ -250,6 +266,7 @@
     if (mk && w.startsWith(mk)) {
       const rest = w.slice(mk.length);
       if (!rest) return true;
+      if (!md) return true;
       if (md && (md.includes(rest) || rest.includes(md))) return true;
       if (md && rest[0] && md[0] === rest[0]) return true; // "5series" ≈ "530i"
     }
@@ -278,7 +295,7 @@
     // action, not a navigation item.
     const nav = [
       { id: 'listings', label: 'გაცვლები', href: 'cars.html' },
-      { id: 'contact', label: 'კონტაქტი', href: 'index.html#contact' },
+      { id: 'about', label: 'ჩვენ შესახებ', href: 'about.html' },
     ];
 
     return `
@@ -290,9 +307,23 @@
           </a>
           <div class="header-actions">
             <nav class="site-nav" aria-label="მთავარი ნავიგაცია">
-              ${nav.map((item) => `<a class="${item.id === active ? 'is-active' : ''}" href="${item.href}">${item.label}</a>`).join('')}
+              ${nav.map((item) => `<a class="${item.id === active ? 'is-active' : ''}" href="${item.href}"${item.id === active ? ' aria-current="page"' : ''}>${item.label}</a>`).join('')}
             </nav>
             <a class="btn btn-accent header-cta" href="sell.html">${icons.plus}<span>დაამატე მანქანა</span></a>
+            <div class="currency-switch" role="group" aria-label="ფასების ვალუტა">
+              <button type="button" data-currency="GEL" aria-pressed="true">₾</button>
+              <button type="button" data-currency="USD" aria-pressed="false">$</button>
+            </div>
+            <div class="notify-wrap">
+              <button class="notify-btn" type="button" data-notify-btn aria-haspopup="true" aria-expanded="false" aria-label="შეტყობინებები">
+                ${icons.bell}
+                <span class="notify-badge" data-notify-badge hidden></span>
+              </button>
+              <div class="notify-panel" data-notify-panel hidden>
+                <div class="notify-head">შეტყობინებები</div>
+                <div class="notify-body" data-notify-body></div>
+              </div>
+            </div>
             <div class="header-auth" id="header-auth">${authSlotHTML()}</div>
           </div>
         </div>
@@ -314,9 +345,10 @@
           <nav class="footer-nav" aria-label="ფუტერის ნავიგაცია">
             <a href="cars.html">გაცვლები</a>
             <a href="sell.html">განცხადების დამატება</a>
+            <a href="about.html">ჩვენ შესახებ</a>
             <a href="terms.html">წესები</a>
             <a href="privacy.html">კონფიდენციალურობა</a>
-            <a href="index.html#contact">კონტაქტი</a>
+            <a href="about.html#contact">კონტაქტი</a>
           </nav>
         </div>
         <div class="container footer-base">
@@ -1165,6 +1197,10 @@
       slot.dataset.authState = state;
       slot.innerHTML = authSlotHTML();
     });
+    // Notifications are meaningless before login — hide the bell for guests.
+    document.querySelectorAll('.notify-wrap').forEach((wrap) => {
+      wrap.hidden = !authUser;
+    });
   }
 
   // Georgian mobile numbers: 5XX XX XX XX, with or without the +995 prefix.
@@ -1183,6 +1219,10 @@
     if (!error) return { demo: false };
     const message = String(error.message || '');
     if (/provider|not enabled|disabled|unsupported/i.test(message)) return { demo: true };
+    // Raw fetch errors ("Failed to fetch") mean nothing to the user.
+    if (/failed to fetch|network|load failed/i.test(message)) {
+      return { error: 'კავშირი ვერ შედგა — შეამოწმე ინტერნეტი და სცადე თავიდან.' };
+    }
     return { error: `კოდი ვერ გაიგზავნა: ${message}` };
   }
 
@@ -1448,6 +1488,7 @@
         <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">კოდის გაგზავნა</button>
       </form>
       <p class="auth-note">პირველი შესვლისას ანგარიში ავტომატურად შეიქმნება.</p>
+      <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით — SMS-ის გარეშე</button>
     `;
   }
 
@@ -1469,6 +1510,13 @@
     };
 
     function bindPhoneStep() {
+      // Try-it-out account: same local demo path the OTP fallback uses, no SMS.
+      step.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
+        await confirmOtp('+995555000000', DEMO_OTP_CODE, true);
+        toast('დემო ანგარიშით შეხვედი — ტესტირებისთვის');
+        close();
+      });
+
       step.querySelectorAll('.btn-provider').forEach((btn) => {
         btn.addEventListener('click', async () => {
           btn.disabled = true;
@@ -1645,6 +1693,360 @@
     if (event.target.closest('[data-logout]')) logout();
   });
 
+  // ---- Display currency (GEL ⇄ USD) ---------------------------------------
+  // Prices are stored and rendered in GEL; the header toggle converts every
+  // visible "N ₾" amount to USD using the National Bank of Georgia rate
+  // (cached 12h, bundled fallback offline). Filters keep GEL semantics.
+  const CURRENCY_KEY = 'autoswap.currency';
+  const USD_RATE_CACHE_KEY = 'autoswap.usdRate';
+  const USD_RATE_TTL = 12 * 60 * 60 * 1000;
+  const FALLBACK_GEL_PER_USD = 2.70;
+  const MONEY_RE = /(\d[\d\s,.]*\d|\d)\s*₾/g;
+
+  let currency = 'GEL';
+  try {
+    currency = localStorage.getItem(CURRENCY_KEY) === 'USD' ? 'USD' : 'GEL';
+  } catch (_err) { /* private mode */ }
+  let gelPerUsd = FALLBACK_GEL_PER_USD;
+
+  async function loadUsdRate() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(USD_RATE_CACHE_KEY) || 'null');
+      if (cached && cached.rate > 0 && Date.now() - cached.ts < USD_RATE_TTL) {
+        gelPerUsd = cached.rate;
+        return;
+      }
+    } catch (_err) { /* ignore bad cache */ }
+    try {
+      const res = await fetch('https://nbg.gov.ge/gw/api/ct/monetarypolicy/currencies/en/json?currencies=USD');
+      const data = await res.json();
+      const rate = Number(data?.[0]?.currencies?.[0]?.rate);
+      const quantity = Number(data?.[0]?.currencies?.[0]?.quantity) || 1;
+      if (rate > 0) {
+        gelPerUsd = rate / quantity;
+        try { localStorage.setItem(USD_RATE_CACHE_KEY, JSON.stringify({ rate: gelPerUsd, ts: Date.now() })); } catch (_err) { /* private mode */ }
+        if (currency === 'USD') applyCurrency(document.body); // re-render with the live rate
+      }
+    } catch (_err) { /* offline — fallback rate stays */ }
+  }
+
+  function gelToUsdText(match, amount) {
+    const gel = Number(String(amount).replace(/[^\d]/g, ''));
+    if (!Number.isFinite(gel)) return match;
+    return `$${Math.round(gel / gelPerUsd).toLocaleString('en-US')}`;
+  }
+
+  function convertMoneyNode(node) {
+    if (currency === 'USD') {
+      const source = node.__gelText != null ? node.__gelText : node.nodeValue;
+      if (!/₾/.test(source) || !MONEY_RE.test(source)) return;
+      MONEY_RE.lastIndex = 0;
+      node.__gelText = source;
+      node.nodeValue = source.replace(MONEY_RE, gelToUsdText);
+    } else if (node.__gelText != null) {
+      node.nodeValue = node.__gelText;
+      delete node.__gelText;
+    }
+  }
+
+  function applyCurrency(root) {
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = node.parentElement;
+        if (!parent || parent.closest('script, style')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(convertMoneyNode);
+    syncCurrencyUI();
+  }
+
+  function syncCurrencyUI() {
+    document.querySelectorAll('[data-currency]').forEach((btn) => {
+      const active = btn.dataset.currency === currency;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  function setCurrency(next) {
+    if (next !== 'GEL' && next !== 'USD') return;
+    currency = next;
+    try { localStorage.setItem(CURRENCY_KEY, next); } catch (_err) { /* private mode */ }
+    applyCurrency(document.body);
+  }
+
+  loadUsdRate();
+
+  // ---- Notifications (demand matches for "my car") -------------------------
+  // Derived, not push: who in the current feed is looking for the visitor's
+  // car. Badge counts matches the visitor hasn't opened the panel on yet.
+  const NOTIFY_SEEN_KEY = 'autoswap.notifySeen';
+  let notifyMatches = [];
+
+  function notifySeenIds() {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(NOTIFY_SEEN_KEY) || '[]'));
+    } catch (_err) {
+      return new Set();
+    }
+  }
+
+  async function refreshNotifications() {
+    const myCar = getMyCar();
+    if (!authUser || !myCar) {
+      notifyMatches = [];
+    } else {
+      const feed = await fetchFeed().catch(() => null);
+      const cars = feed && feed.length ? feed : DEMO_CARS;
+      notifyMatches = cars.filter((car) => matchLevel(car, myCar)).slice(0, 8);
+    }
+    const seen = notifySeenIds();
+    const unseen = notifyMatches.filter((car) => !seen.has(String(car.id))).length;
+    document.querySelectorAll('[data-notify-badge]').forEach((badge) => {
+      badge.textContent = unseen ? String(unseen) : '';
+      badge.hidden = !unseen;
+    });
+  }
+
+  function renderNotifyPanel() {
+    const body = document.querySelector('[data-notify-body]');
+    if (!body) return;
+    const myCar = getMyCar();
+    if (!myCar) {
+      body.innerHTML = `
+        <p class="notify-empty">მიუთითე შენი მანქანა და აქ გამოჩნდება, ვინ ეძებს მას.</p>
+        <button class="btn btn-primary notify-cta" type="button" data-notify-addcar>${icons.car} მიუთითე მანქანა</button>
+      `;
+      return;
+    }
+    if (!notifyMatches.length) {
+      body.innerHTML = `<p class="notify-empty">ჯერ არავინ ეძებს შენს ${escapeAttr(myCar.make)}-ს. შეტყობინება აქ გამოჩნდება, როგორც კი მატჩი იქნება.</p>`;
+      return;
+    }
+    body.innerHTML = `
+      ${notifyMatches.map((car) => `
+        <a class="notify-item" href="vehicle.html?id=${encodeURIComponent(car.id)}">
+          <span class="notify-item-title">${escapeAttr(car.ownerName || 'მფლობელი')} ეძებს შენს ${escapeAttr(myCar.make)}-ს</span>
+          <span class="notify-item-meta">სთავაზობს: ${escapeAttr(`${car.make} ${car.model}`)} · ${escapeAttr(car.city || '')}</span>
+        </a>
+      `).join('')}
+      <a class="notify-all" href="cars.html?onlyMatches=1">ყველა მატჩის ნახვა ${icons.arrowRight}</a>
+    `;
+  }
+
+  function setNotifyOpen(open) {
+    const panel = document.querySelector('[data-notify-panel]');
+    const btn = document.querySelector('[data-notify-btn]');
+    if (!panel || !btn) return;
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    if (open) {
+      renderNotifyPanel();
+      // opening marks everything as seen
+      try { localStorage.setItem(NOTIFY_SEEN_KEY, JSON.stringify(notifyMatches.map((car) => String(car.id)))); } catch (_err) { /* private mode */ }
+      document.querySelectorAll('[data-notify-badge]').forEach((badge) => { badge.hidden = true; });
+    }
+  }
+
+  document.addEventListener('click', (event) => {
+    const currencyBtn = event.target.closest('[data-currency]');
+    if (currencyBtn) {
+      setCurrency(currencyBtn.dataset.currency);
+      return;
+    }
+    const bell = event.target.closest('[data-notify-btn]');
+    if (bell) {
+      const panel = document.querySelector('[data-notify-panel]');
+      setNotifyOpen(panel ? panel.hidden : true);
+      return;
+    }
+    if (event.target.closest('[data-notify-addcar]')) {
+      setNotifyOpen(false);
+      openMyCarModal();
+      return;
+    }
+    if (!event.target.closest('.notify-wrap')) setNotifyOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setNotifyOpen(false);
+  });
+
+  document.addEventListener('autoswap:mycar', refreshNotifications);
+
+  // ---- Styled select popup -------------------------------------------------
+  // The native <select> stays in the DOM as the visible trigger (so every
+  // context keeps its field styling, form serialization, and semantics), but
+  // on fine-pointer devices its OS popup is replaced with a brand-styled
+  // fixed-position panel. Touch devices keep the native picker, which is
+  // better UX on phones. One shared controller; only one panel at a time.
+  const ASELECT_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.6 4.5L19 7"></path></svg>';
+  const aselect = { select: null, panel: null, activeIndex: -1 };
+
+  function aselectClose() {
+    aselect.panel?.remove();
+    if (aselect.select) aselect.select.setAttribute('aria-expanded', 'false');
+    aselect.panel = null;
+    aselect.select = null;
+    aselect.activeIndex = -1;
+  }
+
+  function aselectPosition() {
+    const { select, panel } = aselect;
+    if (!select || !panel) return;
+    const rect = select.getBoundingClientRect();
+    if (!rect.width) {
+      aselectClose();
+      return;
+    }
+    panel.style.left = `${Math.round(rect.left)}px`;
+    panel.style.minWidth = `${Math.round(rect.width)}px`;
+    const spaceBelow = window.innerHeight - rect.bottom - 16;
+    if (spaceBelow < 200 && rect.top > window.innerHeight - rect.bottom) {
+      panel.style.top = 'auto';
+      panel.style.bottom = `${Math.round(window.innerHeight - rect.top + 6)}px`;
+      panel.style.maxHeight = `${Math.min(300, Math.max(140, rect.top - 16))}px`;
+    } else {
+      panel.style.bottom = 'auto';
+      panel.style.top = `${Math.round(rect.bottom + 6)}px`;
+      panel.style.maxHeight = `${Math.min(300, Math.max(140, spaceBelow))}px`;
+    }
+  }
+
+  function aselectRender() {
+    const { select, panel, activeIndex } = aselect;
+    if (!select || !panel) return;
+    panel.innerHTML = Array.from(select.options).map((option, index) => {
+      const selected = index === select.selectedIndex;
+      const classes = `aselect-option${selected ? ' is-selected' : ''}${index === activeIndex ? ' is-active' : ''}`;
+      return `<button type="button" class="${classes}" role="option" aria-selected="${selected}" data-index="${index}"${option.disabled ? ' disabled' : ''}>
+        <span>${escapeAttr(option.textContent.trim()) || '&nbsp;'}</span>
+        ${selected ? ASELECT_CHECK : ''}
+      </button>`;
+    }).join('');
+    panel.querySelector('.aselect-option.is-active')?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function aselectCommit(index) {
+    const { select } = aselect;
+    if (!select) return;
+    const option = select.options[index];
+    if (!option || option.disabled) return;
+    if (select.selectedIndex !== index) {
+      select.selectedIndex = index;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const focusTarget = select;
+    aselectClose();
+    focusTarget.focus({ preventScroll: true });
+  }
+
+  function aselectOpen(select) {
+    if (aselect.select === select) return;
+    aselectClose();
+    if (select.disabled || !select.options.length) return;
+    aselect.select = select;
+    aselect.activeIndex = Math.max(0, select.selectedIndex);
+    const panel = document.createElement('div');
+    panel.className = 'aselect-panel';
+    panel.setAttribute('role', 'listbox');
+    aselect.panel = panel;
+    document.body.appendChild(panel);
+    select.setAttribute('aria-expanded', 'true');
+    aselectPosition();
+    aselectRender();
+    panel.addEventListener('mousedown', (event) => {
+      const optionBtn = event.target.closest('.aselect-option');
+      if (!optionBtn) return;
+      event.preventDefault();
+      aselectCommit(Number(optionBtn.dataset.index));
+    });
+  }
+
+  function aselectKeydown(event, select) {
+    const { key } = event;
+    const isOpen = aselect.select === select;
+    if (!isOpen) {
+      if (key === 'Enter' || key === ' ' || key === 'ArrowDown' || key === 'ArrowUp') {
+        event.preventDefault();
+        aselectOpen(select);
+      }
+      return;
+    }
+    const count = select.options.length;
+    if (key === 'ArrowDown' || key === 'ArrowUp') {
+      event.preventDefault();
+      const delta = key === 'ArrowDown' ? 1 : -1;
+      aselect.activeIndex = ((aselect.activeIndex + delta) % count + count) % count;
+      aselectRender();
+    } else if (key === 'Home' || key === 'End') {
+      event.preventDefault();
+      aselect.activeIndex = key === 'Home' ? 0 : count - 1;
+      aselectRender();
+    } else if (key === 'Enter' || key === ' ') {
+      event.preventDefault();
+      aselectCommit(aselect.activeIndex);
+    } else if (key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation(); // close only the popup, not a host modal
+      aselectClose();
+    } else if (key === 'Tab') {
+      aselectClose();
+    }
+  }
+
+  function enhanceSelects(root = document) {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    root.querySelectorAll('select:not([data-native]):not([data-aselect])').forEach((select) => {
+      select.dataset.aselect = '1';
+      select.setAttribute('role', 'combobox');
+      select.setAttribute('aria-expanded', 'false');
+      select.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+        select.focus({ preventScroll: true });
+        if (aselect.select === select) aselectClose();
+        else aselectOpen(select);
+      });
+      select.addEventListener('keydown', (event) => aselectKeydown(event, select));
+      select.addEventListener('blur', aselectClose);
+    });
+  }
+
+  window.addEventListener('resize', aselectClose);
+  window.addEventListener('scroll', () => aselectPosition(), true);
+  document.addEventListener('pointerdown', (event) => {
+    if (!aselect.select) return;
+    if (event.target === aselect.select || aselect.panel?.contains(event.target)) return;
+    aselectClose();
+  });
+
+  // Pages render into #app with innerHTML and modals mount later — a single
+  // debounced observer keeps selects enhanced, money converted, and the
+  // notification badge alive without per-page wiring. (Text conversion emits
+  // characterData mutations only, so watching childList cannot loop.)
+  enhanceSelects();
+  let domSyncQueued = false;
+  const domObserver = new MutationObserver(() => {
+    if (domSyncQueued) return;
+    domSyncQueued = true;
+    requestAnimationFrame(() => {
+      domSyncQueued = false;
+      enhanceSelects();
+      if (currency === 'USD') applyCurrency(document.body);
+      else syncCurrencyUI();
+      const badge = document.querySelector('[data-notify-badge]');
+      if (badge && !badge.dataset.ready) {
+        badge.dataset.ready = '1';
+        refreshNotifications();
+      }
+    });
+  });
+  domObserver.observe(document.body, { childList: true, subtree: true });
+
   window.AutoSwap = {
     assets,
     icons,
@@ -1672,6 +2074,7 @@
     CATEGORY_LABELS,
     labelFor,
     fuelLabel,
+    getLogoUrl,
     formatCash,
     fallbackImageFor,
     mapFeedRow,

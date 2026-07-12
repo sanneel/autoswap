@@ -23,14 +23,8 @@ function carCash(car) {
 }
 
 function descriptionFor(car) {
-  
   if (car.description) return car.description;
-  const parts = [car.transmissionLabel, car.categoryLabel].filter(Boolean).join(' · ');
-  const intent = car.openToOffers
-    ? 'მფლობელი ღიაა გაცვლის შემოთავაზებებისთვის.'
-    : `მფლობელი ეძებს გაცვლას: ${car.wants}.`;
-  return `${car.make} ${car.model}, ${car.year} წ. ${car.mileage}, ${car.fuel}${parts ? `, ${parts}` : ''}. `
-    + `${intent} ავტომობილი დათვალიერებადია ${car.city}-ში, დოკუმენტები წესრიგშია.`;
+  return 'მფლობელმა დამატებითი ინფო არ მიუთითა.';
 }
 
 
@@ -76,6 +70,9 @@ function DetailPage(car, photos) {
     .join('');
 
   const name = esc(`${car.make} ${car.model}`);
+  const ownerHref = car.ownerId ? `cars.html?owner=${encodeURIComponent(car.ownerId)}` : '';
+  const ownerTag = ownerHref ? 'a' : 'div';
+  const ownerAttr = ownerHref ? ` href="${ownerHref}" aria-label="მფლობელის სხვა განცხადებები"` : '';
   return `
     ${Header({ active: 'listings' })}
     <main class="detail-shell">
@@ -96,14 +93,14 @@ function DetailPage(car, photos) {
               <button class="btn btn-primary detail-offer" type="button" data-offer data-id="${esc(car.id)}" data-make="${esc(car.make)}" data-model="${esc(car.model)}">${icons.swap} შესთავაზე გაცვლა</button>
               <button class="save-btn detail-save" type="button" data-id="${esc(car.id)}" aria-label="${name} შენახვა">${icons.heart}</button>
             </div>
-            <div class="detail-owner">
+            <${ownerTag} class="detail-owner${ownerHref ? ' detail-owner--link' : ''}"${ownerAttr}>
               <span class="owner-avatar">${esc((car.ownerName || car.make || 'A').charAt(0))}</span>
               <div class="detail-owner-info">
                 <strong>${car.ownerName ? esc(car.ownerName) : 'კერძო მფლობელი'}</strong>
                 <small>${esc(car.city)}${car.ownerSwaps ? ` · ${esc(String(car.ownerSwaps))} გაცვლა` : ''}</small>
               </div>
-              ${car.ownerId ? `<a class="owner-more" href="cars.html?owner=${encodeURIComponent(car.ownerId)}">სხვა განცხადებები ${icons.arrowRight}</a>` : ''}
-            </div>
+              ${ownerHref ? `<span class="owner-more">სხვა განცხადებები ${icons.arrowRight}</span>` : ''}
+            </${ownerTag}>
           </aside>
         </div>
         <section class="detail-about">

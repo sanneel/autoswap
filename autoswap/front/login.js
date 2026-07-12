@@ -51,6 +51,7 @@ function PhoneStep(phone, error) {
       <button class="btn btn-primary auth-submit" type="submit">გამომიგზავნე კოდი</button>
     </form>
     <p class="auth-note">პირველი შესვლისას ანგარიში ავტომატურად შეიქმნება.</p>
+    <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით — SMS-ის გარეშე</button>
   `);
 }
 
@@ -126,6 +127,12 @@ function bindProviders() {
 function renderPhoneStep(error) {
   document.querySelector('#app').innerHTML = PhoneStep(currentPhone, error);
   bindProviders();
+  // Try-it-out account: local demo session, no SMS round-trip.
+  document.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
+    await confirmPhoneOtp('+995555000000', AUTH_DEMO_CODE, true);
+    toast('დემო ანგარიშით შეხვედი — ტესტირებისთვის');
+    window.location.href = 'index.html';
+  });
   const form = document.querySelector('#phone-form');
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
