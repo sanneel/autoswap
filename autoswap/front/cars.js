@@ -16,6 +16,9 @@ const {
   openMyCarModal,
   matchLevel,
   daysSince,
+  getCurrency,
+  getUsdRate,
+  onCurrencyChange,
 } = window.AutoSwap;
 
 function escapeHtml(value) {
@@ -24,7 +27,7 @@ function escapeHtml(value) {
 
 const PAGE_SIZE = 24;
 const STICKY_CTA_DISMISSED_KEY = 'autoswap_cta_dismissed';
-const NUMERIC_FILTER_KEYS = ['yearFrom', 'yearTo', 'mileageMin', 'mileageMax', 'valueMin', 'valueMax'];
+const NUMERIC_FILTER_KEYS = ['yearFrom', 'yearTo', 'mileageMin', 'mileageMax', 'valueMin', 'valueMax', 'cashMin', 'cashMax'];
 
 // Car brand logos from car-logos-dataset via jsdelivr CDN
 const MAKE_LOGOS = {
@@ -40,6 +43,22 @@ const MAKE_LOGOS = {
   'Kia': 'kia.png',
 };
 const LOGO_CDN = 'https://cdn.jsdelivr.net/gh/filippofilip95/car-logos-dataset@master/logos/optimized/';
+
+// Self-hosted brand logos (assets/logos/<slug>.png) shown in the make filter.
+const FILTER_LOGO_SLUGS = new Set([
+  'bmw', 'mercedes-benz', 'audi', 'toyota', 'volkswagen', 'hyundai', 'lexus',
+  'kia', 'honda', 'ford', 'nissan', 'chevrolet', 'volvo', 'mazda', 'subaru',
+  'mitsubishi', 'jeep', 'porsche', 'opel', 'skoda', 'renault', 'peugeot',
+]);
+function makeSlug(name) {
+  return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+function filterMakeLogo(name) {
+  const slug = makeSlug(name);
+  return FILTER_LOGO_SLUGS.has(slug)
+    ? `<img class="combo-logo" src="assets/logos/${slug}.png" alt="" loading="lazy" width="22" height="22">`
+    : `<span class="combo-logo combo-logo--none">${icons.car}</span>`;
+}
 
 const URL_MAKE_ALIASES = {
   alfa: 'Alfa Romeo',
@@ -153,7 +172,7 @@ const FRESH_OPTIONS = [
 function emptyFilters() {
   return {
     query: '', make: '', makeId: '', category: '', model: '', modelGroup: '', transmission: '', fuel: '',
-    city: '', cash: '', yearFrom: '', yearTo: '', mileageMin: '', mileageMax: '',
+    city: '', cash: '', cashMin: '', cashMax: '', yearFrom: '', yearTo: '', mileageMin: '', mileageMax: '',
     valueMin: '', valueMax: '',
     onlyMatches: '', verified: '', fresh: '', owner: '',
     modelTerms: [],
@@ -365,6 +384,15 @@ function FilterSidebar() {
           </select>
         </label>
 
+        <div class="filter-field filter-cash-amount" id="filter-cash-amount"${(f.cash === 'add' || f.cash === 'ask') ? '' : ' hidden'}>
+          <span class="filter-label">თანხის ოდენობა <span class="cash-cur-tag" data-cash-cur>${getCurrency() === 'USD' ? '$' : '₾'}</span></span>
+          <div class="filter-range">
+            <input type="number" name="cashMin" value="${escapeHtml(f.cashMin || '')}" placeholder="მინ." min="0" inputmode="numeric" aria-label="თანხა დან">
+            <span class="filter-range-sep">-</span>
+            <input type="number" name="cashMax" value="${escapeHtml(f.cashMax || '')}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="თანხა მდე">
+          </div>
+        </div>
+
         <label class="filter-field filter-advanced">
           <span class="filter-label">განცხადების ასაკი</span>
           <select name="fresh">
@@ -372,11 +400,14 @@ function FilterSidebar() {
           </select>
         </label>
 
-        <div class="filter-checks filter-advanced">
-          ${myCar ? `<label class="filter-check">
+        ${myCar ? `<div class="filter-checks">
+          <label class="filter-check">
             <input type="checkbox" name="onlyMatches" value="1"${f.onlyMatches ? ' checked' : ''}>
             <span>მხოლოდ ვინც ჩემს მანქანას ეძებს</span>
-          </label>` : ''}
+          </label>
+        </div>` : ''}
+
+        <div class="filter-checks filter-advanced">
           <label class="filter-check">
             <input type="checkbox" name="verified" value="1"${f.verified ? ' checked' : ''}>
             <span>მხოლოდ დადასტურებული მფლობელები</span>
@@ -475,13 +506,13 @@ function CarRow(car) {
           <span class="listing-city">${icons.location}${escapeHtml(car.city)}${car.freshness ? `<span class="listing-age">· ${escapeHtml(car.freshness)}</span>` : ''}</span>
         </div>
         <p class="car-card-specs">${escapeHtml(specs)}</p>
-        ${car.openToOffers
-          ? '<p class="car-card-wants car-card-wants--open">ღიაა ნებისმიერ შეთავაზებაზე</p>'
-          : `<p class="car-card-wants"><span>ეძებს</span>${escapeHtml(car.wants)}</p>`}
       </div>
 
       <div class="car-card-aside">
         ${cashLine(car)}
+        ${car.openToOffers
+          ? '<p class="car-card-wants car-card-wants--open">ღიაა ნებისმიერ შეთავაზებაზე</p>'
+          : `<p class="car-card-wants"><span>ეძებს</span>${escapeHtml(car.wants)}</p>`}
         <button class="btn btn-primary car-row-offer" type="button" data-offer data-id="${escapeHtml(car.id)}" data-make="${escapeHtml(car.make)}" data-model="${escapeHtml(car.model)}">${icons.swap} შესთავაზე გაცვლა</button>
         <a class="btn btn-ghost car-card-detail" href="${detailHref}">დეტალურად</a>
       </div>
@@ -560,9 +591,9 @@ const QUICK_BRAND_SLUGS = {
 };
 
 function quickBrandLogo(make) {
-  const url = window.AutoSwap.getLogoUrl(make);
-  return url
-    ? `<img src="${url}" alt="${make}" class="quick-chip-brand-logo" loading="lazy" onerror="this.style.display='none'">`
+  const slug = makeSlug(make);
+  return FILTER_LOGO_SLUGS.has(slug)
+    ? `<img src="assets/logos/${slug}.png" alt="${escapeHtml(make)}" class="quick-chip-brand-logo" loading="lazy">`
     : `<span class="quick-chip-icon">${icons.car}</span>`;
 }
 
@@ -711,6 +742,12 @@ function applyFilters(cars, f) {
   const valueMin = Number(f.valueMin) || null;
   const valueMax = Number(f.valueMax) || null;
   const maxDays = f.fresh === '' ? null : Number(f.fresh);
+  // Cash amount is entered in the displayed currency; stored amounts are GEL,
+  // so convert the bounds to GEL before comparing.
+  const toGel = (n) => (getCurrency() === 'USD' ? Math.round(n * getUsdRate()) : n);
+  const cashActive = (f.cash === 'add' || f.cash === 'ask');
+  const cashMin = cashActive && Number(f.cashMin) ? toGel(Number(f.cashMin)) : null;
+  const cashMax = cashActive && Number(f.cashMax) ? toGel(Number(f.cashMax)) : null;
 
   const filtered = cars.filter((car) => {
     const family = familyLabelForModel(car.model, car.make);
@@ -726,6 +763,8 @@ function applyFilters(cars, f) {
     if (f.fuel && car.fuelType !== f.fuel) return false;
     if (f.city && car.city !== f.city) return false;
     if (f.cash && car.cashType !== f.cash) return false;
+    if (cashMin && (car.cashAmount == null || car.cashAmount < cashMin)) return false;
+    if (cashMax && (car.cashAmount == null || car.cashAmount > cashMax)) return false;
     if (yearFrom && (car.yearNum == null || car.yearNum < yearFrom)) return false;
     if (yearTo && (car.yearNum == null || car.yearNum > yearTo)) return false;
     if (mileageMin && (car.mileageNum == null || car.mileageNum < mileageMin)) return false;
@@ -804,8 +843,10 @@ function update() {
 function readFiltersFromForm(form) {
   const data = new FormData(form);
   const f = { ...currentFilters };
-  ['query', 'make', 'category', 'model', 'yearFrom', 'yearTo', 'transmission', 'fuel', 'mileageMin', 'mileageMax', 'valueMin', 'valueMax', 'city', 'cash', 'fresh']
+  ['query', 'make', 'category', 'model', 'yearFrom', 'yearTo', 'transmission', 'fuel', 'mileageMin', 'mileageMax', 'valueMin', 'valueMax', 'city', 'cash', 'cashMin', 'cashMax', 'fresh']
     .forEach((key) => { f[key] = String(data.get(key) || '').trim(); });
+  // Amount only applies to the add/ask cash directions.
+  if (f.cash !== 'add' && f.cash !== 'ask') { f.cashMin = ''; f.cashMax = ''; }
   f.onlyMatches = data.get('onlyMatches') ? '1' : '';
   f.verified = data.get('verified') ? '1' : '';
   if (!f.make || f.make !== currentFilters.make) f.makeId = '';
@@ -997,11 +1038,13 @@ function setActiveComboOption(list, index) {
 function renderComboList(combo, items) {
   const list = combo.querySelector('.combo-list');
   combo.__comboItems = items;
+  const isMakeCombo = combo.dataset.combo === 'make';
   list.innerHTML = items.length
     ? items.map((it, index) => {
       const type = it.type || 'model';
       const count = type === 'group' && Array.isArray(it.children) ? `<span class="combo-option-meta">${it.children.length} მოდელი</span>` : '';
-      return `<li class="combo-option combo-option--${type}" role="option" data-index="${index}" data-name="${escapeHtml(it.name)}" data-id="${escapeHtml(it.id)}"><span>${escapeHtml(it.label || it.name)}</span>${count}</li>`;
+      const logo = isMakeCombo ? filterMakeLogo(it.name) : '';
+      return `<li class="combo-option combo-option--${type}${isMakeCombo ? ' combo-option--make' : ''}" role="option" data-index="${index}" data-name="${escapeHtml(it.name)}" data-id="${escapeHtml(it.id)}"><span class="combo-option-label">${logo}${escapeHtml(it.label || it.name)}</span>${count}</li>`;
     }).join('')
     : '<li class="combo-empty">ვერ მოიძებნა</li>';
   setComboOpen(combo, true);
@@ -1310,9 +1353,24 @@ function bindEvents() {
 
   
   form?.addEventListener('change', (event) => {
-    if (event.target.classList.contains('combo-input')) return; 
+    if (event.target.classList.contains('combo-input')) return;
     applyFormFilters(form);
   });
+
+  // Reveal the amount inputs only for the "adds / asks money" directions.
+  const cashSelect = form?.querySelector('[name="cash"]');
+  cashSelect?.addEventListener('change', () => {
+    const field = document.querySelector('#filter-cash-amount');
+    if (field) field.hidden = !(cashSelect.value === 'add' || cashSelect.value === 'ask');
+  });
+
+  // Keep the ₾/$ tag and the amount conversion in sync with the header toggle.
+  if (typeof onCurrencyChange === 'function') {
+    onCurrencyChange((cur) => {
+      document.querySelectorAll('[data-cash-cur]').forEach((el) => { el.textContent = cur === 'USD' ? '$' : '₾'; });
+      applyFormFilters(form);
+    });
+  }
 
   let queryTimer = null;
   form?.querySelector('[name="query"]')?.addEventListener('input', () => {

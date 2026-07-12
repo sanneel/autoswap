@@ -1,9 +1,9 @@
 /* ===================================================================
-   AutoSwap — shared module (window.AutoSwap)
+   AutoSwap, shared module (window.AutoSwap)
    Used by both the landing (app.js) and the cars product page (cars.js).
    Holds: assets, icons, Header/Footer markup, label maps + mappers,
    the Supabase read path, and a feed-shaped demo dataset.
-   No framework — plain script, exposed on window.AutoSwap.
+   No framework, plain script, exposed on window.AutoSwap.
 =================================================================== */
 (function () {
   const assets = {
@@ -150,7 +150,7 @@
 
   // Maps a public_vehicle_feed row (also the shape of DEMO_FEED) to a uniform
   // card object carrying BOTH display strings and raw values for filtering.
-  // Bare "any car" labels carry zero swap intent — strip them so such
+  // Bare "any car" labels carry zero swap intent, strip them so such
   // listings fall into the open-to-offers category instead of faking a want.
   // Qualified wants like "ნებისმიერი SUV" are real intent and stay.
   function isAnyCarLabel(label) {
@@ -199,7 +199,7 @@
       city: row.city || '',
 
       // Structured wants. Listings with no targets are honestly categorized
-      // as "open to offers" — they must never pretend to want "any car".
+      // as "open to offers", they must never pretend to want "any car".
       wantsList: labels,
       openToOffers: labels.length === 0,
       wants: labels.length ? labels.join(' / ') : 'ღიაა შემოთავაზებებისთვის',
@@ -239,7 +239,7 @@
   function setMyCar(car) {
     try {
       window.localStorage.setItem(MY_CAR_KEY, JSON.stringify(car));
-    } catch (_err) { /* private mode — context just won't persist */ }
+    } catch (_err) { /* private mode, context just won't persist */ }
     document.dispatchEvent(new CustomEvent('autoswap:mycar'));
   }
 
@@ -273,9 +273,9 @@
     return false;
   }
 
-  // 'mutual'  — they want your car AND you want theirs.
-  // 'reverse' — they want your car.
-  // ''        — no compatibility signal.
+  // 'mutual' , they want your car AND you want theirs.
+  // 'reverse', they want your car.
+  // ''       , no compatibility signal.
   // Open-to-offers listings never claim to want your car.
   function matchLevel(car, myCar) {
     if (!myCar || !myCar.make || !Array.isArray(car.wantsList) || !car.wantsList.length) return '';
@@ -291,7 +291,7 @@
     // No default: pages without a matching nav item (landing, login, …)
     // render the nav with nothing highlighted.
     const active = options.active || '';
-    // "Add your car" moved from the nav into the CTA — it is the conversion
+    // "Add your car" moved from the nav into the CTA, it is the conversion
     // action, not a navigation item.
     const nav = [
       { id: 'listings', label: 'გაცვლები', href: 'cars.html' },
@@ -412,7 +412,7 @@
   const sbClient = createClient();
 
   // ---- Tiny TTL cache (sessionStorage) -------------------------------------
-  // The frontend is a static site talking straight to Supabase — there is no
+  // The frontend is a static site talking straight to Supabase, there is no
   // server runtime to host Redis, so hot read paths (catalog, feed) are cached
   // per-tab instead. Writers call cacheBust() to invalidate.
   const CACHE_PREFIX = 'as:cache:';
@@ -438,7 +438,7 @@
         CACHE_PREFIX + key,
         JSON.stringify({ v: value, exp: Date.now() + ttlMs }),
       );
-    } catch (_err) { /* quota/private mode — just skip caching */ }
+    } catch (_err) { /* quota/private mode, just skip caching */ }
   }
 
   function cacheBust(prefix) {
@@ -471,7 +471,7 @@
 
   // ---- Auth state (one source of truth) --------------------------------------
   // Sign-in paths sharing this state: phone OTP (header modal + login.html)
-  // and Google OAuth. Email registration is intentionally removed — the
+  // and Google OAuth. Email registration is intentionally removed, the
   // phone number is the primary identity; OAuth users are required to attach
   // a number afterwards (openPhoneRequiredModal). Supabase Auth issues the
   // OTP code, stores only its hash, expires it, rate-limits requests, and
@@ -505,7 +505,7 @@
   }
 
   // Resolves once the initial session lookup has finished. Returns the
-  // Supabase user (never the local demo user — gated pages need a real JWT).
+  // Supabase user (never the local demo user, gated pages need a real JWT).
   const authReady = (async () => {
     if (!sbClient) {
       authUser = demoAuthUser();
@@ -531,11 +531,11 @@
     return session ? session.user : null;
   })();
 
-  // Google OAuth — redirects away and back; Supabase restores the
+  // Google OAuth, redirects away and back; Supabase restores the
   // session on return. Configure the provider in the Supabase dashboard
   // (Authentication → Providers) and allow the site URL as a redirect.
   async function signInWithProvider(provider) {
-    if (!sbClient) return { error: 'დემო რეჟიმი — Google-ით შესვლა მოითხოვს Supabase-ის კონფიგურაციას.' };
+    if (!sbClient) return { error: 'დემო რეჟიმი, Google-ით შესვლა მოითხოვს Supabase-ის კონფიგურაციას.' };
     const { error } = await sbClient.auth.signInWithOAuth({
       provider,
       options: { redirectTo: window.location.href.split('#')[0] },
@@ -598,7 +598,7 @@
   });
 
   // Returns mapped listings on success (possibly empty), or null when Supabase
-  // is not configured / the request failed — null means "keep the demo data".
+  // is not configured / the request failed, null means "keep the demo data".
   async function fetchFeed(limit = 48) {
     if (!sbClient) return null;
 
@@ -665,7 +665,7 @@
     return mapFeedRow(data);
   }
 
-  // This vehicle's own photos only — gallery thumbnails must never borrow
+  // This vehicle's own photos only, gallery thumbnails must never borrow
   // images from other listings or shared assets.
   async function fetchVehiclePhotos(vehicleId) {
     if (!sbClient || !vehicleId) return [];
@@ -731,7 +731,7 @@
     console.warn(`AutoSwap: ${kind} catalog query failed; using bundled fallback.`, error.message || error);
   }
 
-  // Catalog reads are cached for 10 minutes per (term, make) — RLS already
+  // Catalog reads are cached for 10 minutes per (term, make), RLS already
   // filters out deactivated makes/models server-side.
   const CATALOG_TTL = 10 * 60 * 1000;
 
@@ -819,7 +819,7 @@
     return { overlay, close };
   }
 
-  // Quick "my car" capture — the viewer's half of the trade. Local-only for
+  // Quick "my car" capture, the viewer's half of the trade. Local-only for
   // now; the full listing flow on sell.html replaces this after auth lands.
   function openMyCarModal() {
     const myCar = getMyCar() || {};
@@ -849,7 +849,7 @@
               <input type="text" name="wants" value="${escapeAttr(wantsValue)}" placeholder="მაგ: BMW X5, Audi Q7">
             </label>
           </div>
-          <p class="mycar-note">ეს მხოლოდ კატალოგის მორგებაა — სრული განცხადებისთვის <a href="sell.html">დაამატე ფოტოებით</a>.</p>
+          <p class="mycar-note">ეს მხოლოდ კატალოგის მორგებაა, სრული განცხადებისთვის <a href="sell.html">დაამატე ფოტოებით</a>.</p>
           <div class="offer-actions">
             ${myCar.make ? '<button type="button" class="btn btn-ghost" id="mycar-clear">წაშლა</button>' : '<button type="button" class="btn btn-ghost" data-close>გაუქმება</button>'}
             <button type="submit" class="btn btn-primary">შენახვა</button>
@@ -947,7 +947,7 @@
         <div class="modal-body">
           <p class="modal-eyebrow">გაცვლის შეთავაზება</p>
           <h2 class="modal-title" id="offer-title">ჯერ შენი განცხადება გვჭირდება</h2>
-          <p class="offer-gate-text">შეთავაზებაში შენი აქტიური მანქანა მონაწილეობს — დაამატე განცხადება და მერე შესთავაზე ${escapeAttr(title)}-ის მფლობელს.</p>
+          <p class="offer-gate-text">შეთავაზებაში შენი აქტიური მანქანა მონაწილეობს, დაამატე განცხადება და მერე შესთავაზე ${escapeAttr(title)}-ის მფლობელს.</p>
           <div class="offer-actions">
             <button type="button" class="btn btn-ghost" data-close>გაუქმება</button>
             <a class="btn btn-primary" href="sell.html">დაამატე განცხადება</a>
@@ -1021,7 +1021,7 @@
         if (String(error.code) === '23505') {
           toast('ამ წყვილზე უკვე გაქვს მოლოდინში მყოფი შეთავაზება', 'error');
         } else {
-          toast('შეთავაზება ვერ გაიგზავნა — სცადე თავიდან', 'error');
+          toast('შეთავაზება ვერ გაიგზავნა, სცადე თავიდან', 'error');
           console.error('AutoSwap: offer insert failed', error.message);
         }
         return;
@@ -1042,10 +1042,10 @@
 
   function openOfferModal(car) {
     // Live listing: real offer when signed in, login gate when not.
-    // The local demo user has no JWT, so RLS would reject the insert — gate it.
+    // The local demo user has no JWT, so RLS would reject the insert, gate it.
     if (sbClient && car && isUuid(car.id)) {
       if (!authUser || authUser.demo) {
-        openLoginGateModal('შეთავაზების გასაგზავნად შედი ერთჯერადი კოდით — ისე, რომ მფლობელმა იცოდეს ვინ სთავაზობს.');
+        openLoginGateModal('შეთავაზების გასაგზავნად შედი ერთჯერადი კოდით, ისე, რომ მფლობელმა იცოდეს ვინ სთავაზობს.');
         return;
       }
       openRealOfferModal(car);
@@ -1055,14 +1055,14 @@
     const title = `${car && car.make ? car.make : ''} ${car && car.model ? car.model : ''}`.trim() || 'ავტომობილი';
     const myCar = getMyCar();
 
-    // No car = no trade. An offer is half a deal — never let users send
+    // No car = no trade. An offer is half a deal, never let users send
     // an empty one; convert the moment into adding their car instead.
     if (!myCar) {
       buildModal(`
         <div class="modal-body">
           <p class="modal-eyebrow">გაცვლის შეთავაზება</p>
           <h2 class="modal-title" id="offer-title">ჯერ შენი მანქანა გვჭირდება</h2>
-          <p class="offer-gate-text">შეთავაზება გაცვლის ნახევარია — ${escapeAttr(title)}-ის მფლობელმა უნდა ნახოს, რას სთავაზობ სანაცვლოდ.</p>
+          <p class="offer-gate-text">შეთავაზება გაცვლის ნახევარია, ${escapeAttr(title)}-ის მფლობელმა უნდა ნახოს, რას სთავაზობ სანაცვლოდ.</p>
           <div class="offer-actions">
             <a class="btn btn-ghost" href="sell.html">სრული განცხადება</a>
             <button type="button" class="btn btn-primary" id="offer-add-mycar">მიუთითე შენი მანქანა</button>
@@ -1125,7 +1125,7 @@
           <span class="offer-success-icon">${icons.check}</span>
           <h2 class="modal-title">შეთავაზება გაიგზავნა</h2>
           <p>${escapeAttr(title)}-ის მფლობელი ნახავს შენს ${escapeAttr(myLabel)}-ს და პირობებს. ნახვისთანავე და პასუხისთანავე შეგატყობინებთ.</p>
-          <p class="offer-demo-note">დემო რეჟიმი — რეალური გაგზავნა ჩაირთვება ანგარიშის დადასტურების შემდეგ.</p>
+          <p class="offer-demo-note">დემო რეჟიმი, რეალური გაგზავნა ჩაირთვება ანგარიშის დადასტურების შემდეგ.</p>
           <button type="button" class="btn btn-primary" data-close>გასაგებია</button>
         </div>
       `;
@@ -1171,7 +1171,7 @@
     // Real sessions link to the account hub; the local demo user has no
     // server-side rows to show there.
     const display = authDisplayName(authUser);
-    // Uppercase only Latin initials — Georgian script has no everyday
+    // Uppercase only Latin initials, Georgian script has no everyday
     // uppercase, and Mtavruli forms look off in an avatar.
     const first = display.trim().charAt(0);
     const initial = /[a-z]/.test(first) ? first.toUpperCase() : first;
@@ -1197,7 +1197,7 @@
       slot.dataset.authState = state;
       slot.innerHTML = authSlotHTML();
     });
-    // Notifications are meaningless before login — hide the bell for guests.
+    // Notifications are meaningless before login, hide the bell for guests.
     document.querySelectorAll('.notify-wrap').forEach((wrap) => {
       wrap.hidden = !authUser;
     });
@@ -1211,7 +1211,7 @@
     return null;
   }
 
-  // Direct Supabase send — last-resort fallback if the rate-limited Edge
+  // Direct Supabase send, last-resort fallback if the rate-limited Edge
   // Function is not reachable. Carries no IP-based protection; the deployed
   // `request-otp` function is the intended path.
   async function sendOtpDirect(phone) {
@@ -1221,16 +1221,16 @@
     if (/provider|not enabled|disabled|unsupported/i.test(message)) return { demo: true };
     // Raw fetch errors ("Failed to fetch") mean nothing to the user.
     if (/failed to fetch|network|load failed/i.test(message)) {
-      return { error: 'კავშირი ვერ შედგა — შეამოწმე ინტერნეტი და სცადე თავიდან.' };
+      return { error: 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი და სცადე თავიდან.' };
     }
     return { error: `კოდი ვერ გაიგზავნა: ${message}` };
   }
 
   // → { demo: boolean } on success, { error: string } on failure.
-  // The account is auto-created on first login — one flow for everyone.
+  // The account is auto-created on first login, one flow for everyone.
   // Routes through the `request-otp` Edge Function so the server-side rate
   // limiter (per-IP burst, per-phone bombing, distributed velocity) is the
-  // authority — a check in this client could just be skipped.
+  // authority, a check in this client could just be skipped.
   async function requestOtp(phone) {
     if (!sbClient) return { demo: true };
     const base = String(window.AUTO_SWAP_SUPABASE_URL || '').trim().replace(/\/$/, '');
@@ -1243,7 +1243,7 @@
         body: JSON.stringify({ phone }),
       });
     } catch (_err) {
-      // Function unreachable (offline / not deployed yet) — keep auth working.
+      // Function unreachable (offline / not deployed yet), keep auth working.
       return sendOtpDirect(phone);
     }
     if (res.status === 404) return sendOtpDirect(phone);
@@ -1262,7 +1262,7 @@
   // → { user } on success (header updates via auth listener), { error } on failure.
   async function confirmOtp(phone, code, isDemo) {
     if (isDemo) {
-      if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი — დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
+      if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი, დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
       // A returning demo user keeps the name they already gave.
       const existing = getDemoUser();
       const demoUser = { name: (existing && existing.phone === phone && existing.name) || '', phone };
@@ -1362,7 +1362,7 @@
 
   async function confirmPhoneAttach(phone, code, isDemo) {
     if (isDemo) {
-      if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი — დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
+      if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი, დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
       const { error } = await sbClient.auth.updateUser({ data: { phone } });
       return error ? { error: `ნომერი ვერ შეინახა: ${error.message}` } : {};
     }
@@ -1374,7 +1374,7 @@
     const { overlay, close } = buildModal(`
       <div class="modal-body auth-modal">
         <h2 class="modal-title" id="phone-req-title">დაამატე ტელეფონის ნომერი</h2>
-        <p class="auth-sub">ნომერი სავალდებულოა — გაცვლის შეთავაზებები და კონტაქტი ნომერზე დგას.</p>
+        <p class="auth-sub">ნომერი სავალდებულოა, გაცვლის შეთავაზებები და კონტაქტი ნომერზე დგას.</p>
         <div id="phone-req-step">
           <form class="offer-form" id="phone-req-form" novalidate>
             <label class="field">
@@ -1413,7 +1413,7 @@
         return;
       }
       step.innerHTML = `
-        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${result.demo ? ` დემო რეჟიმი — შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
+        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${result.demo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
         <form class="offer-form" id="phone-req-otp" novalidate>
           <label class="field">
             <span>SMS კოდი</span>
@@ -1450,7 +1450,7 @@
 
   // One nudge per page load: an OAuth account without a number gets the
   // required-phone modal until it attaches one; a verified account without
-  // a name gets the name popup (dismissable — re-asked next session).
+  // a name gets the name popup (dismissable, re-asked next session).
   const NAME_LATER_KEY = 'autoswap.nameLater';
 
   function maybeRequireProfile() {
@@ -1488,7 +1488,7 @@
         <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">კოდის გაგზავნა</button>
       </form>
       <p class="auth-note">პირველი შესვლისას ანგარიში ავტომატურად შეიქმნება.</p>
-      <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით — SMS-ის გარეშე</button>
+      <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით, SMS-ის გარეშე</button>
     `;
   }
 
@@ -1513,7 +1513,7 @@
       // Try-it-out account: same local demo path the OTP fallback uses, no SMS.
       step.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
         await confirmOtp('+995555000000', DEMO_OTP_CODE, true);
-        toast('დემო ანგარიშით შეხვედი — ტესტირებისთვის');
+        toast('დემო ანგარიშით შეხვედი, ტესტირებისთვის');
         close();
       });
 
@@ -1552,7 +1552,7 @@
 
     function bindOtpStep(phone, isDemo) {
       step.innerHTML = `
-        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი — შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
+        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
         <form class="offer-form" id="otp-form" novalidate>
           <label class="field">
             <span>SMS კოდი</span>
@@ -1591,10 +1591,10 @@
       step.querySelector('.otp-input').focus();
     }
 
-    // Asked once, right after the number is verified — never before.
+    // Asked once, right after the number is verified, never before.
     function bindNameStep() {
       step.innerHTML = `
-        <p class="auth-sub">ნომერი დადასტურდა — როგორ მოგმართოთ?</p>
+        <p class="auth-sub">ნომერი დადასტურდა, როგორ მოგმართოთ?</p>
         <form class="offer-form" id="name-form" novalidate>
           <label class="field">
             <span>სახელი</span>
@@ -1727,7 +1727,7 @@
         try { localStorage.setItem(USD_RATE_CACHE_KEY, JSON.stringify({ rate: gelPerUsd, ts: Date.now() })); } catch (_err) { /* private mode */ }
         if (currency === 'USD') applyCurrency(document.body); // re-render with the live rate
       }
-    } catch (_err) { /* offline — fallback rate stays */ }
+    } catch (_err) { /* offline, fallback rate stays */ }
   }
 
   function gelToUsdText(match, amount) {
@@ -1772,11 +1772,17 @@
     });
   }
 
+  const currencySubs = [];
+  function onCurrencyChange(cb) {
+    if (typeof cb === 'function') currencySubs.push(cb);
+  }
+
   function setCurrency(next) {
     if (next !== 'GEL' && next !== 'USD') return;
     currency = next;
     try { localStorage.setItem(CURRENCY_KEY, next); } catch (_err) { /* private mode */ }
     applyCurrency(document.body);
+    currencySubs.forEach((cb) => { try { cb(currency, gelPerUsd); } catch (_err) { /* ignore */ } });
   }
 
   loadUsdRate();
@@ -2024,7 +2030,7 @@
     aselectClose();
   });
 
-  // Pages render into #app with innerHTML and modals mount later — a single
+  // Pages render into #app with innerHTML and modals mount later, a single
   // debounced observer keeps selects enhanced, money converted, and the
   // notification badge alive without per-page wiring. (Text conversion emits
   // characterData mutations only, so watching childList cannot loop.)
@@ -2097,5 +2103,9 @@
     daysSince,
     DEMO_FEED,
     DEMO_CARS,
+    getCurrency: () => currency,
+    getUsdRate: () => gelPerUsd,
+    setCurrency,
+    onCurrencyChange,
   };
 })();

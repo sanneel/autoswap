@@ -36,7 +36,7 @@ function sellSection(index, bodyHTML, extraClass = '') {
   return `
     <section class="sell-section ${extraClass}" id="sell-section-${index + 1}">
       <div class="sell-section-head">
-        <h2><span class="sell-section-num">0${index + 1}</span>${s.title}</h2>
+        <h2>${s.title}</h2>
         <span class="sell-section-badge">${s.icon}</span>
       </div>
       ${bodyHTML}
@@ -143,7 +143,6 @@ function HeroSteps() {
     <ol class="sell-steps" aria-hidden="true">
       ${SECTIONS.map((s, i) => `
         <li class="sell-step-pip${i === 0 ? ' is-active' : ''}">
-          <span class="sell-step-pip-num">${i + 1}</span>
           <span class="sell-step-pip-label">${s.title}</span>
         </li>`).join('')}
     </ol>
@@ -157,7 +156,7 @@ function isLiteMode() {
 function ModeBar() {
   return `
     <div class="sell-mode-bar" aria-label="ფორმის ნაწილები">
-      ${SECTIONS.map((s, i) => `<a class="sell-mode-chip${i === 0 ? ' is-active' : ''}" href="#sell-section-${i + 1}"><span>0${i + 1}</span>${s.title}</a>`).join('')}
+      ${SECTIONS.map((s, i) => `<a class="sell-mode-chip${i === 0 ? ' is-active' : ''}" href="#sell-section-${i + 1}">${s.title}</a>`).join('')}
     </div>
   `;
 }
@@ -1235,7 +1234,7 @@ function renderLocked() {
   bindCashAmount(document.querySelector('#sell-form'));
   bindCounter(document.querySelector('#sell-form'));
   // The overlay blocks the pointer, but keyboard focus could still reach the
-  // form behind it — and an Enter there did a native GET submit that dumped
+  // form behind it, and an Enter there did a native GET submit that dumped
   // the whole form into the URL. inert + a guarded submit close both holes.
   const lockedForm = document.querySelector('#sell-form');
   lockedForm?.setAttribute('inert', '');

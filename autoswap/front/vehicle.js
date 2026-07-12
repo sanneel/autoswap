@@ -1,6 +1,6 @@
 
 const { Header, Footer, icons, DEMO_CARS, fetchVehicleById, fetchVehiclePhotos, escapeAttr } = window.AutoSwap;
-// Escapes & < > " — every user-controlled listing string goes through this
+// Escapes & < > ", every user-controlled listing string goes through this
 // before being placed into innerHTML.
 const esc = escapeAttr;
 

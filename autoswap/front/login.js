@@ -1,7 +1,7 @@
-/* AutoSwap — login / registration page.
+/* AutoSwap, login / registration page.
    Sign-in methods: Google OAuth, or Georgian phone number with
    a one-time SMS code (account auto-created on first login). Email auth is
-   intentionally removed — the number is the marketplace identity, and OAuth
+   intentionally removed, the number is the marketplace identity, and OAuth
    users are asked to attach one right after (shared.js maybeRequirePhone).
    ?next=<page> sends the user back where they came from. */
 const {
@@ -36,7 +36,7 @@ function PhoneStep(phone, error) {
   return Shell(`
     <span class="auth-icon">${icons.swap}</span>
     <h1>შესვლა ან რეგისტრაცია</h1>
-    <p class="auth-sub">გააგრძელე Google-ით, ან შეიყვანე ნომერი — გამოგიგზავნით ერთჯერად SMS კოდს.</p>
+    <p class="auth-sub">გააგრძელე Google-ით, ან შეიყვანე ნომერი, გამოგიგზავნით ერთჯერად SMS კოდს.</p>
     <div class="auth-providers">
       <button type="button" class="btn-provider btn-google" data-provider="google">${icons.google}<span>Google-ით გაგრძელება</span></button>
     </div>
@@ -51,7 +51,7 @@ function PhoneStep(phone, error) {
       <button class="btn btn-primary auth-submit" type="submit">გამომიგზავნე კოდი</button>
     </form>
     <p class="auth-note">პირველი შესვლისას ანგარიში ავტომატურად შეიქმნება.</p>
-    <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით — SMS-ის გარეშე</button>
+    <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით, SMS-ის გარეშე</button>
   `);
 }
 
@@ -59,7 +59,7 @@ function CodeStep(phone, isDemo, error) {
   return Shell(`
     <span class="auth-icon">${icons.check}</span>
     <h1>შეიყვანე კოდი</h1>
-    <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი — შეიყვანე კოდი <strong>${AUTH_DEMO_CODE}</strong>.` : ' კოდი მოქმედებს 5 წუთის განმავლობაში.'}</p>
+    <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${AUTH_DEMO_CODE}</strong>.` : ' კოდი მოქმედებს 5 წუთის განმავლობაში.'}</p>
     ${error ? `<p class="auth-error" role="alert">${escapeAttr(error)}</p>` : ''}
     <form class="auth-form" id="code-form" novalidate>
       <label class="field">
@@ -83,12 +83,12 @@ let resendTimer = null;
 function friendlyError(message) {
   const msg = String(message || '');
   if (/rate limit|too many|security purposes/i.test(msg)) {
-    return 'ძალიან ბევრი მცდელობა — დაიცადე ცოტა ხანი და სცადე თავიდან.';
+    return 'ძალიან ბევრი მცდელობა, დაიცადე ცოტა ხანი და სცადე თავიდან.';
   }
   if (/expired|invalid/i.test(msg)) {
-    return 'კოდი არასწორია ან ვადა გაუვიდა — სცადე თავიდან.';
+    return 'კოდი არასწორია ან ვადა გაუვიდა, სცადე თავიდან.';
   }
-  return msg || 'რაღაც შეცდომა მოხდა — სცადე თავიდან.';
+  return msg || 'რაღაც შეცდომა მოხდა, სცადე თავიდან.';
 }
 
 function startResendCooldown() {
@@ -130,7 +130,7 @@ function renderPhoneStep(error) {
   // Try-it-out account: local demo session, no SMS round-trip.
   document.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
     await confirmPhoneOtp('+995555000000', AUTH_DEMO_CODE, true);
-    toast('დემო ანგარიშით შეხვედი — ტესტირებისთვის');
+    toast('დემო ანგარიშით შეხვედი, ტესტირებისთვის');
     window.location.href = 'index.html';
   });
   const form = document.querySelector('#phone-form');
@@ -178,7 +178,7 @@ function renderCodeStep(error) {
       return;
     }
     toast('შესვლა წარმატებულია');
-    // Demo sessions can browse but not write — gated pages would bounce
+    // Demo sessions can browse but not write, gated pages would bounce
     // them straight back here, so land on the catalog instead.
     window.location.replace(currentIsDemo ? 'cars.html' : nextTarget());
   });

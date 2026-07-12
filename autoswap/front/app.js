@@ -1,6 +1,21 @@
 
-const { assets, icons, Header, Footer, DEMO_CARS, escapeAttr } = window.AutoSwap;
-// Short alias — every user-controlled string rendered into innerHTML goes
+const { assets, icons, Header, Footer, DEMO_CARS, escapeAttr, getCurrency, getUsdRate, onCurrencyChange } = window.AutoSwap;
+
+// Hero cash slider range depends on the display currency.
+function heroSliderCfg() {
+  return getCurrency() === 'USD'
+    ? { max: 10000, step: 500, sym: '$' }
+    : { max: 25000, step: 1000, sym: '₾' };
+}
+function formatSliderDiff(raw) {
+  const value = Number(raw) || 0;
+  const sym = getCurrency() === 'USD' ? '$' : '₾';
+  const amount = Math.abs(value).toLocaleString('en-US');
+  if (value > 0) return `ვამატებ ${sym}${amount}`;
+  if (value < 0) return `ვითხოვ ${sym}${amount}`;
+  return 'თანხის გარეშე';
+}
+// Short alias, every user-controlled string rendered into innerHTML goes
 // through this. Escapes & < > " so listing data can't inject markup.
 const esc = escapeAttr;
 
@@ -321,7 +336,7 @@ function Hero() {
   `;
 }
 
-// Live marketplace numbers under the search bar — real counts only, no
+// Live marketplace numbers under the search bar, real counts only, no
 // vanity metrics. Recomputed when the Supabase feed arrives.
 function heroProofText(cars) {
   const active = cars.length;
@@ -370,8 +385,12 @@ function SearchBar() {
             <option value="ქუთაისი">ქუთაისი</option>
           </select>
         </label>
-        <input name="cashSlider" class="cash-slider garage-cash-slider" type="range" min="-5000" max="5000" step="500" value="0" aria-label="თანხის სხვაობა">
-        <span class="slider-value garage-slider-value" id="slider-value">0 ₾</span>
+        <div class="hero-cash-slider">
+          <span class="slider-edge">ვითხოვ</span>
+          <input name="cashSlider" class="cash-slider garage-cash-slider" type="range" min="-${heroSliderCfg().max}" max="${heroSliderCfg().max}" step="${heroSliderCfg().step}" value="0" aria-label="თანხის სხვაობა">
+          <span class="slider-edge">ვამატებ</span>
+          <output class="slider-value garage-slider-value" id="slider-value">${formatSliderDiff(0)}</output>
+        </div>
         <button class="btn btn-primary btn-liquid search-submit" type="submit">${icons.search} ძებნა</button>
       </div>
     </form>
@@ -476,7 +495,7 @@ function bindHavePicker(form) {
     modelInput.value = vehicle?.model || '';
     picker.classList.toggle('has-selection', Boolean(make));
     if (selectedLogo) {
-      // Only show the tile when we have a real logo — otherwise it duplicates
+      // Only show the tile when we have a real logo, otherwise it duplicates
       // the default car glyph already sitting in the field.
       const showTile = Boolean(make) && hasBrandLogo(make);
       selectedLogo.hidden = !showTile;
@@ -607,7 +626,7 @@ function bindBrandPicker(form) {
     hidden.value = make || '';
     picker.classList.toggle('has-selection', Boolean(make));
     if (selectedLogo) {
-      // Only show the tile when we have a real logo — otherwise it duplicates
+      // Only show the tile when we have a real logo, otherwise it duplicates
       // the default car glyph already sitting in the field.
       const showTile = Boolean(make) && hasBrandLogo(make);
       selectedLogo.hidden = !showTile;
@@ -820,7 +839,7 @@ function ListingsSection(cars = activeListings) {
 
 // The one thing a first-time visitor must leave with: how a swap actually
 // works. A real 3-step sequence (list → match → agree), so the numbers carry
-// information — this is not decorative section scaffolding.
+// information, this is not decorative section scaffolding.
 function HowItWorks() {
   return `
     <section class="how-strip" aria-labelledby="how-title">
@@ -830,21 +849,21 @@ function HowItWorks() {
         </div>
         <ol class="how-steps">
           <li class="how-step">
-            <span class="how-num" aria-hidden="true">1</span>
+            <span class="how-icon" aria-hidden="true">${icons.car}</span>
             <div class="how-copy">
               <strong>დაამატე შენი მანქანა</strong>
-              <p>ორ წუთში — ფოტოები, სასურველი სანაცვლო მანქანა და თანხის სხვაობა.</p>
+              <p>ორ წუთში, ფოტოები, სასურველი სანაცვლო მანქანა და თანხის სხვაობა.</p>
             </div>
           </li>
           <li class="how-step">
-            <span class="how-num" aria-hidden="true">2</span>
+            <span class="how-icon" aria-hidden="true">${icons.search}</span>
             <div class="how-copy">
               <strong>ნახე ვინ ეძებს მას</strong>
               <p>მატჩი გაჩვენებს მფლობელებს, რომლებსაც სწორედ შენი მანქანა უნდათ.</p>
             </div>
           </li>
           <li class="how-step">
-            <span class="how-num" aria-hidden="true">3</span>
+            <span class="how-icon" aria-hidden="true">${icons.swap}</span>
             <div class="how-copy">
               <strong>შეთანხმდი და გაცვალე</strong>
               <p>პირობები ბარათზევე ჩანს, ამიტომ ზარი მხოლოდ საქმეზეა.</p>
@@ -860,18 +879,11 @@ function ClosingStrip() {
   return `
     <section class="closing-strip">
       <div class="container closing-strip-inner">
-        <p>შენი მანქანა შეიძლება უკვე ვიღაცას უნდა — განცხადება ორ წუთში ემატება.</p>
+        <p>შენი მანქანა შეიძლება უკვე ვიღაცას უნდა, განცხადება ორ წუთში ემატება.</p>
         <a class="btn btn-accent btn-liquid" href="sell.html">${icons.plus}<span>დაამატე მანქანა</span></a>
       </div>
     </section>
   `;
-}
-
-// Render a car make's logo image from the CDN (387 brands available)
-function brandLogo(make) {
-  const url = window.AutoSwap.getLogoUrl(make);
-  if (!url) return make;
-  return `<img src="${url}" alt="${make}" class="brand-logo" loading="lazy" onerror="this.style.display='none'">`;
 }
 
 function BrowseStrip() {
@@ -899,7 +911,7 @@ function BrowseStrip() {
         <button class="rail-arrow rail-arrow--prev" type="button" data-rail-prev aria-label="წინა">${icons.arrowRight}</button>
         <div class="browse-pills" data-drag-scroll>
           ${brands.map((brand) => `
-            <a class="brand-chip" href="cars.html?make=${encodeURIComponent(brand.make)}" aria-label="${brand.label || brand.make} — გაცვლები">
+            <a class="brand-chip" href="cars.html?make=${encodeURIComponent(brand.make)}" aria-label="${brand.label || brand.make}, გაცვლები">
               <span class="brand-mark">${brandLogo(brand.make)}</span>
               <span class="brand-chip-text"><strong>${brand.label || brand.make}</strong></span>
             </a>
@@ -980,7 +992,7 @@ function bindDragRails(root = document) {
     });
   });
 
-  // Scroll arrows are dead controls when everything already fits — hide them.
+  // Scroll arrows are dead controls when everything already fits, hide them.
   const syncRailArrows = () => {
     root.querySelectorAll('[data-drag-scroll]').forEach((rail) => {
       rail.parentElement?.classList.toggle('rail-no-overflow', rail.scrollWidth <= rail.clientWidth + 1);
@@ -995,18 +1007,23 @@ function bindInteractions() {
   const slider = document.querySelector('.cash-slider');
   const sliderValue = document.querySelector('#slider-value');
 
-  // Explicit direction labels: a bare "+2,000 ₾" reads two opposite ways.
-  const formatDiff = (raw) => {
-    const value = Number(raw) || 0;
-    if (value > 0) return `შენ ამატებ ${value.toLocaleString('en-US')} ₾`;
-    if (value < 0) return `შენ იღებ ${Math.abs(value).toLocaleString('en-US')} ₾`;
-    return 'თანხის გარეშე';
-  };
-
   slider?.addEventListener('input', () => {
-    if (sliderValue) sliderValue.textContent = formatDiff(slider.value);
+    if (sliderValue) sliderValue.textContent = formatSliderDiff(slider.value);
   });
-  if (slider && sliderValue) sliderValue.textContent = formatDiff(slider.value);
+  if (slider && sliderValue) sliderValue.textContent = formatSliderDiff(slider.value);
+
+  // Re-scale the slider range + label when the header currency toggles.
+  if (typeof onCurrencyChange === 'function') {
+    onCurrencyChange(() => {
+      if (!slider) return;
+      const cfg = heroSliderCfg();
+      slider.min = String(-cfg.max);
+      slider.max = String(cfg.max);
+      slider.step = String(cfg.step);
+      slider.value = '0';
+      if (sliderValue) sliderValue.textContent = formatSliderDiff(0);
+    });
+  }
 
   bindHavePicker(form);
   bindBrandPicker(form);
