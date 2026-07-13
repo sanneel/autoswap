@@ -3882,8 +3882,8 @@ p {
 
 .matches-toggle input,
 .filter-check input {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   min-height: 0;
   margin: 0;
   accent-color: var(--deep-green);

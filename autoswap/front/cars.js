@@ -316,7 +316,7 @@ function FilterSidebar() {
       <form class="filters-form${filtersLite ? ' is-lite' : ''}" id="filters-form">
         <div class="filters-head">
           <div class="filters-title-row">
-            <span class="filters-title">${icons.filter} ფილტრები<span class="filters-count" id="apply-count">${getFiltered().length}</span></span>
+            <span class="filters-title">${icons.filter} ფილტრები</span>
             <button type="button" class="filter-lite-toggle${filtersLite ? ' is-on' : ''}" id="filter-lite-toggle" aria-pressed="${filtersLite}" aria-label="მხოლოდ ძირითადი ფილტრები" data-tooltip="მხოლოდ ძირითადი ფილტრები" title="მხოლოდ ძირითადი ფილტრები">
               <span>მარტივი</span>
               <i aria-hidden="true"></i>
@@ -814,8 +814,6 @@ function update() {
 
   const count = document.querySelector('#results-count');
   if (count) count.textContent = String(filtered.length);
-  const applyCount = document.querySelector('#apply-count');
-  if (applyCount) applyCount.textContent = String(filtered.length);
 
   const badge = document.querySelector('#filters-badge');
   if (badge) {
