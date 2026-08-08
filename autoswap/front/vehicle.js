@@ -107,7 +107,10 @@ function pricePosition(car, comparables) {
 
 function PricePositionBar(pos) {
   if (!pos) return '';
-  const labels = { low: 'დაბალი ფასი', mid: 'საშუალო ფასი', high: 'მაღალი ფასი' };
+  // "საშუალო ფასი" tells the reader nothing they can act on — the bar only
+  // earns its space when the price is actually notable in one direction.
+  if (pos.band === 'mid') return '';
+  const labels = { low: 'დაბალი ფასი', high: 'მაღალი ფასი' };
   return `
     <div class="price-pos price-pos--${pos.band}">
       <div class="price-pos-head">

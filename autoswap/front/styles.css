@@ -2223,11 +2223,10 @@ svg {
 .filter-group-head {
   margin: 0;
   color: var(--graphite);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  opacity: 0.55;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .filters-head {
@@ -3833,11 +3832,11 @@ p {
 }
 
 .stat-cell span {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--graphite);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .stat-cell strong {
@@ -11071,11 +11070,11 @@ body {
 /* "მარკები" / "მოდელები" section headers inside the suggestion list */
 .brand-picker-group {
   padding: 8px 8px 3px;
-  color: var(--market-muted);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: var(--graphite);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .brand-picker-logo {
@@ -11951,7 +11950,6 @@ select[data-aselect]:focus-visible,
 }
 
 .price-pos--low .price-pos-label { color: var(--positive, #2e7741); }
-.price-pos--mid .price-pos-label { color: var(--graphite); }
 .price-pos--high .price-pos-label { color: var(--negative, #b23a2e); }
 
 .price-pos-note {
@@ -12140,4 +12138,60 @@ select[data-aselect]:focus-visible,
   .gallery-tools .save-btn:hover {
     transform: none;
   }
+}
+
+/* ─── Label normalization ───────────────────────────────────────────────
+   A tiny uppercase, wide-tracked, muted-gray label was used as default
+   scaffolding across the app. Georgian script has no uppercase, so
+   text-transform did nothing to the words themselves while the tracking
+   loosened them and the muted grey pushed contrast down — noise with no
+   hierarchy gained. Normal case, no tracking, readable ink. */
+.stat-cell span,
+.brand-picker-group,
+.filter-group-head,
+.listing-wants span,
+.wanted-label,
+.car-card-wants span,
+.car-card-value span,
+.offer-trade-side,
+.sell-subgroup-title,
+.swap-plan-item span,
+.offer-side small {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.listing-wants span,
+.wanted-label,
+.car-card-wants span,
+.car-card-value span,
+.offer-trade-side,
+.offer-side small {
+  color: var(--secondary);
+  font-size: 11.5px;
+}
+
+.sell-subgroup-title {
+  color: var(--graphite);
+  font-size: 13px;
+}
+
+/* Label stays black as requested, but must not compete with its own value.
+   Hierarchy now comes from weight and size rather than from greying the
+   label out. */
+.stat-cell span {
+  font-weight: 600;
+}
+
+.stat-cell strong {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--graphite);
+}
+
+/* .detail-panel .stat-cell strong (0,3,0) outranks the bare element rule, so
+   the detail page needs the matching specificity to pick up the value size. */
+.detail-panel .stat-cell strong {
+  font-size: 13px;
+  font-weight: 800;
 }
