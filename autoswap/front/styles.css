@@ -2179,20 +2179,38 @@ svg {
 }
 
 
+/* Two regions: the filter list scrolls, the apply footer is pinned. The
+   panel itself no longer scrolls, so the footer can't drift out of view. */
 .filters {
   position: sticky;
   top: 78px;
   align-self: start;
-  
+  display: flex;
   max-height: calc(100vh - 92px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.filters-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  gap: 18px;
+  align-content: start;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
+  /* Room for the scrollbar so it doesn't sit on top of the fields. */
+  padding-right: 2px;
 }
 
 .filters-form {
-  display: grid;
-  gap: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  min-height: 0;
+  max-height: 100%;
   padding: 16px 16px 0;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -2440,9 +2458,7 @@ svg {
    taller than the viewport, so a static button meant scrolling back down to
    apply. */
 .filters-actions {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
+  flex: 0 0 auto;
   display: grid;
   gap: 8px;
   margin: 0 -16px;
@@ -2450,6 +2466,11 @@ svg {
   background: var(--card-white);
   border-top: 1px solid var(--border);
   border-radius: 0 0 11px 11px;
+}
+
+.filters-search-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.72;
 }
 
 .filters-actions .btn {

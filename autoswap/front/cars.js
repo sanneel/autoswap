@@ -326,6 +326,7 @@ function FilterSidebar() {
           <button type="button" class="filters-close" id="filters-close" aria-label="დახურვა">&times;</button>
         </div>
 
+        <div class="filters-scroll">
         ${MyCarFilterPanel()}
 
         <label class="filter-field">
@@ -418,9 +419,10 @@ function FilterSidebar() {
             <span>დადასტურებული მფლობელი</span>
           </label>
         </section>
+        </div>
 
         <div class="filters-actions">
-          <button type="button" class="btn btn-primary filters-search" id="filters-search">${icons.search} შედეგების ნახვა</button>
+          <button type="button" class="btn btn-primary filters-search" id="filters-search">${icons.search} შედეგების ნახვა <span class="filters-search-count" id="apply-count">(${getFiltered().length})</span></button>
         </div>
       </form>
     </aside>
@@ -820,6 +822,8 @@ function update() {
 
   const count = document.querySelector('#results-count');
   if (count) count.textContent = String(filtered.length);
+  const applyCount = document.querySelector('#apply-count');
+  if (applyCount) applyCount.textContent = `(${filtered.length})`;
 
   const badge = document.querySelector('#filters-badge');
   if (badge) {
