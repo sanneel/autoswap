@@ -30,7 +30,8 @@ Deno.serve(async (req) => {
 
   // Telegram sends the configured secret in this header — reject anything else.
   const secret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
-  if (secret && req.headers.get("x-telegram-bot-api-secret-token") !== secret) {
+  if (!secret) return new Response("Server misconfigured: TELEGRAM_WEBHOOK_SECRET not set", { status: 500 });
+  if (req.headers.get("x-telegram-bot-api-secret-token") !== secret) {
     return new Response("Forbidden", { status: 403 });
   }
 

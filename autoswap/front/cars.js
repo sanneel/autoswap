@@ -498,6 +498,7 @@ function CarRow(car) {
           <img src="${escapeHtml(car.image)}" alt="${name}" loading="lazy">
         </a>
         <button class="save-btn" type="button" aria-label="${name} შენახვა">${icons.heart}</button>
+        ${matchBadge(matchFor(car))}
       </div>
 
       <div class="car-card-body">
@@ -1298,15 +1299,19 @@ function bindDragRails(root = document) {
       moved = false;
       startX = event.clientX;
       startLeft = rail.scrollLeft;
-      rail.classList.add('is-dragging');
-      rail.setPointerCapture?.(event.pointerId);
     });
 
     rail.addEventListener('pointermove', (event) => {
       if (!active) return;
       const delta = event.clientX - startX;
-      if (Math.abs(delta) > 4) moved = true;
-      rail.scrollLeft = startLeft - delta;
+      // Defer capture until real drag begins — capturing on pointerdown
+      // retargets the eventual click to the rail and kills chip link clicks.
+      if (!moved && Math.abs(delta) > 6) {
+        moved = true;
+        rail.classList.add('is-dragging');
+        rail.setPointerCapture?.(event.pointerId);
+      }
+      if (moved) rail.scrollLeft = startLeft - delta;
     });
 
     const stop = (event) => {

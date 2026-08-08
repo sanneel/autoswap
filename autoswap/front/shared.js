@@ -1243,10 +1243,13 @@
         body: JSON.stringify({ phone }),
       });
     } catch (_err) {
-      // Function unreachable (offline / not deployed yet), keep auth working.
-      return sendOtpDirect(phone);
+      return { error: 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი და სცადე თავიდან.' };
     }
-    if (res.status === 404) return sendOtpDirect(phone);
+    if (res.status === 404) {
+      // Edge Function not deployed — surface the problem rather than silently
+      // bypassing rate limiting by calling signInWithOtp directly.
+      return { error: 'SMS სერვისი დროებით მიუწვდომელია. სცადე მოგვიანებით.' };
+    }
     let data = {};
     try { data = await res.json(); } catch (_err) { /* fall through to status check */ }
     if (res.status === 429 || data.blocked) {
