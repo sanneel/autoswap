@@ -148,7 +148,7 @@ seedMyCarFromURL();
 let currentFilters = readFiltersFromURL();
 let pagesShown = 1;
 let currentView = 'list';
-let filtersLite = true;
+let currencySubscribed = false;
 
 const SORT_OPTIONS = [
   { value: 'match', label: 'ჩემი შესაბამისობით', needsCar: true },
@@ -1129,6 +1129,48 @@ async function comboSearch(kind, term) {
   return modelFamilyOptions(models, currentFilters.make, term);
 }
 
+// The combo list is position:fixed so it escapes .filters-scroll's overflow —
+// as an absolutely-positioned child it was being clipped by ~110px, hiding the
+// bottom of every result list. Fixed positioning means the coordinates have to
+// be computed against the control, and refreshed while the sidebar scrolls.
+const COMBO_LIST_MAX_H = 264;
+
+function positionComboList(combo) {
+  const list = combo.querySelector('.combo-list');
+  const control = combo.querySelector('.combo-control');
+  if (!list || !control || list.hidden) return;
+  const r = control.getBoundingClientRect();
+  const gap = 4;
+  const margin = 8;
+  const spaceBelow = window.innerHeight - r.bottom - gap - margin;
+  const spaceAbove = r.top - gap - margin;
+  // Prefer opening downward; flip up only when below is genuinely cramped
+  // and above has more room.
+  const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+  const avail = Math.max(120, Math.min(COMBO_LIST_MAX_H, openUp ? spaceAbove : spaceBelow));
+  list.style.left = `${Math.round(r.left)}px`;
+  list.style.width = `${Math.round(r.width)}px`;
+  list.style.maxHeight = `${Math.round(avail)}px`;
+  if (openUp) {
+    list.style.top = 'auto';
+    list.style.bottom = `${Math.round(window.innerHeight - r.top + gap)}px`;
+  } else {
+    list.style.bottom = 'auto';
+    list.style.top = `${Math.round(r.bottom + gap)}px`;
+  }
+}
+
+function repositionOpenCombos() {
+  document.querySelectorAll('.combo').forEach((combo) => {
+    const list = combo.querySelector('.combo-list');
+    if (list && !list.hidden) positionComboList(combo);
+  });
+}
+
+// Module-level so these attach once, not once per renderAll().
+window.addEventListener('scroll', repositionOpenCombos, true);
+window.addEventListener('resize', repositionOpenCombos);
+
 function setComboOpen(combo, open) {
   const list = combo.querySelector('.combo-list');
   const input = combo.querySelector('.combo-input');
@@ -1136,6 +1178,7 @@ function setComboOpen(combo, open) {
   if (list) list.hidden = !open;
   if (input) input.setAttribute('aria-expanded', String(open));
   if (control) control.setAttribute('aria-expanded', String(open));
+  if (open) positionComboList(combo);
 }
 
 function setActiveComboOption(list, index) {
@@ -1491,6 +1534,40 @@ function applyFormFilters(form) {
   update();
 }
 
+// Open/close live at module scope: renderAll() re-runs bindEvents(), so a
+// document-level Escape handler registered in there would stack up one more
+// listener per render.
+let advLastFocus = null;
+
+function openAdvModal() {
+  const modal = document.querySelector('#adv-modal');
+  if (!modal) return;
+  advLastFocus = document.activeElement;
+  modal.removeAttribute('hidden');
+  document.body.classList.add('adv-open');
+  modal.querySelector('.adv-modal-close')?.focus();
+}
+
+function closeAdvModal() {
+  const modal = document.querySelector('#adv-modal');
+  if (!modal || modal.hasAttribute('hidden')) return;
+  modal.setAttribute('hidden', '');
+  document.body.classList.remove('adv-open');
+  // Return focus to whatever opened it, falling back to the trigger, so
+  // keyboard users are not dumped back at the top of the document.
+  const back = (advLastFocus && document.contains(advLastFocus))
+    ? advLastFocus
+    : document.querySelector('#filters-adv-btn');
+  back?.focus();
+  advLastFocus = null;
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (document.querySelector('#adv-modal')?.hasAttribute('hidden') !== false) return;
+  closeAdvModal();
+});
+
 function bindEvents() {
   const form = document.querySelector('#filters-form');
 
@@ -1509,10 +1586,14 @@ function bindEvents() {
   });
 
   // Keep the ₾/$ tag and the amount conversion in sync with the header toggle.
-  if (typeof onCurrencyChange === 'function') {
+  // Subscribed once: bindEvents() re-runs on every renderAll(), and there is no
+  // unsubscribe, so re-subscribing here stacked a duplicate callback per render.
+  if (!currencySubscribed && typeof onCurrencyChange === 'function') {
+    currencySubscribed = true;
     onCurrencyChange((cur) => {
       document.querySelectorAll('[data-cash-cur]').forEach((el) => { el.textContent = cur === 'USD' ? '$' : '₾'; });
-      applyFormFilters(form);
+      const liveForm = document.querySelector('#filters-form');
+      if (liveForm) applyFormFilters(liveForm);
     });
   }
 
@@ -1526,22 +1607,9 @@ function bindEvents() {
 
   // Advanced filters modal
   const advModal = document.querySelector('#adv-modal');
-  const openAdv = () => {
-    if (!advModal) return;
-    advModal.removeAttribute('hidden');
-    document.body.classList.add('adv-open');
-  };
-  const closeAdv = () => {
-    if (!advModal) return;
-    advModal.setAttribute('hidden', '');
-    document.body.classList.remove('adv-open');
-  };
-  document.querySelector('#filters-adv-btn')?.addEventListener('click', openAdv);
-  advModal?.querySelector('.adv-modal-close')?.addEventListener('click', closeAdv);
-  advModal?.querySelector('.adv-modal-backdrop')?.addEventListener('click', closeAdv);
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !advModal?.hasAttribute('hidden')) closeAdv();
-  });
+  document.querySelector('#filters-adv-btn')?.addEventListener('click', openAdvModal);
+  advModal?.querySelector('.adv-modal-close')?.addEventListener('click', closeAdvModal);
+  advModal?.querySelector('.adv-modal-backdrop')?.addEventListener('click', closeAdvModal);
 
   // Chip toggle buttons inside modal (radio-style per group)
   advModal?.addEventListener('click', (event) => {
@@ -1563,11 +1631,15 @@ function bindEvents() {
     currentFilters[el.name] = el.type === 'checkbox' ? (el.checked ? el.value : '') : el.value;
     updateAdvBadge();
   });
+  // Debounced: updateAdvBadge() runs a full filter+sort, and doing that on
+  // every keystroke of a range input janks once the feed is real-sized.
+  let advInputTimer = null;
   advModal?.addEventListener('input', (event) => {
     const el = event.target;
     if (el.tagName !== 'INPUT' || el.type === 'checkbox' || !el.hasAttribute('data-adv-field')) return;
     currentFilters[el.name] = el.value;
-    updateAdvBadge();
+    clearTimeout(advInputTimer);
+    advInputTimer = setTimeout(updateAdvBadge, 200);
   });
 
   // Clear all advanced fields
@@ -1587,9 +1659,10 @@ function bindEvents() {
 
   // Apply and close
   advModal?.querySelector('.adv-apply-btn')?.addEventListener('click', () => {
+    clearTimeout(advInputTimer);
     pagesShown = 1;
     update();
-    closeAdv();
+    closeAdvModal();
   });
 
   document.querySelector('#filters-reset')?.addEventListener('click', () => {
