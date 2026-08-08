@@ -1,5 +1,8 @@
 
-const { Header, Footer, icons, DEMO_CARS, fetchVehicleById, fetchVehiclePhotos, escapeAttr } = window.AutoSwap;
+const {
+  Header, Footer, icons, DEMO_CARS, fetchVehicleById, fetchVehiclePhotos, escapeAttr,
+  fetchFeed, priceCurrencyToggle, toast,
+} = window.AutoSwap;
 // Escapes & < > ", every user-controlled listing string goes through this
 // before being placed into innerHTML.
 const esc = escapeAttr;
@@ -48,13 +51,94 @@ function Gallery(car, photos) {
       <div class="detail-main-media">
         <img id="detail-main-img" src="${esc(sources[0])}" alt="${name}">
         ${count}
+        <div class="gallery-tools">
+          <button type="button" class="gallery-tool save-btn" data-id="${esc(car.id)}" aria-label="${name} შენახვა">${icons.heart}</button>
+          <button type="button" class="gallery-tool" data-zoom aria-label="სურათის გადიდება">${icons.search}</button>
+          <button type="button" class="gallery-tool" data-share aria-label="გაზიარება">${icons.upload}</button>
+        </div>
       </div>
       ${thumbs}
     </div>
   `;
 }
 
-function DetailPage(car, photos) {
+function Breadcrumb(car) {
+  const trail = [
+    { label: 'მთავარი', href: 'index.html' },
+    { label: 'განცხადებები', href: 'cars.html' },
+    car.make ? { label: car.make, href: `cars.html?make=${encodeURIComponent(car.make)}` } : null,
+    car.model ? { label: car.model, href: '' } : null,
+    car.year ? { label: car.year, href: '' } : null,
+  ].filter(Boolean);
+  return `
+    <nav class="crumbs" aria-label="ნავიგაცია">
+      <ol>
+        ${trail.map((c, i) => {
+    const last = i === trail.length - 1;
+    const inner = c.href && !last
+      ? `<a href="${esc(c.href)}">${esc(c.label)}</a>`
+      : `<span${last ? ' aria-current="page"' : ''}>${esc(c.label)}</span>`;
+    return `<li>${inner}</li>`;
+  }).join('')}
+      </ol>
+    </nav>`;
+}
+
+// Where this listing's value sits among comparable listings currently on the
+// site. Same category only, and suppressed below a real sample — a "price
+// position" derived from two other cars would be decoration, not information.
+const PRICE_POS_MIN_SAMPLE = 5;
+
+function pricePosition(car, comparables) {
+  if (!car.estimatedValue || !car.category) return null;
+  const peers = comparables
+    .filter((c) => c.id !== car.id && c.category === car.category && c.estimatedValue > 0)
+    .map((c) => c.estimatedValue)
+    .sort((a, b) => a - b);
+  if (peers.length < PRICE_POS_MIN_SAMPLE) return null;
+  const below = peers.filter((v) => v < car.estimatedValue).length;
+  const pct = below / peers.length;
+  return {
+    pct,
+    band: pct <= 0.33 ? 'low' : (pct >= 0.67 ? 'high' : 'mid'),
+    sample: peers.length,
+  };
+}
+
+function PricePositionBar(pos) {
+  if (!pos) return '';
+  const labels = { low: 'დაბალი ფასი', mid: 'საშუალო ფასი', high: 'მაღალი ფასი' };
+  return `
+    <div class="price-pos price-pos--${pos.band}">
+      <div class="price-pos-head">
+        <strong class="price-pos-label">${labels[pos.band]}</strong>
+        <span class="price-pos-note">${pos.sample} მსგავს განცხადებასთან</span>
+      </div>
+      <div class="price-pos-track" role="img" aria-label="${labels[pos.band]}, ${pos.sample} მსგავს განცხადებასთან შედარებით">
+        <span class="price-pos-marker" style="left:${Math.round(pos.pct * 100)}%"></span>
+      </div>
+      <div class="price-pos-scale"><span>დაბალი</span><span>საშუალო</span><span>მაღალი</span></div>
+    </div>`;
+}
+
+function StickyBar(car, cash) {
+  const name = esc(`${car.make} ${car.model}`);
+  const specs = [car.year, car.mileage, car.fuel].filter(Boolean).join(' · ');
+  return `
+    <div class="detail-stickybar" id="detail-stickybar" aria-hidden="true">
+      <div class="container detail-stickybar-inner">
+        <img class="detail-stickybar-thumb" src="${esc(car.image)}" alt="">
+        <div class="detail-stickybar-copy">
+          <strong>${name} <span>${esc(car.year)}</span></strong>
+          <small>${esc(specs)}</small>
+        </div>
+        <span class="detail-stickybar-cash ${cash.cls}">${cash.icon}<span>${esc(cash.text)}</span></span>
+        <button class="btn btn-primary detail-stickybar-cta" type="button" data-offer data-id="${esc(car.id)}" data-make="${esc(car.make)}" data-model="${esc(car.model)}">${icons.swap} შესთავაზე გაცვლა</button>
+      </div>
+    </div>`;
+}
+
+function DetailPage(car, photos, comparables) {
   const cash = carCash(car);
   
   const stats = [
@@ -75,16 +159,18 @@ function DetailPage(car, photos) {
   const ownerAttr = ownerHref ? ` href="${ownerHref}" aria-label="მფლობელის სხვა განცხადებები"` : '';
   return `
     ${Header({ active: 'listings' })}
+    ${StickyBar(car, cash)}
     <main class="detail-shell">
       <section class="container detail">
-        <a class="detail-back" href="cars.html">${icons.arrowRight}<span>უკან განცხადებებზე</span></a>
+        ${Breadcrumb(car)}
         <div class="detail-grid">
           ${Gallery(car, photos)}
           <aside class="detail-panel">
             <h1 class="detail-title">${name} <span>${esc(car.year)}</span></h1>
             <span class="listing-city">${icons.location}${esc(car.city)}</span>
             <div class="stat-row" role="list">${statRow}</div>
-            <div class="car-row-cash ${cash.cls} detail-cash">${cash.icon}<span>${esc(cash.text)}</span></div>
+            <div class="car-row-cash ${cash.cls} detail-cash">${cash.icon}<span>${esc(cash.text)}</span>${car.cashAmount > 0 ? priceCurrencyToggle() : ''}</div>
+            ${PricePositionBar(pricePosition(car, comparables))}
             <div class="car-row-wants detail-wants">
               <span>ეძებს</span>
               <strong>${esc(car.wants)}</strong>
@@ -141,17 +227,80 @@ function bindThumbs() {
   });
 }
 
+// Reveals the sticky CTA bar once the main image has scrolled away, so the
+// offer action is never out of reach. Falls back to always-hidden where
+// IntersectionObserver is unavailable rather than pinning it permanently.
+function bindStickyBar() {
+  const bar = document.querySelector('#detail-stickybar');
+  const media = document.querySelector('.detail-main-media');
+  if (!bar || !media || typeof IntersectionObserver !== 'function') return;
+  const io = new IntersectionObserver(([entry]) => {
+    const show = !entry.isIntersecting;
+    bar.classList.toggle('is-visible', show);
+    bar.setAttribute('aria-hidden', String(!show));
+  }, { rootMargin: '-80px 0px 0px 0px' });
+  io.observe(media);
+}
+
+function bindGalleryTools() {
+  document.querySelector('.gallery-tools')?.addEventListener('click', (event) => {
+    const zoom = event.target.closest('[data-zoom]');
+    const share = event.target.closest('[data-share]');
+    if (zoom) {
+      const src = document.querySelector('#detail-main-img')?.src;
+      if (src) openLightbox(src);
+      return;
+    }
+    if (!share) return;
+    const payload = { title: document.title, url: window.location.href };
+    if (navigator.share) {
+      navigator.share(payload).catch(() => { /* user dismissed */ });
+      return;
+    }
+    navigator.clipboard?.writeText(payload.url)
+      .then(() => toast('ბმული დაკოპირდა'))
+      .catch(() => toast('ბმული ვერ დაკოპირდა', 'error'));
+  });
+}
+
+function openLightbox(src) {
+  const overlay = document.createElement('div');
+  overlay.className = 'lightbox';
+  overlay.innerHTML = `<img src="${esc(src)}" alt=""><button type="button" class="lightbox-close" aria-label="დახურვა">&times;</button>`;
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+  };
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('.lightbox-close')) close();
+  });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(overlay);
+  overlay.querySelector('.lightbox-close')?.focus();
+}
+
 async function render() {
   const id = getId();
   let car = DEMO_CARS.find((c) => c.id === id) || null;
   const isDemo = !!car;
   if (!car && id) car = await fetchVehicleById(id);
 
-  
   const photos = car && !isDemo ? await fetchVehiclePhotos(car.id) : [];
+  // Comparison set for the price-position bar. Demo listings compare against
+  // the demo set; live listings against the real feed.
+  let comparables = DEMO_CARS;
+  if (car && !isDemo) {
+    const feed = await fetchFeed().catch(() => null);
+    if (feed && feed.length) comparables = feed;
+  }
 
-  document.querySelector('#app').innerHTML = car ? DetailPage(car, photos) : NotFound();
-  if (car) bindThumbs();
+  document.querySelector('#app').innerHTML = car ? DetailPage(car, photos, comparables) : NotFound();
+  if (car) {
+    bindThumbs();
+    bindStickyBar();
+    bindGalleryTools();
+  }
 }
 
 render();
