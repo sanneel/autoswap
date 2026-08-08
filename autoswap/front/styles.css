@@ -3255,7 +3255,11 @@ body.modal-open {
 }
 
 .detail-save {
-  position: static;
+  /* relative, not static: this button carries a ::after hit-area expander at
+     inset -8px. Static made that pseudo-element resolve against a distant
+     positioned ancestor, stretching it to 404x559 across the whole panel and
+     swallowing every click on "შესთავაზე გაცვლა" beside it. */
+  position: relative;
   width: 50px;
   height: 50px;
   background: var(--card-white);
