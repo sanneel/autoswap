@@ -2192,11 +2192,24 @@ svg {
 
 .filters-form {
   display: grid;
-  gap: 16px;
-  padding: 18px;
+  gap: 18px;
+  padding: 16px 16px 0;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 12px;
   background: var(--card-white);
+}
+
+/* Section heading — the sidebar was one undifferentiated stack of fields;
+   these give the eye somewhere to land and make the lite/full toggle legible
+   as "a whole group appeared" rather than "rows shuffled". */
+.filter-group-head {
+  margin: 0;
+  color: var(--graphite);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
 }
 
 .filters-head {
@@ -2224,21 +2237,21 @@ svg {
 
 .filter-field {
   display: grid;
-  gap: 7px;
+  gap: 5px;
 }
 
 .filter-label {
   color: var(--secondary);
   font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .filters-form select,
 .filters-form input {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
+  min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -2301,10 +2314,20 @@ svg {
 }
 
 .filter-search input {
-  min-height: 44px;
+  min-height: 40px;
   padding: 0;
   border: 0;
   background: transparent;
+}
+
+/* Desktop runs dense so the whole filter set is visible without scrolling;
+   touch gets the 44px target back. */
+@media (pointer: coarse) {
+  .filters-form select,
+  .filters-form input:not([type="checkbox"]),
+  .filter-search input {
+    min-height: 44px;
+  }
 }
 
 
@@ -2413,10 +2436,20 @@ svg {
   font-weight: 800;
 }
 
+/* Pinned to the bottom of the scrolling sidebar — the advanced filter set is
+   taller than the viewport, so a static button meant scrolling back down to
+   apply. */
 .filters-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: grid;
   gap: 8px;
-  margin-top: 2px;
+  margin: 0 -16px;
+  padding: 12px 16px;
+  background: var(--card-white);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 11px 11px;
 }
 
 .filters-actions .btn {
@@ -3870,18 +3903,43 @@ p {
 }
 
 .matches-toggle,
+/* Was inline-flex with centre alignment, so a label that wrapped to three
+   lines left the box floating in the middle of the text. Now a real row:
+   fixed control column, text block beside it, hover bleeding to panel edge. */
 .filter-check {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 9px;
+  gap: 10px;
+  min-height: 38px;
+  margin: 0 -10px;
+  padding: 6px 10px;
+  border-radius: 9px;
   color: var(--graphite);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 1.35;
   cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.filter-check:hover {
+  background: var(--soft-beige);
+}
+
+.filter-check:focus-within {
+  background: var(--soft-beige);
+}
+
+/* Fill the row instead of collapsing to min-content, which wrapped a
+   two-word Georgian label onto three lines inside a 280px sidebar. */
+.filter-check span {
+  min-width: 0;
 }
 
 .matches-toggle input,
 .filter-check input {
+  flex: 0 0 auto;
   width: 14px;
   height: 14px;
   min-height: 0;
@@ -7665,7 +7723,7 @@ body {
 }
 
 .filters-form select,
-.filters-form input,
+.filters-form input:not([type="checkbox"]),
 .filter-search {
   min-height: 42px;
   border-color: var(--market-line);
@@ -7679,10 +7737,6 @@ body {
 
 .filter-checks {
   gap: 8px;
-}
-
-.filter-check {
-  align-items: flex-start;
 }
 
 .filters-actions .filters-search {
@@ -8548,7 +8602,6 @@ body {
 
 .filters-form {
   border-radius: 12px;
-  box-shadow: none;
 }
 
 .filters-form select,

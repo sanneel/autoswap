@@ -239,7 +239,7 @@ function comboField(kind, labelText, value, placeholder, disabled = false) {
     <div class="filter-field">
       <span class="filter-label">${labelText}</span>
       <div class="combo${disabledClass}" data-combo="${kind}">
-        <span class="filter-search combo-control" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-owns="${listId}">${icons.search}
+        <span class="filter-search combo-control" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-owns="${listId}">
           <input type="text" class="combo-input" name="${kind}" autocomplete="off" placeholder="${displayPlaceholder}" data-placeholder="${placeholder}" value="${escapeHtml(value || '')}" aria-autocomplete="list" aria-controls="${listId}" aria-expanded="false"${disabledAttr}>
           <button type="button" class="combo-clear" aria-label="გასუფთავება"${clearHidden}>&times;</button>
         </span>
@@ -338,81 +338,86 @@ function FilterSidebar() {
           </div>
         </label>
 
-        ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა…')}
-        ${comboField('model', 'მოდელი', f.model, 'მოძებნე მოდელი…', !f.makeId)}
-        ${selectField('category', 'მანქანის ტიპი', categories, f.category, 'ნებისმიერი ტიპი', CATEGORY_LABELS)}
+        <section class="filter-group">
+          <h3 class="filter-group-head">მანქანა</h3>
+          ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა…')}
+          ${comboField('model', 'მოდელი', f.model, 'მოძებნე მოდელი…', !f.makeId)}
+          ${selectField('category', 'ტიპი', categories, f.category, 'ნებისმიერი ტიპი', CATEGORY_LABELS)}
+        </section>
 
-        <div class="filter-field filter-advanced">
-          <span class="filter-label">გამოშვების წელი</span>
-          <div class="filter-range">
-            <select name="yearFrom"><option value="">მინ.</option>${optionTags(years, f.yearFrom)}</select>
-            <span class="filter-range-sep">-</span>
-            <select name="yearTo"><option value="">მაქს.</option>${optionTags(years, f.yearTo)}</select>
+        <section class="filter-group filter-advanced">
+          <h3 class="filter-group-head">პარამეტრები</h3>
+          <div class="filter-field">
+            <span class="filter-label">გამოშვების წელი</span>
+            <div class="filter-range">
+              <select name="yearFrom"><option value="">მინ.</option>${optionTags(years, f.yearFrom)}</select>
+              <span class="filter-range-sep">-</span>
+              <select name="yearTo"><option value="">მაქს.</option>${optionTags(years, f.yearTo)}</select>
+            </div>
           </div>
-        </div>
 
-        <div class="filter-field filter-advanced">
-          <span class="filter-label">ღირებულება (₾)</span>
-          <div class="filter-range">
-            <input type="number" name="valueMin" value="${escapeHtml(f.valueMin || '')}" placeholder="მინ." min="0" inputmode="numeric" aria-label="ღირებულება დან">
-            <span class="filter-range-sep">-</span>
-            <input type="number" name="valueMax" value="${escapeHtml(f.valueMax || '')}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="ღირებულება მდე">
+          <div class="filter-field">
+            <span class="filter-label">ღირებულება (₾)</span>
+            <div class="filter-range">
+              <input type="number" name="valueMin" value="${escapeHtml(f.valueMin || '')}" placeholder="მინ." min="0" inputmode="numeric" aria-label="ღირებულება დან">
+              <span class="filter-range-sep">-</span>
+              <input type="number" name="valueMax" value="${escapeHtml(f.valueMax || '')}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="ღირებულება მდე">
+            </div>
           </div>
-        </div>
 
-        <div class="filter-field filter-advanced">
-          <span class="filter-label">გარბენი (კმ)</span>
-          <div class="filter-range">
-            <input type="number" name="mileageMin" value="${escapeHtml(f.mileageMin || '')}" placeholder="მინ." min="0" inputmode="numeric" aria-label="გარბენი დან">
-            <span class="filter-range-sep">-</span>
-            <input type="number" name="mileageMax" value="${escapeHtml(f.mileageMax || '')}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="გარბენი მდე">
+          <div class="filter-field">
+            <span class="filter-label">გარბენი (კმ)</span>
+            <div class="filter-range">
+              <input type="number" name="mileageMin" value="${escapeHtml(f.mileageMin || '')}" placeholder="მინ." min="0" inputmode="numeric" aria-label="გარბენი დან">
+              <span class="filter-range-sep">-</span>
+              <input type="number" name="mileageMax" value="${escapeHtml(f.mileageMax || '')}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="გარბენი მდე">
+            </div>
           </div>
-        </div>
 
-        ${selectField('transmission', 'გადაცემათა კოლოფი', transmissions, f.transmission, 'ნებისმიერი', TRANSMISSION_LABELS, 'filter-advanced')}
-        ${selectField('fuel', 'საწვავი', fuels, f.fuel, 'ნებისმიერი', FUEL_LABELS, 'filter-advanced')}
-        ${selectField('city', 'ქალაქი', cities, f.city, 'ნებისმიერი ქალაქი', null, 'filter-advanced')}
+          ${selectField('transmission', 'გადაცემათა კოლოფი', transmissions, f.transmission, 'ნებისმიერი', TRANSMISSION_LABELS)}
+          ${selectField('fuel', 'საწვავი', fuels, f.fuel, 'ნებისმიერი', FUEL_LABELS)}
+          ${selectField('city', 'ქალაქი', cities, f.city, 'ნებისმიერი ქალაქი', null)}
+        </section>
 
-        <label class="filter-field">
-          <span class="filter-label">თანხის სხვაობა</span>
-          <select name="cash">
-            <option value="">ნებისმიერი</option>
-            <option value="none"${f.cash === 'none' ? ' selected' : ''}>თანაბარი გაცვლა</option>
-            <option value="add"${f.cash === 'add' ? ' selected' : ''}>ის ამატებს, მე ვიღებ თანხას</option>
-            <option value="ask"${f.cash === 'ask' ? ' selected' : ''}>ის ითხოვს, მე ვამატებ</option>
-            <option value="flexible"${f.cash === 'flexible' ? ' selected' : ''}>შეთანხმებით</option>
-          </select>
-        </label>
+        <section class="filter-group">
+          <h3 class="filter-group-head">გაცვლის პირობა</h3>
+          <label class="filter-field">
+            <span class="filter-label">თანხის სხვაობა</span>
+            <select name="cash">
+              <option value="">ნებისმიერი</option>
+              <option value="none"${f.cash === 'none' ? ' selected' : ''}>თანაბარი გაცვლა</option>
+              <option value="add"${f.cash === 'add' ? ' selected' : ''}>ის ამატებს, მე ვიღებ თანხას</option>
+              <option value="ask"${f.cash === 'ask' ? ' selected' : ''}>ის ითხოვს, მე ვამატებ</option>
+              <option value="flexible"${f.cash === 'flexible' ? ' selected' : ''}>შეთანხმებით</option>
+            </select>
+          </label>
 
-        <div class="filter-field filter-cash-amount" id="filter-cash-amount"${(f.cash === 'add' || f.cash === 'ask') ? '' : ' hidden'}>
-          <span class="filter-label">თანხის ოდენობა <span class="cash-cur-tag" data-cash-cur>${getCurrency() === 'USD' ? '$' : '₾'}</span></span>
-          <div class="filter-range">
-            <input type="number" name="cashMin" value="${escapeHtml(f.cashMin || '')}" placeholder="მინ." min="0" inputmode="numeric" aria-label="თანხა დან">
-            <span class="filter-range-sep">-</span>
-            <input type="number" name="cashMax" value="${escapeHtml(f.cashMax || '')}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="თანხა მდე">
+          <div class="filter-field filter-cash-amount" id="filter-cash-amount"${(f.cash === 'add' || f.cash === 'ask') ? '' : ' hidden'}>
+            <span class="filter-label">თანხის ოდენობა <span class="cash-cur-tag" data-cash-cur>${getCurrency() === 'USD' ? '$' : '₾'}</span></span>
+            <div class="filter-range">
+              <input type="number" name="cashMin" value="${escapeHtml(f.cashMin || '')}" placeholder="მინ." min="0" inputmode="numeric" aria-label="თანხა დან">
+              <span class="filter-range-sep">-</span>
+              <input type="number" name="cashMax" value="${escapeHtml(f.cashMax || '')}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="თანხა მდე">
+            </div>
           </div>
-        </div>
 
-        <label class="filter-field filter-advanced">
-          <span class="filter-label">განცხადების ასაკი</span>
-          <select name="fresh">
-            ${FRESH_OPTIONS.map((o) => `<option value="${o.value}"${o.value === f.fresh ? ' selected' : ''}>${o.label}</option>`).join('')}
-          </select>
-        </label>
+          <label class="filter-field filter-advanced">
+            <span class="filter-label">განცხადების ასაკი</span>
+            <select name="fresh">
+              ${FRESH_OPTIONS.map((o) => `<option value="${o.value}"${o.value === f.fresh ? ' selected' : ''}>${o.label}</option>`).join('')}
+            </select>
+          </label>
 
-        ${myCar ? `<div class="filter-checks">
-          <label class="filter-check">
+          ${myCar ? `<label class="filter-check">
             <input type="checkbox" name="onlyMatches" value="1"${f.onlyMatches ? ' checked' : ''}>
-            <span>მხოლოდ ვინც ჩემს მანქანას ეძებს</span>
-          </label>
-        </div>` : ''}
+            <span>ეძებს ჩემნაირ მანქანას</span>
+          </label>` : ''}
 
-        <div class="filter-checks filter-advanced">
-          <label class="filter-check">
+          <label class="filter-check filter-advanced">
             <input type="checkbox" name="verified" value="1"${f.verified ? ' checked' : ''}>
-            <span>მხოლოდ დადასტურებული მფლობელები</span>
+            <span>დადასტურებული მფლობელი</span>
           </label>
-        </div>
+        </section>
 
         <div class="filters-actions">
           <button type="button" class="btn btn-primary filters-search" id="filters-search">${icons.search} შედეგების ნახვა</button>
@@ -1093,6 +1098,9 @@ function setComboValue(kind, name, id, item = null) {
     if (changed) {
       resetModelFilter();
     }
+    // Warm the model catalog as soon as a make is settled, so opening the
+    // model field is instant instead of waiting on searchMakes → searchModels.
+    if (currentFilters.makeId) loadCurrentMakeModels().catch(() => {});
   } else {
     currentFilters.model = name;
     currentFilters.modelGroup = item && item.groupName ? item.groupName : '';
@@ -1227,7 +1235,24 @@ function initCombos() {
 
     const run = async () => {
       if (input.disabled) return;
-      renderComboList(combo, await comboSearch(kind, input.value.trim()));
+      const term = input.value.trim();
+      const items = await comboSearch(kind, term);
+      renderComboList(combo, items);
+
+      // Typing a name out in full commits it exactly like clicking the option
+      // would, so "alfa romeo" unlocks the model field and "giulia" then
+      // settles the model without ever touching the dropdown.
+      const exact = term
+        ? items.find((it) => String(it.name).toLowerCase() === term.toLowerCase())
+        : null;
+      if (exact) {
+        const settled = kind === 'make'
+          ? String(currentFilters.makeId) === String(exact.id)
+          : currentFilters.model === exact.name;
+        if (!settled) setComboValue(kind, exact.name, exact.id, exact);
+        return;
+      }
+      setComboValue(kind, term, '');
     };
 
     input.addEventListener('focus', run);
@@ -1235,8 +1260,9 @@ function initCombos() {
       if (input.disabled) return;
       clear.hidden = !input.value;
       clearTimeout(timer);
+      // Debounced: setComboValue re-runs the whole filter + list render, so
+      // calling it per keystroke made every character feel like a page reload.
       timer = setTimeout(run, 150);
-      setComboValue(kind, input.value.trim(), ''); 
     });
     
     list.addEventListener('mousedown', (event) => {

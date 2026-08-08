@@ -85,11 +85,17 @@ function normalizeBrandText(value) {
     .trim();
 }
 
+// Constant for the page's lifetime, but it sat in a default-parameter
+// expression that re-ran on every keystroke of the picker. Compute once.
+let heroBrandNamesCache = null;
 function heroBrandNames() {
-  return Array.from(new Set([
-    ...HERO_SEARCH_BRANDS,
-    ...DEMO_CARS.map((car) => car.make).filter(Boolean),
-  ]));
+  if (!heroBrandNamesCache) {
+    heroBrandNamesCache = Array.from(new Set([
+      ...HERO_SEARCH_BRANDS,
+      ...DEMO_CARS.map((car) => car.make).filter(Boolean),
+    ]));
+  }
+  return heroBrandNamesCache;
 }
 
 function displayBrand(make) {
