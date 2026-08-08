@@ -1742,7 +1742,12 @@
   function convertMoneyNode(node) {
     if (currency === 'USD') {
       const source = node.__gelText != null ? node.__gelText : node.nodeValue;
-      if (!/₾/.test(source) || !MONEY_RE.test(source)) return;
+      if (!/₾/.test(source)) return;
+      // MONEY_RE is /g, so .test() advances lastIndex and the next node starts
+      // mid-string — that silently skipped most prices on the page. Reset
+      // before testing, not after.
+      MONEY_RE.lastIndex = 0;
+      if (!MONEY_RE.test(source)) return;
       MONEY_RE.lastIndex = 0;
       node.__gelText = source;
       node.nodeValue = source.replace(MONEY_RE, gelToUsdText);
@@ -1780,13 +1785,44 @@
     if (typeof cb === 'function') currencySubs.push(cb);
   }
 
+  // Inline flip rendered next to a price, so the currency can be switched
+  // without scrolling back to the header toggle. The label is a lone symbol
+  // with no digits, so the money text-walker in applyCurrency leaves it alone;
+  // syncFlipLabels keeps it pointing at the *target* currency.
+  function priceCurrencyToggle() {
+    const target = currency === 'USD' ? '₾' : '$';
+    return `<button type="button" class="cur-flip" data-currency-flip aria-label="ვალუტის შეცვლა" title="ვალუტის შეცვლა">${target}</button>`;
+  }
+
+  function syncFlipLabels() {
+    const target = currency === 'USD' ? '₾' : '$';
+    document.querySelectorAll('[data-currency-flip]').forEach((btn) => {
+      btn.textContent = target;
+    });
+  }
+
   function setCurrency(next) {
     if (next !== 'GEL' && next !== 'USD') return;
     currency = next;
     try { localStorage.setItem(CURRENCY_KEY, next); } catch (_err) { /* private mode */ }
-    applyCurrency(document.body);
+    // Subscribers re-render markup from the GEL source data (cars.js reruns
+    // the filters, which rebuilds every card). Converting before that ran meant
+    // the rewrite was immediately overwritten and prices never changed, so the
+    // conversion has to be the last thing that touches the DOM.
     currencySubs.forEach((cb) => { try { cb(currency, gelPerUsd); } catch (_err) { /* ignore */ } });
+    applyCurrency(document.body);
+    syncFlipLabels();
   }
+
+  // Delegated so it works on re-rendered markup. stopPropagation keeps the
+  // flip from triggering the surrounding card's navigation.
+  document.addEventListener('click', (event) => {
+    const flip = event.target.closest('[data-currency-flip]');
+    if (!flip) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setCurrency(currency === 'USD' ? 'GEL' : 'USD');
+  });
 
   loadUsdRate();
 
@@ -2110,5 +2146,6 @@
     getUsdRate: () => gelPerUsd,
     setCurrency,
     onCurrencyChange,
+    priceCurrencyToggle,
   };
 })();

@@ -2534,6 +2534,38 @@ svg {
   height: 13px;
 }
 
+/* Inline currency flip beside a price. Quiet until hovered — it sits next to
+   the number it converts, so it must not compete with it. */
+.cur-flip {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.cur-flip:hover {
+  border-color: var(--panel-green);
+  background: var(--soft-beige);
+  color: var(--deep-green);
+}
+
+.cur-flip:focus-visible {
+  outline: 2px solid var(--deep-green);
+  outline-offset: 2px;
+}
+
 .filters-actions .btn {
   width: 100%;
   gap: 8px;

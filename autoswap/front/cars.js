@@ -19,6 +19,7 @@ const {
   getCurrency,
   getUsdRate,
   onCurrencyChange,
+  priceCurrencyToggle,
 } = window.AutoSwap;
 
 function escapeHtml(value) {
@@ -481,7 +482,9 @@ function specStrip(car) {
 
 function cashLine(car) {
   const iconMap = { add: icons.trendUp, ask: icons.trendDown, flexible: icons.swap, none: icons.equals };
-  return `<p class="trade-cash trade-cash--${car.cashType}">${iconMap[car.cashType] || icons.equals}<span>${escapeHtml(car.cash)}</span></p>`;
+  // Only amounts get the inline flip; "თანაბარი გაცვლა" has no figure to convert.
+  const flip = car.cashAmount > 0 ? priceCurrencyToggle() : '';
+  return `<p class="trade-cash trade-cash--${car.cashType}">${iconMap[car.cashType] || icons.equals}<span>${escapeHtml(car.cash)}</span>${flip}</p>`;
 }
 
 function wantsChips(car) {
