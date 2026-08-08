@@ -2473,6 +2473,67 @@ svg {
   opacity: 0.72;
 }
 
+/* ---- Listing card: spec strip, good-price badge, listing age ---------- */
+
+.spec-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spec-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.spec-chip svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+
+.good-price-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: start;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(46, 119, 65, 0.12);
+  color: var(--positive, #2e7741);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.good-price-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.listing-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.listing-meta svg {
+  width: 13px;
+  height: 13px;
+}
+
 .filters-actions .btn {
   width: 100%;
   gap: 8px;

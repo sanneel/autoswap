@@ -437,6 +437,48 @@ function matchBadge(match) {
 }
 
 
+// Category price baselines for the "კარგი ფასი" badge, recomputed whenever the
+// feed changes so the claim reflects what is actually on the market. A category
+// needs a real sample before we call anything a deal — with three listings the
+// "average" is noise, and a false badge is worse than no badge.
+const GOOD_PRICE_RATIO = 0.88;
+const GOOD_PRICE_MIN_SAMPLE = 5;
+let priceBaselines = new Map();
+
+function recomputePriceBaselines() {
+  const buckets = new Map();
+  allCars.forEach((car) => {
+    if (!car.estimatedValue || !car.category) return;
+    if (!buckets.has(car.category)) buckets.set(car.category, []);
+    buckets.get(car.category).push(car.estimatedValue);
+  });
+  priceBaselines = new Map();
+  buckets.forEach((values, category) => {
+    if (values.length < GOOD_PRICE_MIN_SAMPLE) return;
+    priceBaselines.set(category, values.reduce((a, b) => a + b, 0) / values.length);
+  });
+}
+
+function isGoodPrice(car) {
+  const baseline = priceBaselines.get(car.category);
+  if (!baseline || !car.estimatedValue) return false;
+  return car.estimatedValue <= baseline * GOOD_PRICE_RATIO;
+}
+
+// Icon-labelled spec row. Reads faster than a comma-separated string because
+// the icon carries the category and the eye can skip to the one it wants.
+function specStrip(car) {
+  const items = [
+    car.fuel ? [icons.fuel, car.fuel] : null,
+    car.transmissionLabel ? [icons.gear, car.transmissionLabel] : null,
+    car.mileage ? [icons.gauge, car.mileage] : null,
+  ].filter(Boolean);
+  if (!items.length) return '';
+  return `<ul class="spec-strip">${items
+    .map(([icon, text]) => `<li class="spec-chip">${icon}<span>${escapeHtml(text)}</span></li>`)
+    .join('')}</ul>`;
+}
+
 function cashLine(car) {
   const iconMap = { add: icons.trendUp, ask: icons.trendDown, flexible: icons.swap, none: icons.equals };
   return `<p class="trade-cash trade-cash--${car.cashType}">${iconMap[car.cashType] || icons.equals}<span>${escapeHtml(car.cash)}</span></p>`;
@@ -513,11 +555,13 @@ function CarRow(car) {
           <h3 class="car-row-title"><a class="card-title-link" href="${detailHref}">${name}</a> <span class="car-row-year">${escapeHtml(car.year)}</span></h3>
           <span class="listing-city">${icons.location}${escapeHtml(car.city)}${car.freshness ? `<span class="listing-age">· ${escapeHtml(car.freshness)}</span>` : ''}</span>
         </div>
-        <p class="car-card-specs">${escapeHtml(specs)}</p>
+        ${specStrip(car)}
       </div>
 
       <div class="car-card-aside">
+        ${isGoodPrice(car) ? `<span class="good-price-badge">${icons.tag} კარგი ფასი</span>` : ''}
         ${cashLine(car)}
+        ${car.freshness ? `<span class="listing-meta">${icons.clock}${escapeHtml(car.freshness)}</span>` : ''}
         ${car.openToOffers
           ? '<p class="car-card-wants car-card-wants--open">ღიაა ნებისმიერ შეთავაზებაზე</p>'
           : `<p class="car-card-wants"><span>ეძებს</span>${escapeHtml(car.wants)}</p>`}
@@ -1507,6 +1551,8 @@ document.addEventListener('autoswap:mycar', () => {
 });
 
 function renderAll() {
+  // Before the markup: CarRow reads the baselines to decide the good-price badge.
+  recomputePriceBaselines();
   document.querySelector('#app').innerHTML = CatalogPage();
   bindEvents();
   initCombos();
@@ -1517,8 +1563,9 @@ async function hydrateFromSupabase() {
   const mapped = await fetchFeed();
   if (mapped !== null && mapped.length) {
     allCars = mapped;
+    recomputePriceBaselines();
     pagesShown = 1;
-    renderAll(); 
+    renderAll();
   }
 }
 
