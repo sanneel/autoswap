@@ -2481,6 +2481,13 @@ svg {
   opacity: 0.72;
 }
 
+/* Swapped in when a listing photo fails to load. Contain, not cover, so the
+   glyph is not cropped by the card's usual object-fit. */
+.img-placeholder {
+  object-fit: contain !important;
+  background: #eceee9;
+}
+
 /* ---- Advanced filters button + modal ---------------------------------- */
 
 .filters-adv-btn {

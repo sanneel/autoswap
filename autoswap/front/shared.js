@@ -155,6 +155,34 @@
     return String(make || '').toLowerCase().includes('bmw') ? assets.bmw : assets.audi;
   }
 
+  // Neutral "no photo" tile. Deliberately not a stock car photo: substituting a
+  // real BMW shot for a listing whose photo failed would misrepresent the car.
+  // Inline data URI so it needs no request and cannot itself fail.
+  const PHOTO_PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,'
+    + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+<rect width="400" height="300" fill="#eceee9"/>
+<g fill="none" stroke="#a8b0a4" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+<path d="M96 176h208M110 176l16-42a18 18 0 0 1 17-12h114a18 18 0 0 1 17 12l16 42"/>
+<path d="M96 176v30h208v-30"/><circle cx="140" cy="206" r="15"/><circle cx="260" cy="206" r="15"/>
+</g></svg>`);
+
+  // Photos are third-party URLs: buckets get locked down and links rot. Without
+  // this a failed image left the browser's broken-image glyph in the card.
+  // `error` does not bubble, so the listener has to run in the capture phase,
+  // and it is wired in JS because the CSP forbids inline onerror handlers.
+  function bindImageFallbacks() {
+    document.addEventListener('error', (event) => {
+      const img = event.target;
+      if (!img || img.tagName !== 'IMG' || img.dataset.imgFallbackDone) return;
+      const next = img.dataset.fallback || PHOTO_PLACEHOLDER;
+      if (img.src === next) return;
+      img.dataset.imgFallbackDone = '1';
+      img.classList.add('img-placeholder');
+      img.src = next;
+    }, true);
+  }
+  bindImageFallbacks();
+
   // Maps a public_vehicle_feed row (also the shape of DEMO_FEED) to a uniform
   // card object carrying BOTH display strings and raw values for filtering.
   // Bare "any car" labels carry zero swap intent, strip them so such
