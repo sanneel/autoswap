@@ -7096,6 +7096,58 @@ a.header-user:hover {
   background: #fff;
   box-shadow: 0 1px 2px rgba(15, 20, 15, 0.05), 0 16px 36px -24px rgba(15, 20, 15, 0.3);
 }
+
+/* Three identical white boxes gave the form no sense of place. Each section is
+   tinted by what it means: green for the car you own, blue for the car you
+   want (the same two sides the cash badges already use across the site), warm
+   neutral for the optional details. Kept faint so the fields stay the focus. */
+.sell-shell--v3 .sell-section.sell-section--car {
+  border-color: rgba(30, 77, 52, 0.22);
+  background: linear-gradient(180deg, #eef5ee 0%, #f8fbf7 62%, #fff 100%);
+}
+
+.sell-shell--v3 .sell-section.sell-section--terms {
+  border-color: rgba(46, 111, 149, 0.2);
+  background: linear-gradient(180deg, #ecf3f8 0%, #f7fafc 62%, #fff 100%);
+}
+
+.sell-shell--v3 .sell-section.sell-section--details {
+  border-color: rgba(122, 110, 86, 0.2);
+  background: linear-gradient(180deg, #f6f4ec 0%, #fbfaf5 62%, #fff 100%);
+}
+
+/* Badge picks up its own section's hue instead of one green for all three. */
+.sell-shell--v3 .sell-section--car .sell-section-badge {
+  background: #dfeade;
+  border-color: rgba(30, 77, 52, 0.24);
+  color: #1e4d34;
+}
+
+.sell-shell--v3 .sell-section--terms .sell-section-badge {
+  background: #dceaf3;
+  border-color: rgba(46, 111, 149, 0.24);
+  color: #235c7d;
+}
+
+.sell-shell--v3 .sell-section--details .sell-section-badge {
+  background: #efeadb;
+  border-color: rgba(122, 110, 86, 0.26);
+  color: #6b5f45;
+}
+
+/* Inputs stay white so they read as fields against the tint. */
+.sell-shell--v3 .sell-section .field-control > input,
+.sell-shell--v3 .sell-section .field-control > select,
+.sell-shell--v3 .sell-section .field-control--area textarea {
+  background: #fff;
+}
+
+/* The engine size is fixed at 0.0 for electric cars: show it as locked. */
+.sell-shell--v3 .field--locked .field-control > input {
+  background: rgba(20, 26, 20, 0.05);
+  color: var(--muted);
+  cursor: not-allowed;
+}
 .sell-shell--v3 .sell-section-head {
   display: flex;
   align-items: center;
@@ -7132,7 +7184,7 @@ a.header-user:hover {
   background: #e8f0e9;
   color: var(--panel-green);
 }
-.sell-shell--v3 .sell-section-badge svg { width: 19px; height: 19px; }
+.sell-shell--v3 .sell-section-badge svg { width: 23px; height: 23px; stroke-width: 2.1; }
 
 
 .sell-shell--v3 .sell-grid {
@@ -7146,7 +7198,30 @@ a.header-user:hover {
 .sell-shell--v3 .field { display: grid; gap: 6px; }
 .sell-shell--v3 .field[hidden] { display: none; }
 .sell-shell--v3 .field > span { color: var(--secondary); font-size: 12.5px; font-weight: 700; }
-.sell-shell--v3 .field-control { position: relative; display: block; }
+/* Flex, not block: as a block the inline <input> sat on the text baseline and
+   left ~7px of descender space under it, so an input field measured 55px tall
+   against a select's 48px and the two columns did not line up. */
+.sell-shell--v3 .field-control { position: relative; display: flex; }
+
+.sell-shell--v3 .field-control > input,
+.sell-shell--v3 .field-control > select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Equal-height cells so labels of differing line counts still bottom-align. */
+.sell-shell--v3 .sell-grid > .field {
+  align-self: stretch;
+}
+
+.sell-shell--v3 .field--icon {
+  display: flex;
+  flex-direction: column;
+}
+
+.sell-shell--v3 .field--icon > .field-control {
+  margin-top: auto;
+}
 .sell-shell--v3 .field--icon .field-control > svg {
   position: absolute;
   left: 13px;
@@ -7415,16 +7490,18 @@ a.header-user:hover {
 }
 
 .sell-shell--lite .sell-section-badge {
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   border: 1px solid rgba(122, 138, 122, 0.25);
   border-radius: 10px;
   background: rgba(20, 26, 20, 0.04);
 }
 
 .sell-shell--lite .sell-section-badge svg {
-  width: 17px;
-  height: 17px;
+  width: 23px;
+  height: 23px;
+  /* Was rendering hairline-thin at this size against a tinted disc. */
+  stroke-width: 2.1;
 }
 
 .sell-shell--lite .sell-grid {
@@ -10632,15 +10709,15 @@ body {
 /* Real brand logos: contained, full color on a white tile. */
 .brand-mark .brand-logo-img,
 .brand-mark .brand-logo {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 
 /* Quick-filter brand logos (cars sidebar) */
 .quick-chip-brand-logo {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
   margin-right: 6px;
 }
@@ -11369,7 +11446,7 @@ body {
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  padding: 8px;
+  padding: 4px;
   border: 1px solid rgba(20, 26, 20, 0.14);
   border-radius: 10px;
   background: #fff;
@@ -11384,8 +11461,10 @@ body {
 }
 
 .brand-featured-tile .brand-logo-img {
-  width: 26px;
-  height: 26px;
+  width: 100%;
+  height: 100%;
+  max-width: 38px;
+  max-height: 38px;
   object-fit: contain;
 }
 
@@ -12115,7 +12194,8 @@ select[data-aselect]:focus-visible,
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  padding: 6px;
+  /* Tight: the mark should fill the tile, not float in a white field. */
+  padding: 3px;
   border: 1px solid rgba(20, 26, 20, 0.12);
   border-radius: 8px;
   background: #fff;
@@ -12130,8 +12210,10 @@ select[data-aselect]:focus-visible,
 }
 
 .combo-featured-tile img {
-  width: 22px;
-  height: 22px;
+  width: 100%;
+  height: 100%;
+  max-width: 34px;
+  max-height: 34px;
   object-fit: contain;
 }
 

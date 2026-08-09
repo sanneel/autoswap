@@ -559,8 +559,39 @@ function bindCashAmount(form) {
   update();
 }
 
+// An electric car has no engine displacement, so the field is set to 0.0 and
+// locked rather than left for the user to fill with a number that cannot exist.
+// The previous value is restored if they switch back to a combustion fuel.
+function bindEngineSizeToFuel(form) {
+  const fuel = form.querySelector('[name="fuel"]');
+  const engine = form.querySelector('[name="engineSize"]');
+  if (!fuel || !engine) return;
+  let lastCombustionValue = engine.value;
+  const update = () => {
+    const isElectric = fuel.value === 'electric';
+    if (isElectric) {
+      if (engine.value && engine.value !== '0.0') lastCombustionValue = engine.value;
+      engine.value = '0.0';
+      // min is 0.1, so 0.0 would fail validation while disabled inputs are
+      // skipped by the constraint API and omitted from FormData.
+      engine.min = '0';
+      engine.readOnly = true;
+      engine.setAttribute('aria-readonly', 'true');
+    } else {
+      engine.min = '0.1';
+      engine.readOnly = false;
+      engine.removeAttribute('aria-readonly');
+      if (engine.value === '0.0') engine.value = lastCombustionValue === '0.0' ? '' : lastCombustionValue;
+    }
+    engine.closest('.field')?.classList.toggle('field--locked', isElectric);
+    updatePreview(form);
+  };
+  fuel.addEventListener('change', update);
+  update();
+}
 
-const FUEL_STEMS = { 'ბენზინ': 'petrol', 'დიზელ': 'diesel', 'ჰიბრიდ': 'hybrid', 'ელექტრო': 'electric', 'გაზ': 'lpg' };
+
+const FUEL_STEMS ={ 'ბენზინ': 'petrol', 'დიზელ': 'diesel', 'ჰიბრიდ': 'hybrid', 'ელექტრო': 'electric', 'გაზ': 'lpg' };
 const TRANSMISSION_STEMS = { 'ავტომატ': 'automatic', 'მექანიკ': 'manual', 'ტიპტრონიკ': 'tiptronic', 'ვარიატორ': 'variator' };
 const CATEGORY_STEMS = { 'სედან': 'sedan', 'ჯიპ': 'suv', 'კროსოვერ': 'crossover', 'ჰეჩბექ': 'hatchback', 'კუპე': 'coupe', 'მინივენ': 'minivan', 'პიკაპ': 'pickup', 'უნივერსალ': 'universal' };
 const CITY_STEMS = ['თბილის', 'ბათუმ', 'ქუთაის', 'რუსთავ', 'გორ', 'ზუგდიდ', 'ფოთ', 'თელავ'];
@@ -1188,6 +1219,7 @@ async function renderReal(user) {
   bindVoiceFill(document.querySelector('#sell-form'));
   bindPreview(document.querySelector('#sell-form'));
   bindCashAmount(document.querySelector('#sell-form'));
+  bindEngineSizeToFuel(document.querySelector('#sell-form'));
   bindCounter(document.querySelector('#sell-form'));
 
   const form = document.querySelector('#sell-form');
@@ -1232,6 +1264,7 @@ function renderLocked() {
   bindCatalogSuggestions();
   updatePreview(document.querySelector('#sell-form'));
   bindCashAmount(document.querySelector('#sell-form'));
+  bindEngineSizeToFuel(document.querySelector('#sell-form'));
   bindCounter(document.querySelector('#sell-form'));
   // The overlay blocks the pointer, but keyboard focus could still reach the
   // form behind it, and an Enter there did a native GET submit that dumped
@@ -1267,6 +1300,7 @@ function renderDemo() {
   bindVoiceFill(document.querySelector('#sell-form'));
   bindPreview(document.querySelector('#sell-form'));
   bindCashAmount(document.querySelector('#sell-form'));
+  bindEngineSizeToFuel(document.querySelector('#sell-form'));
   bindCounter(document.querySelector('#sell-form'));
   document.querySelector('#sell-form')?.addEventListener('submit', (event) => {
     event.preventDefault();
