@@ -7107,20 +7107,21 @@ a.header-user:hover {
 /* Three identical white boxes gave the form no sense of place. Each section is
    tinted by what it means: green for the car you own, blue for the car you
    want (the same two sides the cash badges already use across the site), warm
-   neutral for the optional details. Kept faint so the fields stay the focus. */
+   neutral for the optional details. Flat fills, not gradients: a tint fading
+   to white down a card is decoration that says nothing about the content. */
 .sell-shell--v3 .sell-section.sell-section--car {
   border-color: rgba(30, 77, 52, 0.22);
-  background: linear-gradient(180deg, #eef5ee 0%, #f8fbf7 62%, #fff 100%);
+  background: #eef4ee;
 }
 
 .sell-shell--v3 .sell-section.sell-section--terms {
   border-color: rgba(46, 111, 149, 0.2);
-  background: linear-gradient(180deg, #ecf3f8 0%, #f7fafc 62%, #fff 100%);
+  background: #ecf2f7;
 }
 
 .sell-shell--v3 .sell-section.sell-section--details {
   border-color: rgba(122, 110, 86, 0.2);
-  background: linear-gradient(180deg, #f6f4ec 0%, #fbfaf5 62%, #fff 100%);
+  background: #f5f3ea;
 }
 
 /* Badge picks up its own section's hue instead of one green for all three. */
