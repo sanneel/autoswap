@@ -7973,7 +7973,9 @@ body {
 .trade-cash--ask,
 .car-row-cash--ask {
   background: #F7DFDA;
-  color: var(--market-red);
+  /* --market-red (#B64032) measured 4.38:1 here, just under the 4.5 minimum;
+     its add/none siblings both pass, so this darkens only the red. */
+  color: #A33627;
 }
 
 .trade-cash--none,
@@ -8065,18 +8067,38 @@ body {
   display: none;
 }
 
+/* These chips were styled for a dark quickbar (white text on a white 12%
+   overlay). The bar is light, so every chip rendered white-on-white at 1.07:1,
+   i.e. invisible. Light-bar styling, with the active chip as a solid fill. */
 .catalog-quickbar-pills a {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 36px;
   padding: 8px 12px;
-  background: rgba(255,255,255,0.12);
-  color: #fff;
+  border: 1px solid var(--market-line);
+  background: #fff;
+  color: var(--market-ink);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .catalog-quickbar-pills a:hover {
-  background: rgba(255,255,255,0.22);
+  border-color: var(--copper);
+  background: #fff;
+}
+
+.catalog-quickbar-pills a.is-active {
+  border-color: var(--copper);
+  background: var(--copper);
+  color: #fff;
+}
+
+.catalog-quickbar-pills a .quick-chip-count {
+  color: inherit;
+  opacity: 0.62;
+  font-variant-numeric: tabular-nums;
 }
 
 .catalog {
@@ -8979,7 +9001,7 @@ body {
 }
 
 .catalog-quickbar-pills a {
-  border: 1px solid rgba(255,255,255,0.16);
+  border: 1px solid var(--market-line);
 }
 
 .catalog {
@@ -10072,19 +10094,29 @@ body {
   background: rgba(255, 255, 255, 0.18);
 }
 
+/* Light-bar styling. The white text + white-overlay values here were left over
+   from a dark quickbar and rendered every chip at 1.07:1 against the light bar,
+   i.e. invisible. This rule is last in the cascade, so it owns the colors. */
 .catalog-quickbar-pills a {
   flex: 0 0 auto;
   min-height: 52px;
   padding: 0 18px;
   scroll-snap-align: start;
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  border-color: var(--market-line);
+  background: #fff;
+  color: var(--market-ink);
   white-space: nowrap;
 }
 
 .catalog-quickbar-pills a:hover {
-  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--copper);
+  background: #fff;
+}
+
+.catalog-quickbar-pills a.is-active {
+  border-color: var(--copper);
+  background: var(--copper);
+  color: #fff;
 }
 
 .filters,
