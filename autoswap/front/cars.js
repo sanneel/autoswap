@@ -20,6 +20,7 @@ const {
   getUsdRate,
   onCurrencyChange,
   priceCurrencyToggle,
+  getLogoUrl,
 } = window.AutoSwap;
 
 function escapeHtml(value) {
@@ -697,9 +698,8 @@ const QUICK_BRAND_SLUGS = {
 
 // Featured makes only; unfeatured brands are text, with no filler glyph.
 function quickBrandLogo(make) {
-  const slug = makeSlug(make);
-  return FEATURED_MAKE_SLUGS.has(slug)
-    ? `<img src="assets/logos/${slug}.png" alt="${escapeHtml(make)}" class="quick-chip-brand-logo" loading="lazy">`
+  return FEATURED_MAKE_SLUGS.has(makeSlug(make))
+    ? `<img src="${escapeHtml(getLogoUrl(make))}" alt="${escapeHtml(make)}" class="quick-chip-brand-logo" loading="lazy">`
     : '';
 }
 
@@ -1204,7 +1204,7 @@ function featuredMakeRow() {
     <li class="combo-featured" role="presentation">
       ${FEATURED_MAKES.map((make) => `
         <button type="button" class="combo-featured-tile" data-featured-make="${escapeHtml(make)}" title="${escapeHtml(make)}" aria-label="${escapeHtml(make)}">
-          <img src="assets/logos/${makeSlug(make)}.png" alt="" loading="lazy" width="24" height="24">
+          <img src="${escapeHtml(getLogoUrl(make))}" alt="" loading="lazy" width="24" height="24">
         </button>`).join('')}
     </li>`;
 }

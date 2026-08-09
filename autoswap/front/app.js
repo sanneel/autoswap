@@ -1,5 +1,5 @@
 
-const { assets, icons, Header, Footer, DEMO_CARS, escapeAttr, getCurrency, getUsdRate, onCurrencyChange } = window.AutoSwap;
+const { assets, icons, Header, Footer, DEMO_CARS, escapeAttr, getCurrency, getUsdRate, onCurrencyChange, getLogoUrl } = window.AutoSwap;
 
 // Hero cash slider range depends on the display currency.
 function heroSliderCfg() {
@@ -42,7 +42,7 @@ function hasBrandLogo(make) {
 
 function brandLogo(make) {
   if (!hasBrandLogo(make)) return '';
-  return `<img class="brand-logo-img" src="assets/logos/${BRAND_SLUGS[make]}.png" alt="${esc(make)}" loading="lazy" width="34" height="34">`;
+  return `<img class="brand-logo-img" src="${esc(getLogoUrl(make))}" alt="${esc(make)}" loading="lazy" width="34" height="34">`;
 }
 
 // Featured row pinned to the top of the picker: the five marks as tiles, so the

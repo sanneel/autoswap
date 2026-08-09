@@ -100,16 +100,23 @@
   // Get brand logo image URL from the car-logos-dataset (387 brands via jsdelivr CDN).
   // Converts "Mercedes-Benz" → "mercedes-benz.png" → CDN URL.
   // Fallback: returns the make name as text if logo unavailable.
-  function getLogoUrl(make) {
-    if (!make) return null;
-    // Convert make name to filename: "Alfa Romeo" → "alfa-romeo", "BMW" → "bmw"
-    const filename = String(make)
+  // Local asset path for a make's logo, and the single place that knows which
+  // file extension each brand ships as. Previously pointed at a jsDelivr CDN
+  // that the CSP does not allow in img-src and that nothing called; the real
+  // logos have always been served from assets/logos.
+  const LOGO_EXT = { bmw: 'svg' };
+
+  function logoSlug(make) {
+    return String(make || '')
       .toLowerCase()
-      .replace(/\s+/g, '-')      // spaces → hyphens
-      .replace(/[^\w\-]/g, '')   // remove special chars
-      .replace(/--+/g, '-')      // collapse multiple hyphens
-      + '.png';
-    return `https://cdn.jsdelivr.net/gh/filippofilip95/car-logos-dataset@master/logos/optimized/${filename}`;
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function getLogoUrl(make) {
+    const slug = logoSlug(make);
+    if (!slug) return null;
+    return `assets/logos/${slug}.${LOGO_EXT[slug] || 'png'}`;
   }
 
   // Cash sentence with an explicit subject ("ის" = the listing owner) so the
