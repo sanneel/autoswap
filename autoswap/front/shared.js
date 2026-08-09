@@ -155,6 +155,32 @@
     return String(make || '').toLowerCase().includes('bmw') ? assets.bmw : assets.audi;
   }
 
+  // "Equal swap" and "by agreement" carry no figure, so the amount input is
+  // hidden for them rather than sitting there showing a meaningless 0.
+  function bindOfferAmount(form) {
+    const mode = form?.querySelector('[name="cashMode"]');
+    const field = form?.querySelector('[data-offer-amount]');
+    const amount = form?.querySelector('[name="amount"]');
+    if (!mode || !field || !amount) return;
+    const update = () => {
+      const needs = mode.value !== 'none' && mode.value !== 'flexible';
+      field.hidden = !needs;
+      if (!needs) amount.value = '';
+    };
+    mode.addEventListener('change', update);
+    update();
+  }
+
+  // Offers are stored in GEL. The user may enter the figure in dollars, so it
+  // is converted here rather than silently saving a USD number as if it were
+  // lari.
+  function offerAmountInGel(form) {
+    const raw = Number(form?.querySelector('[name="amount"]')?.value) || 0;
+    if (raw <= 0) return 0;
+    const currency = form?.querySelector('[name="amountCurrency"]')?.value || 'GEL';
+    return currency === 'USD' ? Math.round(raw * getUsdRate()) : Math.round(raw);
+  }
+
   // Every .combo-list is position:fixed so it can escape a scrolling or
   // overflow-hidden ancestor. Fixed means the coordinates must be computed, and
   // an unpositioned list falls back to its static spot, which sat over the label
@@ -1085,9 +1111,15 @@
                 <option value="flexible">შეთანხმებით</option>
               </select>
             </label>
-            <label class="field">
-              <span>თანხა (₾)</span>
-              <input type="number" name="amount" min="0" placeholder="0" inputmode="numeric">
+            <label class="field field--offer-amount" data-offer-amount hidden>
+              <span>თანხა</span>
+              <span class="offer-amount-control">
+                <input type="number" name="amount" min="0" placeholder="0" inputmode="numeric">
+                <select name="amountCurrency" aria-label="ვალუტა">
+                  <option value="GEL">₾</option>
+                  <option value="USD">$</option>
+                </select>
+              </span>
             </label>
           </div>
           <label class="field">
@@ -1102,6 +1134,7 @@
       </div>
     `, 'offer-title');
 
+    bindOfferAmount(overlay.querySelector('#real-offer-form'));
     overlay.querySelector('#real-offer-form').addEventListener('submit', async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
@@ -1116,7 +1149,7 @@
         from_user_id: authUser.id,
         to_user_id: ownerId,
         cash_mode: cashMode,
-        cash_amount: cashMode === 'none' || cashMode === 'flexible' ? 0 : (Number(data.get('amount')) || 0),
+        cash_amount: cashMode === 'none' || cashMode === 'flexible' ? 0 : offerAmountInGel(form),
         message: String(data.get('message') || '').trim() || null,
       });
 
@@ -1200,9 +1233,15 @@
                 <option value="flexible">შეთანხმებით</option>
               </select>
             </label>
-            <label class="field">
-              <span>თანხა (₾)</span>
-              <input type="number" name="amount" min="0" placeholder="0" inputmode="numeric">
+            <label class="field field--offer-amount" data-offer-amount hidden>
+              <span>თანხა</span>
+              <span class="offer-amount-control">
+                <input type="number" name="amount" min="0" placeholder="0" inputmode="numeric">
+                <select name="amountCurrency" aria-label="ვალუტა">
+                  <option value="GEL">₾</option>
+                  <option value="USD">$</option>
+                </select>
+              </span>
             </label>
           </div>
           <label class="field">
@@ -1222,6 +1261,7 @@
       </div>
     `, 'offer-title');
 
+    bindOfferAmount(overlay.querySelector('#offer-form'));
     overlay.querySelector('#offer-form').addEventListener('submit', (event) => {
       event.preventDefault();
       overlay.querySelector('#offer-modal-body').innerHTML = `

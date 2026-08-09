@@ -5641,7 +5641,21 @@ p {
 
 .offer-arrow { color: var(--copper); }
 
-.offer-card { grid-template-columns: 1fr auto; }
+/* Specificity, not just order: the later `.account-card` rule sets a 3-column
+   template (110px media, body, actions). An offer card has no media, only body
+   and actions, so those two landed in the 110px and 1fr tracks: the text was
+   crushed into 110px while the button stretched across the rest. */
+.account-card.offer-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.account-card.conversation-card {
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+}
+
+.account-card.offer-card .account-card-actions .btn {
+  white-space: nowrap;
+}
 
 .offer-card-msg { margin: 4px 0; font-size: 13px; color: var(--secondary); font-style: italic; }
 
