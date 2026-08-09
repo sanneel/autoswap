@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const DEFAULT_CSV = 'C:/Users/pc/Downloads/100.csv';
+const DEFAULT_CSV = 'C:/Users/User/Downloads/100.csv';
 const DEFAULT_LIMIT = 15;
 const TEST_EMAIL = 'autoswap-test-loader@autoswap.test';
 const TEST_PASSWORD = crypto.randomBytes(18).toString('base64url');
@@ -28,9 +28,20 @@ function readFrontendUrl() {
   }
 }
 
-if (!SUPABASE_URL) fail('Set SUPABASE_URL or configure front/supabase-config.js first.');
-if (!SERVICE_KEY) fail('Set SUPABASE_SERVICE_ROLE_KEY in this terminal first.');
+// DRY_RUN parses and maps the CSV without touching the network, so the data
+// pipeline can be checked before any credentials exist.
+const DRY_RUN = process.env.DRY_RUN === '1' || process.argv.includes('--dry-run');
+const PLACEHOLDER_URL = /^https?:\/\/(dummy|example|placeholder|project|your-project)\./i;
+
 if (!fs.existsSync(CSV_PATH)) fail(`CSV not found: ${CSV_PATH}`);
+if (!DRY_RUN) {
+  if (!SUPABASE_URL) fail('Set SUPABASE_URL or configure front/supabase-config.js first.');
+  if (PLACEHOLDER_URL.test(SUPABASE_URL)) {
+    fail(`SUPABASE_URL is still the placeholder (${SUPABASE_URL}). Set the real project URL:\n`
+      + '  SUPABASE_URL=https://YOUR_REF.supabase.co SUPABASE_SERVICE_ROLE_KEY=... node scripts/upload-test-listings-from-csv.mjs');
+  }
+  if (!SERVICE_KEY) fail('Set SUPABASE_SERVICE_ROLE_KEY in this terminal first.');
+}
 
 const authHeaders = {
   apikey: SERVICE_KEY,
@@ -240,11 +251,37 @@ async function insertRows(table, rows, onConflict = '') {
 }
 
 async function main() {
-  await assertSchemaReady();
+  if (!DRY_RUN) await assertSchemaReady();
 
   const csvText = fs.readFileSync(CSV_PATH, 'utf8');
   const rows = parseCsv(csvText);
   const listings = csvRowsToListings(rows);
+
+  if (DRY_RUN) {
+    const photoTotal = listings.reduce((sum, l) => sum + l.photos.length, 0);
+    const tally = (key) => listings.reduce((acc, l) => {
+      acc[l.vehicle[key]] = (acc[l.vehicle[key]] || 0) + 1;
+      return acc;
+    }, {});
+    console.log(JSON.stringify({
+      dryRun: true,
+      csv: CSV_PATH,
+      csvRows: rows.length,
+      usableListings: listings.length,
+      limit: LIMIT,
+      photosToInsert: photoTotal,
+      byFuel: tally('fuel_type'),
+      byTransmission: tally('transmission'),
+      byCategory: tally('category'),
+      sample: listings.slice(0, 5).map(({ vehicle }) => ({
+        make: vehicle.make, model: vehicle.model, year: vehicle.year,
+        mileage: vehicle.mileage, fuel: vehicle.fuel_type,
+        gearbox: vehicle.transmission, category: vehicle.category, city: vehicle.city,
+      })),
+    }, null, 2));
+    return;
+  }
+
   if (listings.length < LIMIT) fail(`Only found ${listings.length} usable CSV rows with photos.`);
 
   const ownerId = await ensureTestOwner();
