@@ -155,6 +155,52 @@
     return String(make || '').toLowerCase().includes('bmw') ? assets.bmw : assets.audi;
   }
 
+  // Every .combo-list is position:fixed so it can escape a scrolling or
+  // overflow-hidden ancestor. Fixed means the coordinates must be computed, and
+  // an unpositioned list falls back to its static spot, which sat over the label
+  // above the input. Shared so every page with a dropdown positions it the same
+  // way instead of each re-implementing it.
+  const COMBO_LIST_MAX_H = 264;
+
+  function placeComboList(list, anchor) {
+    if (!list || !anchor || list.hidden) return;
+    const r = anchor.getBoundingClientRect();
+    if (!r.width && !r.height) return; // anchor hidden; nothing to align to
+    const gap = 4;
+    const margin = 8;
+    const spaceBelow = window.innerHeight - r.bottom - gap - margin;
+    const spaceAbove = r.top - gap - margin;
+    // Prefer downward; flip up only when below is cramped and above has more.
+    const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+    const avail = Math.max(120, Math.min(COMBO_LIST_MAX_H, openUp ? spaceAbove : spaceBelow));
+    list.style.left = `${Math.round(r.left)}px`;
+    list.style.width = `${Math.round(r.width)}px`;
+    list.style.maxHeight = `${Math.round(avail)}px`;
+    if (openUp) {
+      list.style.top = 'auto';
+      list.style.bottom = `${Math.round(window.innerHeight - r.top + gap)}px`;
+    } else {
+      list.style.bottom = 'auto';
+      list.style.top = `${Math.round(r.bottom + gap)}px`;
+    }
+  }
+
+  // Repositions any open list against its own anchor: the .combo-control when
+  // there is one (catalog filters), otherwise the input it belongs to. Never an
+  // ancestor that contains the list, whose rect would grow to include it and
+  // walk the list down the page on every reposition.
+  function repositionComboLists() {
+    document.querySelectorAll('.combo-list').forEach((list) => {
+      if (list.hidden) return;
+      const anchor = list.closest('.combo')?.querySelector('.combo-control')
+        || list.parentElement?.querySelector('input, select');
+      if (anchor) placeComboList(list, anchor);
+    });
+  }
+
+  window.addEventListener('scroll', repositionComboLists, true);
+  window.addEventListener('resize', repositionComboLists);
+
   // Neutral "no photo" tile. Deliberately not a stock car photo: substituting a
   // real BMW shot for a listing whose photo failed would misrepresent the car.
   // Inline data URI so it needs no request and cannot itself fail.
@@ -326,6 +372,9 @@
     // No default: pages without a matching nav item (landing, login, …)
     // render the nav with nothing highlighted.
     const active = options.active || '';
+    // options.currency: the ₾/$ switch is opt-in and only the catalog passes it.
+    // It converts prices in a list of results; on pages with no prices to
+    // convert it was a control that appeared to do nothing.
     // "Add your car" moved from the nav into the CTA, it is the conversion
     // action, not a navigation item.
     const nav = [
@@ -345,10 +394,11 @@
               ${nav.map((item) => `<a class="${item.id === active ? 'is-active' : ''}" href="${item.href}"${item.id === active ? ' aria-current="page"' : ''}>${item.label}</a>`).join('')}
             </nav>
             <a class="btn btn-accent header-cta" href="sell.html">${icons.plus}<span>დაამატე მანქანა</span></a>
+            ${options.currency ? `
             <div class="currency-switch" role="group" aria-label="ფასების ვალუტა">
               <button type="button" data-currency="GEL" aria-pressed="true">₾</button>
               <button type="button" data-currency="USD" aria-pressed="false">$</button>
-            </div>
+            </div>` : ''}
             <div class="notify-wrap">
               <button class="notify-btn" type="button" data-notify-btn aria-haspopup="true" aria-expanded="false" aria-label="შეტყობინებები">
                 ${icons.bell}
@@ -2176,6 +2226,8 @@
     getLogoUrl,
     formatCash,
     fallbackImageFor,
+    placeComboList,
+    repositionComboLists,
     mapFeedRow,
     Header,
     Footer,

@@ -21,6 +21,7 @@ const {
   onCurrencyChange,
   priceCurrencyToggle,
   getLogoUrl,
+  placeComboList,
 } = window.AutoSwap;
 
 function escapeHtml(value) {
@@ -758,7 +759,7 @@ function CatalogPage() {
   const filtered = getFiltered();
   const slice = pageSlice(filtered);
   return `
-    ${Header({ active: 'listings' })}
+    ${Header({ active: 'listings', currency: true })}
     <main class="catalog-shell">
       <header class="catalog-topbar">
         <div class="container catalog-topbar-inner">
@@ -1128,47 +1129,12 @@ async function comboSearch(kind, term) {
   return modelFamilyOptions(models, currentFilters.make, term);
 }
 
-// The combo list is position:fixed so it escapes .filters-scroll's overflow —
-// as an absolutely-positioned child it was being clipped by ~110px, hiding the
-// bottom of every result list. Fixed positioning means the coordinates have to
-// be computed against the control, and refreshed while the sidebar scrolls.
-const COMBO_LIST_MAX_H = 264;
-
+// Positioning lives in shared.js (placeComboList) so the sell page's dropdown,
+// which uses the same .combo-list class, is placed the same way. It used to be
+// defined only here, which left that one unpositioned and sitting over its label.
 function positionComboList(combo) {
-  const list = combo.querySelector('.combo-list');
-  const control = combo.querySelector('.combo-control');
-  if (!list || !control || list.hidden) return;
-  const r = control.getBoundingClientRect();
-  const gap = 4;
-  const margin = 8;
-  const spaceBelow = window.innerHeight - r.bottom - gap - margin;
-  const spaceAbove = r.top - gap - margin;
-  // Prefer opening downward; flip up only when below is genuinely cramped
-  // and above has more room.
-  const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
-  const avail = Math.max(120, Math.min(COMBO_LIST_MAX_H, openUp ? spaceAbove : spaceBelow));
-  list.style.left = `${Math.round(r.left)}px`;
-  list.style.width = `${Math.round(r.width)}px`;
-  list.style.maxHeight = `${Math.round(avail)}px`;
-  if (openUp) {
-    list.style.top = 'auto';
-    list.style.bottom = `${Math.round(window.innerHeight - r.top + gap)}px`;
-  } else {
-    list.style.bottom = 'auto';
-    list.style.top = `${Math.round(r.bottom + gap)}px`;
-  }
+  placeComboList(combo.querySelector('.combo-list'), combo.querySelector('.combo-control'));
 }
-
-function repositionOpenCombos() {
-  document.querySelectorAll('.combo').forEach((combo) => {
-    const list = combo.querySelector('.combo-list');
-    if (list && !list.hidden) positionComboList(combo);
-  });
-}
-
-// Module-level so these attach once, not once per renderAll().
-window.addEventListener('scroll', repositionOpenCombos, true);
-window.addEventListener('resize', repositionOpenCombos);
 
 function setComboOpen(combo, open) {
   const list = combo.querySelector('.combo-list');

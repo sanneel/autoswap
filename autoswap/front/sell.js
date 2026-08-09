@@ -3,6 +3,7 @@ const {
   Header, Footer, icons, sb, toast, escapeAttr, isUuid,
   authReady, getAuthUser, onAuth, openAuthModal,
   bustListingCaches, searchMakes, searchModels, FUEL_LABELS,
+  placeComboList,
 } = window.AutoSwap;
 
 const MAX_PHOTOS = 6;
@@ -507,6 +508,11 @@ function bindCatalogSuggestions() {
         </li>`)
       .join('');
     list.hidden = false;
+    // .combo-list is position:fixed; without this it lands at its static spot
+    // and covers the label above the input. Anchor to the input, not its
+    // .field-control wrapper: the wrapper contains the list, so its rect grows
+    // to include it and each placement pushes the list further down.
+    placeComboList(list, searchInput);
     searchInput.setAttribute('aria-expanded', 'true');
   };
 
