@@ -45,6 +45,29 @@ function sellSection(index, bodyHTML, extraClass = '') {
 }
 
 
+// Supabase/PostgREST errors arrive in English. Users see Georgian; the raw
+// message still goes to the console for debugging.
+function georgianError(err) {
+  const raw = String(err?.message || err || '');
+  const m = raw.toLowerCase();
+
+  // Schema drift: a column the code writes is missing from the database.
+  const missingCol = /could not find the '([^']+)' column/i.exec(raw);
+  if (missingCol) {
+    return `ბაზა არ არის განახლებული (აკლია ველი „${missingCol[1]}“). გაუშვი supabase/schema.sql.`;
+  }
+  if (m.includes('duplicate key') || m.includes('already exists')) return 'ასეთი ჩანაწერი უკვე არსებობს.';
+  if (m.includes('violates row-level security') || m.includes('row-level security')) return 'ამ მოქმედების უფლება არ გაქვს.';
+  if (m.includes('violates foreign key')) return 'დაკავშირებული ჩანაწერი ვერ მოიძებნა.';
+  if (m.includes('violates check constraint')) return 'ერთ-ერთი ველი დაუშვებელ მნიშვნელობას შეიცავს.';
+  if (m.includes('not-null') || m.includes('null value in column')) return 'სავალდებულო ველი შეუვსებელია.';
+  if (m.includes('jwt') || m.includes('unauthorized') || m.includes('401')) return 'სესია ამოიწურა, გაიარე ავტორიზაცია ხელახლა.';
+  if (m.includes('payload too large') || m.includes('413')) return 'ფაილი ძალიან დიდია.';
+  if (m.includes('failed to fetch') || m.includes('networkerror')) return 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი.';
+  if (m.includes('rate limit') || m.includes('429')) return 'ბევრი მცდელობა იყო, სცადე ცოტა ხანში.';
+  return raw || 'უცნობი შეცდომა.';
+}
+
 function iconField(icon, label, controlHTML, extraClass = '') {
   return `
     <label class="field field--icon ${extraClass}">
@@ -253,42 +276,147 @@ function remainingSlots() {
   return MAX_PHOTOS - (existingPhotos.length - removedPhotoIds.size);
 }
 
+// One object URL per picked file, reused across re-renders. Re-creating them on
+// every reorder leaked a URL per drag.
+const previewUrls = new Map();
+
+function previewUrlFor(file) {
+  if (!previewUrls.has(file)) previewUrls.set(file, URL.createObjectURL(file));
+  return previewUrls.get(file);
+}
+
+function releasePreviewUrl(file) {
+  const url = previewUrls.get(file);
+  if (url) {
+    URL.revokeObjectURL(url);
+    previewUrls.delete(file);
+  }
+}
+
+function acceptPhotoFiles(fileList) {
+  const valid = [];
+  for (const file of Array.from(fileList || [])) {
+    if (!PHOTO_TYPES.includes(file.type)) {
+      toast(`${file.name}: მხოლოდ JPG/PNG/WebP`, 'error');
+      continue;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      toast(`${file.name}: მაქს. 5MB`, 'error');
+      continue;
+    }
+    valid.push(file);
+  }
+  // Append rather than replace: picking or dropping a second batch should add
+  // to the set, which is what the remove buttons make safe.
+  const room = remainingSlots() - pickedFiles.length;
+  const added = valid.slice(0, Math.max(0, room));
+  if (added.length < valid.length) toast(`მაქს. ${MAX_PHOTOS} ფოტო თითო განცხადებაზე`, 'error');
+  pickedFiles = pickedFiles.concat(added);
+  renderPickedPhotos();
+}
+
+function renderPickedPhotos() {
+  const previews = document.querySelector('#upload-previews');
+  if (!previews) return;
+  const noExisting = !(existingPhotos.length - removedPhotoIds.size);
+  previews.innerHTML = pickedFiles
+    .map((file, i) => `
+      <figure class="upload-preview" draggable="true" data-pick="${i}">
+        <img src="${previewUrlFor(file)}" alt="ფოტო ${i + 1}" draggable="false">
+        ${i === 0 && noExisting ? '<figcaption>მთავარი</figcaption>' : ''}
+        <button type="button" class="upload-remove" data-remove-pick="${i}" aria-label="ფოტოს წაშლა">&times;</button>
+      </figure>
+    `)
+    .join('');
+  previews.hidden = !pickedFiles.length;
+
+  if (previewPhotoUrl) previewPhotoUrl = null;
+  previewPhotoUrl = pickedFiles[0] ? previewUrlFor(pickedFiles[0]) : null;
+  updatePreview(document.querySelector('#sell-form'));
+}
+
 function bindUploadZone() {
   const input = document.querySelector('.upload-input');
   const previews = document.querySelector('#upload-previews');
+  const zone = document.querySelector('#upload-zone');
   if (!input || !previews) return;
 
   input.addEventListener('change', () => {
-    previews.querySelectorAll('img').forEach((img) => URL.revokeObjectURL(img.src));
-    const files = Array.from(input.files || []);
-    const valid = [];
-    for (const file of files) {
-      if (!PHOTO_TYPES.includes(file.type)) {
-        toast(`${file.name}: მხოლოდ JPG/PNG/WebP`, 'error');
-        continue;
-      }
-      if (file.size > MAX_PHOTO_BYTES) {
-        toast(`${file.name}: მაქს. 5MB`, 'error');
-        continue;
-      }
-      valid.push(file);
+    acceptPhotoFiles(input.files);
+    // Clear so re-picking the same file still fires change.
+    input.value = '';
+  });
+
+  // ---- Drop files onto the zone ----
+  if (zone) {
+    const stop = (event) => { event.preventDefault(); event.stopPropagation(); };
+    ['dragenter', 'dragover'].forEach((type) => zone.addEventListener(type, (event) => {
+      stop(event);
+      event.dataTransfer.dropEffect = 'copy';
+      zone.classList.add('is-dropping');
+    }));
+    ['dragleave', 'dragend'].forEach((type) => zone.addEventListener(type, (event) => {
+      stop(event);
+      if (!zone.contains(event.relatedTarget)) zone.classList.remove('is-dropping');
+    }));
+    zone.addEventListener('drop', (event) => {
+      stop(event);
+      zone.classList.remove('is-dropping');
+      acceptPhotoFiles(event.dataTransfer?.files);
+    });
+  }
+
+  // Dropping anywhere else must not make the browser navigate to the file.
+  ['dragover', 'drop'].forEach((type) => window.addEventListener(type, (event) => {
+    if (!event.target.closest?.('#upload-zone, #upload-previews')) event.preventDefault();
+  }));
+
+  // ---- Reorder picked photos by dragging ----
+  let dragFrom = null;
+  previews.addEventListener('dragstart', (event) => {
+    const fig = event.target.closest('[data-pick]');
+    if (!fig) return;
+    dragFrom = Number(fig.dataset.pick);
+    fig.classList.add('is-dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    // Firefox requires data to be set for a drag to start at all.
+    event.dataTransfer.setData('text/plain', String(dragFrom));
+  });
+
+  previews.addEventListener('dragover', (event) => {
+    if (dragFrom === null) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const over = event.target.closest('[data-pick]');
+    previews.querySelectorAll('.is-drop-target').forEach((f) => f.classList.remove('is-drop-target'));
+    if (over && Number(over.dataset.pick) !== dragFrom) over.classList.add('is-drop-target');
+  });
+
+  previews.addEventListener('drop', (event) => {
+    if (dragFrom === null) return;
+    event.preventDefault();
+    const over = event.target.closest('[data-pick]');
+    const to = over ? Number(over.dataset.pick) : pickedFiles.length - 1;
+    if (to !== dragFrom) {
+      const [moved] = pickedFiles.splice(dragFrom, 1);
+      pickedFiles.splice(to, 0, moved);
+      renderPickedPhotos();
     }
-    pickedFiles = valid.slice(0, remainingSlots());
-    if (valid.length > pickedFiles.length) toast(`მაქს. ${MAX_PHOTOS} ფოტო თითო განცხადებაზე`, 'error');
+    dragFrom = null;
+  });
 
-    previews.innerHTML = pickedFiles
-      .map((file, i) => `
-        <figure class="upload-preview">
-          <img src="${URL.createObjectURL(file)}" alt="ფოტო ${i + 1}">
-          ${i === 0 && !(existingPhotos.length - removedPhotoIds.size) ? '<figcaption>მთავარი</figcaption>' : ''}
-        </figure>
-      `)
-      .join('');
-    previews.hidden = !pickedFiles.length;
+  previews.addEventListener('dragend', () => {
+    previews.querySelectorAll('.is-dragging, .is-drop-target')
+      .forEach((f) => f.classList.remove('is-dragging', 'is-drop-target'));
+    dragFrom = null;
+  });
 
-    if (previewPhotoUrl) URL.revokeObjectURL(previewPhotoUrl);
-    previewPhotoUrl = pickedFiles[0] ? URL.createObjectURL(pickedFiles[0]) : null;
-    updatePreview(document.querySelector('#sell-form'));
+  previews.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-remove-pick]');
+    if (!btn) return;
+    const [removed] = pickedFiles.splice(Number(btn.dataset.removePick), 1);
+    releasePreviewUrl(removed);
+    renderPickedPhotos();
   });
 
   document.querySelector('#existing-photos')?.addEventListener('click', (event) => {
@@ -297,7 +425,7 @@ function bindUploadZone() {
     const fig = btn.closest('[data-photo]');
     removedPhotoIds.add(fig.dataset.photo);
     fig.remove();
-    updatePreview(document.querySelector('#sell-form'));
+    renderPickedPhotos();
   });
 }
 
@@ -369,11 +497,63 @@ function bindCatalogSuggestions() {
       closeList();
       return;
     }
+    // Make and model as separate parts: one run-on uppercase string was hard
+    // to scan when every row starts with the same make.
     list.innerHTML = lastSuggestions
-      .map((item, index) => `<li class="combo-option${index === activeIndex ? ' is-active' : ''}" role="option" data-index="${index}"><span>${escapeAttr(item.label)}</span></li>`)
+      .map((item, index) => `
+        <li class="combo-option vehicle-option${index === activeIndex ? ' is-active' : ''}" role="option" data-index="${index}">
+          <span class="vs-make">${escapeAttr(item.make || '')}</span>
+          ${item.model ? `<span class="vs-model">${escapeAttr(item.model)}</span>` : ''}
+        </li>`)
       .join('');
     list.hidden = false;
     searchInput.setAttribute('aria-expanded', 'true');
+  };
+
+  // Flags the field when the typed text matches no make in the catalog, so the
+  // user can correct it instead of silently saving an unknown vehicle.
+  const setUnknown = (unknown) => {
+    const field = searchInput.closest('.field');
+    if (!field) return;
+    field.classList.toggle('field--unknown', unknown);
+    searchInput.setAttribute('aria-invalid', unknown ? 'true' : 'false');
+  };
+
+  // Enter with nothing highlighted: take what was typed, resolve it against the
+  // catalog, and either accept it or mark it unknown.
+  const commitTyped = async () => {
+    const raw = searchInput.value.trim();
+    if (!raw) { setUnknown(false); setVehicle('', ''); return; }
+    const exact = lastSuggestions.find((item) => item.label.toLowerCase() === raw.toLowerCase());
+    if (exact) {
+      setUnknown(false);
+      setVehicle(exact.make, exact.model, exact.label);
+      closeList();
+      return;
+    }
+    const make = await candidateMake(raw);
+    if (!make) {
+      setUnknown(true);
+      setVehicle('', '');
+      return;
+    }
+    setUnknown(false);
+    const model = raw.toLowerCase().startsWith(make.name.toLowerCase())
+      ? raw.slice(make.name.length).trim()
+      : raw.split(/\s+/).slice(1).join(' ');
+    setVehicle(make.name, model);
+    closeList();
+  };
+
+  // Double-click on an empty or committed field opens the browse list rather
+  // than forcing the user to delete characters to see options.
+  const showBrowseList = async () => {
+    const term = searchInput.value.trim();
+    lastSuggestions = term
+      ? await suggestionsFor(term)
+      : (await searchMakes('', 20)).map((m) => ({ make: m.name, model: '', label: m.name }));
+    activeIndex = -1;
+    renderList();
   };
 
   const refresh = async () => {
@@ -399,6 +579,7 @@ function bindCatalogSuggestions() {
     const item = lastSuggestions[Number(index)];
     if (!item) return;
     clearTimeout(timer);
+    setUnknown(false);
     setVehicle(item.make, item.model, item.label);
     closeList();
   };
@@ -419,12 +600,19 @@ function bindCatalogSuggestions() {
       activeIndex = ((activeIndex + (event.key === 'ArrowDown' ? 1 : -1)) % count + count) % count;
       renderList();
       list.querySelector('.combo-option.is-active')?.scrollIntoView({ block: 'nearest' });
-    } else if (event.key === 'Enter' && !list.hidden && activeIndex >= 0) {
+    } else if (event.key === 'Enter') {
+      // Never submit the form from this field: Enter resolves the vehicle.
       event.preventDefault();
-      pick(activeIndex);
+      if (!list.hidden && activeIndex >= 0) pick(activeIndex);
+      else commitTyped();
     } else if (event.key === 'Escape') {
       closeList();
     }
+  });
+
+  searchInput.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+    showBrowseList();
   });
   list.addEventListener('mousedown', (event) => {
     const option = event.target.closest('.combo-option');
@@ -1051,16 +1239,46 @@ function readForm(form) {
   };
 }
 
+// Returns { message, field } so the caller can mark the offending input,
+// instead of only printing a sentence the user then has to hunt through the
+// form to act on.
 function validate(values) {
-  if (!values.make || !values.model) return 'მარკა და მოდელი სავალდებულოა.';
-  if (!values.year || values.year < 1980 || values.year > THIS_YEAR + 1) return `წელი უნდა იყოს 1980-${THIS_YEAR + 1} შუალედში.`;
-  if (values.mileage == null || values.mileage < 0) return 'გარბენი უნდა იყოს დადებითი რიცხვი.';
-  if (!values.fuel_type || !values.transmission) return 'საწვავი და ტრანსმისია სავალდებულოა.';
-  if (values.cash_amount < 0) return 'თანხა ვერ იქნება უარყოფითი.';
+  const bad = (message, field) => ({ message, field });
+  if (!values.make || !values.model) return bad('მარკა და მოდელი სავალდებულოა.', 'vehicleSearch');
+  if (!values.year || values.year < 1980 || values.year > THIS_YEAR + 1) return bad(`წელი უნდა იყოს 1980-${THIS_YEAR + 1} შუალედში.`, 'year');
+  if (values.mileage == null || values.mileage < 0) return bad('გარბენი უნდა იყოს დადებითი რიცხვი.', 'mileage');
+  if (!values.fuel_type) return bad('საწვავი სავალდებულოა.', 'fuel');
+  if (!values.transmission) return bad('ტრანსმისია სავალდებულოა.', 'transmission');
+  if (values.cash_amount < 0) return bad('თანხა ვერ იქნება უარყოფითი.', 'amount');
   if ((values.cash_mode === 'add_money' || values.cash_mode === 'ask_money') && values.cash_amount <= 0) {
-    return 'თანხის სხვაობისთვის მიუთითე თანხა.';
+    return bad('თანხის სხვაობისთვის მიუთითე თანხა.', 'amount');
   }
   return null;
+}
+
+// Red border + red placeholder on the field at fault, cleared as soon as the
+// user touches it, so the form points at the problem instead of describing it.
+function clearFieldErrors(form) {
+  form.querySelectorAll('.field--invalid').forEach((f) => f.classList.remove('field--invalid'));
+}
+
+function markFieldError(form, name) {
+  if (!name) return;
+  const input = form.querySelector(`[name="${name}"]`);
+  const field = input?.closest('.field');
+  if (!input || !field) return;
+  field.classList.add('field--invalid');
+  input.setAttribute('aria-invalid', 'true');
+  input.focus({ preventScroll: true });
+  field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const clear = () => {
+    field.classList.remove('field--invalid');
+    input.removeAttribute('aria-invalid');
+    input.removeEventListener('input', clear);
+    input.removeEventListener('change', clear);
+  };
+  input.addEventListener('input', clear);
+  input.addEventListener('change', clear);
 }
 
 // Downscale + re-encode photos in the browser before upload so listings stay
@@ -1227,11 +1445,12 @@ async function renderReal(user) {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const values = readForm(form);
+    clearFieldErrors(form);
     const problem = validate(values);
     if (problem) {
-      errorBox.textContent = problem;
+      errorBox.textContent = problem.message;
       errorBox.hidden = false;
-      errorBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      markFieldError(form, problem.field);
       return;
     }
     errorBox.hidden = true;
@@ -1248,8 +1467,9 @@ async function renderReal(user) {
     } catch (err) {
       submit.disabled = false;
       submit.textContent = editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება';
-      errorBox.textContent = `შენახვა ვერ მოხერხდა: ${err.message}`;
+      errorBox.textContent = `შენახვა ვერ მოხერხდა: ${georgianError(err)}`;
       errorBox.hidden = false;
+      // The raw cause stays in the console for us; the user gets Georgian.
       console.error('AutoSwap: listing save failed', err);
     }
   });

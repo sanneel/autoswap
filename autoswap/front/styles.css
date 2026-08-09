@@ -2481,6 +2481,88 @@ svg {
   opacity: 0.72;
 }
 
+/* Vehicle search rows: make muted, model emphasised. Every row repeats the
+   same make, so leading with it in full weight made the list hard to scan. */
+.vehicle-option {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.vehicle-option .vs-make {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.vehicle-option .vs-model {
+  min-width: 0;
+  color: var(--graphite);
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Typed vehicle matched nothing in the catalog. */
+.sell-shell--v3 .sell-section .field--unknown .field-control > input {
+  border-color: #A33627;
+  background: #fdf4f2;
+}
+
+.sell-shell--v3 .field--unknown > span::after {
+  content: " — ვერ მოიძებნა კატალოგში";
+  color: #A33627;
+  font-weight: 600;
+}
+
+/* Photo upload: drop target + drag-to-reorder feedback */
+.upload-zone.is-dropping {
+  border-color: var(--copper);
+  background: #eef4ee;
+}
+
+.upload-preview[draggable="true"] {
+  cursor: grab;
+  position: relative;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.upload-preview.is-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+/* Insertion marker on the photo the drop would land on. */
+.upload-preview.is-drop-target {
+  outline: 2px solid var(--copper);
+  outline-offset: 2px;
+  transform: translateY(-2px);
+}
+
+/* Field flagged by validation: the border, the label and the placeholder all
+   go red, so the eye lands on the field itself rather than only the message. */
+.sell-shell--v3 .field--invalid > span {
+  color: #A33627;
+}
+
+.sell-shell--v3 .sell-section .field--invalid .field-control > input,
+.sell-shell--v3 .sell-section .field--invalid .field-control > select {
+  border-color: #A33627;
+  background: #fdf4f2;
+}
+
+.sell-shell--v3 .field--invalid .field-control > input::placeholder {
+  color: #C06152;
+  opacity: 1;
+}
+
+.sell-shell--v3 .field--invalid .field-control > svg {
+  color: #A33627;
+}
+
 /* Swapped in when a listing photo fails to load. Contain, not cover, so the
    glyph is not cropped by the card's usual object-fit. */
 .img-placeholder {
