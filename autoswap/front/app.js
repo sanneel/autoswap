@@ -33,7 +33,7 @@ const BRAND_SLUGS = {
 // Only these five carry a logo. Everything else is text, with no placeholder
 // glyph: a generic car icon next to "Alfa Romeo" says nothing the word does not
 // already say, and repeating it down the list turns real marks into decoration.
-const FEATURED_BRANDS = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Volkswagen'];
+const FEATURED_BRANDS = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Porsche'];
 const FEATURED_BRAND_SET = new Set(FEATURED_BRANDS);
 
 function hasBrandLogo(make) {
@@ -944,7 +944,7 @@ function BrowseStrip() {
     { make: 'Mercedes-Benz', label: 'Mercedes' },
     { make: 'Audi' },
     { make: 'Toyota' },
-    { make: 'Volkswagen', label: 'VW' },
+    { make: 'Porsche' },
     { make: 'Hyundai' },
     { make: 'Lexus' },
   ].filter((b) => countByMake(b.make) > 0).slice(0, 5);

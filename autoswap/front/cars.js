@@ -49,7 +49,7 @@ const LOGO_CDN = 'https://cdn.jsdelivr.net/gh/filippofilip95/car-logos-dataset@m
 // These five appear as a logo row pinned to the top of the make dropdown and
 // as the quick-filter chips. Their logos appear there and nowhere else: every
 // row in the list itself is text, these five included.
-const FEATURED_MAKES = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Volkswagen'];
+const FEATURED_MAKES = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Porsche'];
 const FEATURED_MAKE_SLUGS = new Set(FEATURED_MAKES.map((m) => m.toLowerCase().replace(/[^a-z0-9]+/g, '-')));
 function makeSlug(name) {
   return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -722,7 +722,7 @@ function CatalogQuickBar(count) {
     { make: 'Mercedes-Benz', label: 'Mercedes' },
     { make: 'Audi' },
     { make: 'Toyota' },
-    { make: 'Volkswagen', label: 'VW' },
+    { make: 'Porsche' },
   ].filter((brand) => countByMake(brand.make) > 0);
   const routeChips = [
     // No icon: sedan and crossover were both showing the same car glyph, which
