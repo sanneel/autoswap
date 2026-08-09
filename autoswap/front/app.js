@@ -30,15 +30,42 @@ const BRAND_SLUGS = {
   Renault: 'renault', Peugeot: 'peugeot',
 };
 
+// Only these five carry a logo. Everything else is text, with no placeholder
+// glyph: a generic car icon next to "Alfa Romeo" says nothing the word does not
+// already say, and repeating it down the list turns real marks into decoration.
+const FEATURED_BRANDS = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Volkswagen'];
+const FEATURED_BRAND_SET = new Set(FEATURED_BRANDS);
+
 function hasBrandLogo(make) {
-  return Boolean(BRAND_SLUGS[make]);
+  return FEATURED_BRAND_SET.has(make) && Boolean(BRAND_SLUGS[make]);
 }
 
 function brandLogo(make) {
-  const slug = BRAND_SLUGS[make];
-  return slug
-    ? `<img class="brand-logo-img" src="assets/logos/${slug}.png" alt="${esc(make)}" loading="lazy" width="34" height="34">`
-    : icons.car;
+  if (!hasBrandLogo(make)) return '';
+  return `<img class="brand-logo-img" src="assets/logos/${BRAND_SLUGS[make]}.png" alt="${esc(make)}" loading="lazy" width="34" height="34">`;
+}
+
+// Featured row pinned to the top of the picker: the five marks as tiles, so the
+// common picks are one click away and the list below can stay pure text.
+function featuredBrandTiles() {
+  return `
+    <div class="brand-featured" role="group" aria-label="პოპულარული მარკები">
+      ${FEATURED_BRANDS.map((make) => `
+        <button class="brand-featured-tile" type="button" data-featured-make="${esc(make)}" title="${esc(make)}" aria-label="${esc(make)}">
+          ${brandLogo(make)}
+        </button>`).join('')}
+    </div>`;
+}
+
+// The logo cell is omitted entirely for unfeatured makes rather than left empty,
+// so the text list aligns flush instead of indenting past a blank square.
+function brandPickerOptionHTML(item, index) {
+  const logo = brandLogo(item.make);
+  return `
+    <button class="brand-picker-option${logo ? '' : ' is-textonly'}" type="button" role="option" aria-selected="false" data-index="${index}">
+      ${logo ? `<span class="brand-picker-logo" aria-hidden="true">${logo}</span>` : ''}
+      <span class="brand-picker-name">${esc(item.label)}</span>
+    </button>`;
 }
 
 const HERO_SEARCH_BRANDS = [
@@ -514,16 +541,15 @@ function bindHavePicker(form) {
     panel.classList.toggle('is-empty', !items.length);
     const hasBoth = items.some((it) => it.group === 'make') && items.some((it) => it.group === 'model');
     let lastGroup = '';
-    list.innerHTML = items.map((item, index) => {
+    // Featured tiles show only at rest. Once the user is typing, the filtered
+    // results are the answer and a fixed row of five is just in the way.
+    const featured = input.value.trim() ? '' : featuredBrandTiles();
+    list.innerHTML = featured + items.map((item, index) => {
       const header = hasBoth && item.group !== lastGroup
         ? `<div class="brand-picker-group" aria-hidden="true">${item.group === 'make' ? 'მარკები' : 'მოდელები'}</div>`
         : '';
       lastGroup = item.group;
-      return `${header}
-        <button class="brand-picker-option" type="button" role="option" aria-selected="false" data-index="${index}">
-          <span class="brand-picker-logo" aria-hidden="true">${brandLogo(item.make)}</span>
-          <span class="brand-picker-name">${esc(item.label)}</span>
-        </button>`;
+      return `${header}${brandPickerOptionHTML(item, index)}`;
     }).join('');
   };
 
@@ -595,6 +621,16 @@ function bindHavePicker(form) {
   });
 
   list.addEventListener('mousedown', (event) => {
+    // A featured tile behaves exactly as if the make had been typed: it fills
+    // the field and re-runs the search, so the model list follows immediately.
+    const tile = event.target.closest('[data-featured-make]');
+    if (tile) {
+      event.preventDefault();
+      input.value = tile.dataset.featuredMake;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      return;
+    }
     const option = event.target.closest('.brand-picker-option');
     if (!option) return;
     event.preventDefault();
@@ -646,16 +682,15 @@ function bindBrandPicker(form) {
     panel.classList.toggle('is-empty', !items.length);
     const hasBoth = items.some((it) => it.group === 'make') && items.some((it) => it.group === 'model');
     let lastGroup = '';
-    list.innerHTML = items.map((item, index) => {
+    // Featured tiles show only at rest. Once the user is typing, the filtered
+    // results are the answer and a fixed row of five is just in the way.
+    const featured = input.value.trim() ? '' : featuredBrandTiles();
+    list.innerHTML = featured + items.map((item, index) => {
       const header = hasBoth && item.group !== lastGroup
         ? `<div class="brand-picker-group" aria-hidden="true">${item.group === 'make' ? 'მარკები' : 'მოდელები'}</div>`
         : '';
       lastGroup = item.group;
-      return `${header}
-        <button class="brand-picker-option" type="button" role="option" aria-selected="false" data-index="${index}">
-          <span class="brand-picker-logo" aria-hidden="true">${brandLogo(item.make)}</span>
-          <span class="brand-picker-name">${esc(item.label)}</span>
-        </button>`;
+      return `${header}${brandPickerOptionHTML(item, index)}`;
     }).join('');
   };
 
@@ -729,6 +764,16 @@ function bindBrandPicker(form) {
 
   // mousedown (not click) so the option wins the race against input blur
   list.addEventListener('mousedown', (event) => {
+    // A featured tile behaves exactly as if the make had been typed: it fills
+    // the field and re-runs the search, so the model list follows immediately.
+    const tile = event.target.closest('[data-featured-make]');
+    if (tile) {
+      event.preventDefault();
+      input.value = tile.dataset.featuredMake;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      return;
+    }
     const option = event.target.closest('.brand-picker-option');
     if (!option) return;
     event.preventDefault();

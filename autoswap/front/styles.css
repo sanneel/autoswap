@@ -40,11 +40,18 @@
   --panel-green-soft: rgba(33, 41, 33, 0.55);
   --warm-ivory: #f2f6f1;
   --soft-beige: #e8eee6;
-  --card-white: rgba(255, 255, 255, 0.82);
+  /* Opaque. Translucent cards over a blur were glassmorphism used as the
+     default surface: it dropped text contrast against whatever scrolled
+     underneath and made 33 surfaces read as one soft haze. Glass is kept for
+     sticky chrome (--material-thin), where content genuinely passes behind. */
+  --card-white: #ffffff;
   --border: rgba(122, 138, 122, 0.22);
   --graphite: #161a15;
   --secondary: rgba(48, 58, 48, 0.76);
-  --muted: rgba(48, 58, 48, 0.66);
+  /* Was rgba(48,58,48,0.66) — 4.05:1 on the page background, under the 4.5:1
+     minimum for body text. Solid #5a6459 measures 5.65:1 and matches
+     --market-muted, so the two muted greys are now one value. */
+  --muted: #5a6459;
   /* Single calm action color — deep forest green. Kept under the old
      token names so every reference flips at once. No orange/copper. */
   --copper: #1e4d34;
@@ -57,7 +64,8 @@
   --material-thick: rgba(255, 255, 255, 0.88);
   --hairline: rgba(255, 255, 255, 0.6);
   --blur-chrome: blur(24px) saturate(180%);
-  --blur-card: blur(20px) saturate(160%);
+  /* No-op: card surfaces are opaque now, so this only cost compositing. */
+  --blur-card: none;
 
   --cash-add-bg: rgba(46, 119, 65, 0.12);   --cash-add-fg: #2E7741;
   --cash-ask-bg: rgba(178, 58, 46, 0.11);   --cash-ask-fg: #B23A2E;
@@ -69,9 +77,15 @@
   --container: 1280px;
 
   --font: "FiraGO", "Noto Sans Georgian", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: "FiraGO", "Noto Sans Georgian", system-ui, sans-serif;
+  /* --font-display was byte-identical to --font: a "display" token that added
+     a name but no contrast. Kept as an alias so existing usages resolve. */
+  --font-display: var(--font);
   --font-serif: "Noto Serif Georgian", "Noto Sans Georgian", Georgia, serif;
-  --font-mono: "JetBrains Mono", "Noto Sans Georgian", ui-monospace, monospace;
+  /* JetBrains Mono has no Georgian glyphs, so any label mixing Georgian with
+     digits rendered in two different typefaces mid-word. It also read as a code
+     font in a consumer marketplace. Numerals now align via font-variant-numeric
+     rather than a second family. */
+  --font-mono: var(--font);
 }
 
 *,
@@ -354,7 +368,7 @@ svg {
   border-radius: 999px;
   background: #fff;
   color: var(--secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0;
@@ -760,8 +774,7 @@ svg {
   color: rgba(255, 255, 255, 0.82);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .swap-plan-item strong {
@@ -903,8 +916,7 @@ svg {
   color: rgba(255, 255, 255, 0.9);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
@@ -1166,8 +1178,7 @@ svg {
   color: var(--copper);
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .listing-body > .trade-cash {
@@ -1190,8 +1201,7 @@ svg {
   color: var(--copper);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .wanted-main {
@@ -1392,7 +1402,7 @@ svg {
   border-radius: 50%;
   background: var(--ink);
   color: #fff;
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 15px;
   font-weight: 600;
   box-shadow: 0 0 0 4px rgba(243, 246, 241, 0.85);
@@ -3293,8 +3303,7 @@ body.modal-open {
   color: var(--copper);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .modal-title {
@@ -3798,7 +3807,7 @@ body.modal-open {
   content: counter(sell-step, decimal-leading-zero);
   flex: 0 0 auto;
   color: var(--copper);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 600;
 }
@@ -4010,7 +4019,7 @@ body.modal-open {
 .make-chip span,
 .car-spec span,
 .listing-body p {
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums;
 }
 
@@ -4105,7 +4114,7 @@ p {
 .stat-cell strong {
   overflow: hidden;
   color: var(--graphite);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -4249,7 +4258,7 @@ p {
 
 .mycar-copy small b {
   color: var(--warm-ivory);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
 }
 
 .mycar-btn {
@@ -4561,7 +4570,7 @@ p {
   border-radius: 6px;
   background: var(--deep-green);
   color: #fff;
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 11px;
   font-weight: 700;
 }
@@ -4728,7 +4737,7 @@ p {
 
 .want-chip--more {
   color: var(--muted);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
 }
 
 
@@ -4739,7 +4748,7 @@ p {
   margin: 0;
   padding: 9px 11px;
   border-radius: 9px;
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 12.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -4840,7 +4849,7 @@ p {
 
 .load-more span {
   color: var(--muted);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
 
@@ -4913,8 +4922,7 @@ p {
   color: var(--muted);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   line-height: 1.5;
 }
 
@@ -5158,7 +5166,7 @@ p {
 
   .filters-apply span {
     margin: 0 5px;
-    font-family: var(--font-mono);
+    font-family: var(--font); font-variant-numeric: tabular-nums;
   }
 
   .sticky-cta {
@@ -5382,7 +5390,7 @@ p {
 
 .auth-code-input {
   letter-spacing: 0.4em;
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 22px;
   text-align: center;
 }
@@ -5538,7 +5546,7 @@ p {
 
 .offer-side { display: grid; }
 
-.offer-side small { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+.offer-side small { color: var(--muted); font-size: 12px; }
 
 .offer-side strong { font-size: 15px; }
 
@@ -5791,7 +5799,7 @@ a.header-user:hover {
 }
 
 .otp-input {
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 20px;
   font-weight: 700;
   letter-spacing: 0.35em;
@@ -6445,13 +6453,12 @@ a.header-user:hover {
   color: var(--muted);
   font-size: 10.5px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .car-card-value strong {
   color: var(--graphite);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 18px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -6653,7 +6660,7 @@ a.header-user:hover {
 .step-nav-icon svg { width: 18px; height: 18px; }
 
 .step-nav-text { display: grid; gap: 1px; min-width: 0; }
-.step-nav-text b { color: var(--muted); font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
+.step-nav-text b { color: var(--muted); font-family: var(--font); font-variant-numeric: tabular-nums; font-size: 11px; font-weight: 600; }
 .step-nav-text span { color: var(--graphite); font-size: 13px; font-weight: 700; }
 
 .step-nav-item.is-active {
@@ -6702,7 +6709,7 @@ a.header-user:hover {
   border-radius: 50%;
   background: var(--warm-ivory);
   color: var(--secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 600;
 }
@@ -6753,8 +6760,7 @@ a.header-user:hover {
   color: var(--secondary);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .sell-step-error { margin: 16px 0 0; }
@@ -6840,7 +6846,7 @@ a.header-user:hover {
 .preview-panel-head h3 span {
   margin-left: 4px;
   color: var(--secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 15px;
 }
 
@@ -6884,7 +6890,7 @@ a.header-user:hover {
   background: var(--panel-green);
 }
 
-.preview-progress-num { flex: 0 0 auto; font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--graphite); }
+.preview-progress-num { flex: 0 0 auto; font-family: var(--font); font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 600; color: var(--graphite); }
 .preview-publish { width: 100%; min-height: 48px; gap: 8px; }
 
 
@@ -6988,7 +6994,7 @@ a.header-user:hover {
   background: var(--deep-green);
   box-shadow: inset 0 0 0 1.5px rgba(243, 246, 241, 0.45);
   color: rgba(243, 246, 241, 0.78);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 12px;
   font-weight: 600;
 }
@@ -7037,7 +7043,7 @@ a.header-user:hover {
 
 .sell-mode-chip span {
   color: var(--copper);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 11px;
   font-weight: 700;
 }
@@ -7112,7 +7118,7 @@ a.header-user:hover {
 .sell-shell--v3 .sell-section h2::before { content: none; }
 .sell-shell--v3 .sell-section-num {
   color: var(--copper);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 14px;
   font-weight: 600;
 }
@@ -7192,7 +7198,7 @@ a.header-user:hover {
   right: 12px;
   bottom: 9px;
   color: var(--muted);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 11px;
   pointer-events: none;
 }
@@ -7335,7 +7341,7 @@ a.header-user:hover {
   border-radius: 50%;
   background: var(--material-thick);
   color: var(--copper);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 12px;
 }
 
@@ -7404,7 +7410,7 @@ a.header-user:hover {
   border-radius: 50%;
   background: var(--copper);
   color: #fff;
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 13px;
 }
 
@@ -7595,7 +7601,7 @@ a.header-user:hover {
 :root {
   --market-bg: #f2f6f1;
   --market-cream: #f8fbf7;
-  --market-surface: rgba(255, 255, 255, 0.88);
+  --market-surface: #ffffff;
   --market-line: rgba(122, 138, 122, 0.24);
   --market-ink: #161a15;
   --market-muted: #5a6459;
@@ -8036,7 +8042,7 @@ body {
 }
 
 .catalog-quickbar-count strong {
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 18px;
   line-height: 1;
 }
@@ -8125,7 +8131,7 @@ body {
 }
 
 .filters-actions .filters-search span {
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 13px;
 }
 
@@ -10680,7 +10686,7 @@ body {
 
 .catalog-topbar-copy strong {
   color: var(--copper);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
 }
 
 .catalog-topbar-cta {
@@ -10692,7 +10698,7 @@ body {
 .car-card-specs {
   margin: 0;
   color: var(--secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -10722,8 +10728,7 @@ body {
   color: var(--copper);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .car-card-body {
@@ -10902,7 +10907,7 @@ body {
 /* (C) card year + featured meta in the mono data font */
 .car-row-year,
 .featured-meta {
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
@@ -11034,7 +11039,9 @@ body {
 
 .modal-title {
   color: var(--graphite);
-  font-family: var(--font-serif);
+  /* Was the only --font-serif usage in the app: one serif heading among all-sans
+     headings is an orphan, not a type system, and it cost a whole webfont. */
+  font-family: var(--font);
   font-size: 23px;
   font-weight: 700;
   line-height: 1.28;
@@ -11306,6 +11313,48 @@ body {
 .brand-picker-option:focus-visible,
 .brand-picker-option.is-active {
   background: #f2f6f1;
+}
+
+/* Unfeatured makes carry no logo cell at all, so the label sits flush instead
+   of indenting past an empty square. */
+.brand-picker-option.is-textonly {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 40px;
+  padding-left: 12px;
+}
+
+/* Featured marks pinned above the list */
+.brand-featured {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 4px 4px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--market-line);
+}
+
+.brand-featured-tile {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 8px;
+  border: 1px solid rgba(20, 26, 20, 0.14);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.brand-featured-tile:hover,
+.brand-featured-tile:focus-visible {
+  border-color: var(--copper);
+  background: #f2f6f1;
+}
+
+.brand-featured-tile .brand-logo-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 
 /* "მარკები" / "მოდელები" section headers inside the suggestion list */
@@ -11605,7 +11654,7 @@ h1, h2, h3 {
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--copper);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 16px;
   font-weight: 700;
 }
@@ -11989,8 +12038,7 @@ select[data-aselect]:focus-visible,
   flex: 0 0 auto;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--secondary);
   white-space: nowrap;
 }
@@ -12028,7 +12076,7 @@ select[data-aselect]:focus-visible,
   flex: 0 0 auto;
   min-width: 132px;
   text-align: center;
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-size: 14px;
   font-weight: 700;
   color: var(--graphite);
@@ -12062,7 +12110,7 @@ select[data-aselect]:focus-visible,
   display: inline-block;
   margin-left: 4px;
   color: var(--copper);
-  font-family: var(--font-mono);
+  font-family: var(--font); font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
 

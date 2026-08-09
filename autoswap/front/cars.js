@@ -699,11 +699,12 @@ const QUICK_BRAND_SLUGS = {
   Lexus: 'lexus',
 };
 
+// Featured makes only; unfeatured brands are text, with no filler glyph.
 function quickBrandLogo(make) {
   const slug = makeSlug(make);
   return FEATURED_MAKE_SLUGS.has(slug)
     ? `<img src="assets/logos/${slug}.png" alt="${escapeHtml(make)}" class="quick-chip-brand-logo" loading="lazy">`
-    : `<span class="quick-chip-icon">${icons.car}</span>`;
+    : '';
 }
 
 function quickChip({ href, label, count, icon = '', active = false, extraClass = '' }) {
@@ -728,8 +729,10 @@ function CatalogQuickBar(count) {
     { make: 'Volkswagen', label: 'VW' },
   ].filter((brand) => countByMake(brand.make) > 0);
   const routeChips = [
-    { label: 'სედანი', href: 'cars.html?category=sedan', count: countByCategory('sedan'), active: currentFilters.category === 'sedan', icon: `<span class="quick-chip-icon">${icons.car}</span>` },
-    { label: 'ქროსოვერი', href: 'cars.html?category=crossover', count: countByCategory('crossover'), active: currentFilters.category === 'crossover', icon: `<span class="quick-chip-icon">${icons.car}</span>` },
+    // No icon: sedan and crossover were both showing the same car glyph, which
+    // distinguishes nothing and just pads the chip.
+    { label: 'სედანი', href: 'cars.html?category=sedan', count: countByCategory('sedan'), active: currentFilters.category === 'sedan' },
+    { label: 'ქროსოვერი', href: 'cars.html?category=crossover', count: countByCategory('crossover'), active: currentFilters.category === 'crossover' },
     { label: 'გარეშე', href: 'cars.html?cash=none', count: countByCash('none'), active: currentFilters.cash === 'none', icon: '<span class="quick-chip-symbol">₾</span>' },
   ];
   const noQuickFilter = !currentFilters.make && !currentFilters.category && !currentFilters.cash;

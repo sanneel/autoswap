@@ -388,11 +388,29 @@
     }
   }
 
+  // The committed supabase-config.js ships placeholder values so the site runs
+  // without secrets. Pointing a client at them makes every request fail and log
+  // an error, which buries real problems. Detect it and run in demo mode with a
+  // single explanatory line instead.
+  function isPlaceholderConfig(url, key) {
+    if (/^(dummy|your-|example|placeholder|project)[-.]/i.test(key)) return true;
+    try {
+      return /^(dummy|example|placeholder|project|your-project)\./i.test(new URL(url).host);
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function createClient() {
     const url = String(window.AUTO_SWAP_SUPABASE_URL || '').trim();
     const key = String(window.AUTO_SWAP_SUPABASE_ANON_KEY || '').trim();
 
     if (!url || !key || !window.supabase || typeof window.supabase.createClient !== 'function') {
+      return null;
+    }
+
+    if (isPlaceholderConfig(url, key)) {
+      console.info('AutoSwap: running on demo data. Set real values in supabase-config.js to load live listings.');
       return null;
     }
 
