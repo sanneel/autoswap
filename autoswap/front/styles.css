@@ -11399,28 +11399,6 @@ body {
   text-transform: none;
 }
 
-.brand-picker-logo {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 34px;
-  border: 1px solid rgba(20, 26, 20, 0.14);
-  border-radius: 8px;
-  background: #fff;
-}
-
-.brand-picker-logo .brand-logo-img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-
-.brand-picker-logo svg {
-  width: 18px;
-  height: 18px;
-  color: var(--copper);
-}
-
 .brand-picker-name {
   overflow: hidden;
   color: var(--graphite);
@@ -12121,20 +12099,41 @@ select[data-aselect]:focus-visible,
   gap: 9px;
   min-width: 0;
 }
-.combo-logo {
-  flex: 0 0 auto;
+/* Featured marks: one row pinned to the top of the make dropdown. Logos appear
+   here only; every row in the list below is text, these five included. */
+.combo-featured {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  margin: 0 0 5px;
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid var(--market-line);
+  list-style: none;
+}
+
+.combo-featured-tile {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  aspect-ratio: 1;
+  padding: 6px;
+  border: 1px solid rgba(20, 26, 20, 0.12);
+  border-radius: 8px;
   background: #fff;
-  border: 1px solid rgba(20,26,20,0.1);
-  object-fit: contain;
-  padding: 2px;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
 }
-.combo-logo--none { color: var(--muted); }
-.combo-logo--none svg { width: 15px; height: 15px; }
+
+.combo-featured-tile:hover,
+.combo-featured-tile:focus-visible {
+  border-color: var(--copper);
+  background: #f2f6f1;
+}
+
+.combo-featured-tile img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
 
 /* Cash-amount filter field + currency tag */
 .filter-cash-amount[hidden] { display: none; }

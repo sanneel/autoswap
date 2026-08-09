@@ -45,17 +45,13 @@ const MAKE_LOGOS = {
 };
 const LOGO_CDN = 'https://cdn.jsdelivr.net/gh/filippofilip95/car-logos-dataset@master/logos/optimized/';
 
-// Only these featured brands get a logo + text in the make filter dropdown
-// (matches the quick-filter brand chips). Every other brand is text only.
-const FEATURED_MAKE_SLUGS = new Set(['bmw', 'mercedes-benz', 'audi', 'toyota', 'volkswagen']);
+// These five appear as a logo row pinned to the top of the make dropdown and
+// as the quick-filter chips. Their logos appear there and nowhere else: every
+// row in the list itself is text, these five included.
+const FEATURED_MAKES = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Volkswagen'];
+const FEATURED_MAKE_SLUGS = new Set(FEATURED_MAKES.map((m) => m.toLowerCase().replace(/[^a-z0-9]+/g, '-')));
 function makeSlug(name) {
   return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
-function filterMakeLogo(name) {
-  const slug = makeSlug(name);
-  return FEATURED_MAKE_SLUGS.has(slug)
-    ? `<img class="combo-logo" src="assets/logos/${slug}.png" alt="" loading="lazy" width="22" height="22">`
-    : '';
 }
 
 const URL_MAKE_ALIASES = {
@@ -1200,18 +1196,33 @@ function setActiveComboOption(list, index) {
   return active;
 }
 
+// Logos live in the featured row at the top of the make dropdown and nowhere
+// else. Repeating them beside list rows made five brands look promoted over the
+// rest and turned the list into a logo gallery instead of a list of names.
+function featuredMakeRow() {
+  return `
+    <li class="combo-featured" role="presentation">
+      ${FEATURED_MAKES.map((make) => `
+        <button type="button" class="combo-featured-tile" data-featured-make="${escapeHtml(make)}" title="${escapeHtml(make)}" aria-label="${escapeHtml(make)}">
+          <img src="assets/logos/${makeSlug(make)}.png" alt="" loading="lazy" width="24" height="24">
+        </button>`).join('')}
+    </li>`;
+}
+
 function renderComboList(combo, items) {
   const list = combo.querySelector('.combo-list');
   combo.__comboItems = items;
   const isMakeCombo = combo.dataset.combo === 'make';
+  // Featured tiles only at rest; while filtering, the matches are the answer.
+  const typing = Boolean(combo.querySelector('.combo-input')?.value.trim());
+  const featured = isMakeCombo && !typing ? featuredMakeRow() : '';
   list.innerHTML = items.length
-    ? items.map((it, index) => {
+    ? featured + items.map((it, index) => {
       const type = it.type || 'model';
       const count = type === 'group' && Array.isArray(it.children) ? `<span class="combo-option-meta">${it.children.length} მოდელი</span>` : '';
-      const logo = isMakeCombo ? filterMakeLogo(it.name) : '';
-      return `<li class="combo-option combo-option--${type}${isMakeCombo ? ' combo-option--make' : ''}" role="option" data-index="${index}" data-name="${escapeHtml(it.name)}" data-id="${escapeHtml(it.id)}"><span class="combo-option-label">${logo}${escapeHtml(it.label || it.name)}</span>${count}</li>`;
+      return `<li class="combo-option combo-option--${type}" role="option" data-index="${index}" data-name="${escapeHtml(it.name)}" data-id="${escapeHtml(it.id)}"><span class="combo-option-label">${escapeHtml(it.label || it.name)}</span>${count}</li>`;
     }).join('')
-    : '<li class="combo-empty">ვერ მოიძებნა</li>';
+    : featured + '<li class="combo-empty">ვერ მოიძებნა</li>';
   setComboOpen(combo, true);
   setActiveComboOption(list, 0);
 }
@@ -1427,6 +1438,16 @@ function initCombos() {
     });
     
     list.addEventListener('mousedown', (event) => {
+      // A featured tile behaves as if the make had been typed, so the model
+      // combo unlocks and the results update exactly as they would otherwise.
+      const tile = event.target.closest('[data-featured-make]');
+      if (tile) {
+        event.preventDefault();
+        input.value = tile.dataset.featuredMake;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus();
+        return;
+      }
       const opt = event.target.closest('.combo-option');
       if (!opt) return;
       event.preventDefault();

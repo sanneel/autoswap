@@ -57,13 +57,12 @@ function featuredBrandTiles() {
     </div>`;
 }
 
-// The logo cell is omitted entirely for unfeatured makes rather than left empty,
-// so the text list aligns flush instead of indenting past a blank square.
+// Every row is text, the featured five included. Their logos appear once, in
+// the row of tiles above; repeating them beside list entries made five brands
+// look promoted over the rest and turned the list into a logo gallery.
 function brandPickerOptionHTML(item, index) {
-  const logo = brandLogo(item.make);
   return `
-    <button class="brand-picker-option${logo ? '' : ' is-textonly'}" type="button" role="option" aria-selected="false" data-index="${index}">
-      ${logo ? `<span class="brand-picker-logo" aria-hidden="true">${logo}</span>` : ''}
+    <button class="brand-picker-option is-textonly" type="button" role="option" aria-selected="false" data-index="${index}">
       <span class="brand-picker-name">${esc(item.label)}</span>
     </button>`;
 }
