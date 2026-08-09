@@ -10240,7 +10240,11 @@ body {
 
 .catalog-quickbar {
   display: grid;
-  grid-template-columns: auto 34px minmax(0, 1fr) 34px;
+  /* Three children (prev arrow, pill strip, next arrow), so three tracks. The
+     leading `auto` was left from a version that had a heading here; with four
+     tracks the pill strip landed in the 34px arrow column and collapsed to two
+     Georgian letters, while the 1fr track sat empty. */
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
   align-items: center;
   gap: 8px;
   min-width: 0;

@@ -953,8 +953,8 @@ function update() {
 
   updateAdvBadge();
 
-  const toggle = document.querySelector('#matches-toggle');
-  if (toggle) toggle.checked = !!currentFilters.onlyMatches;
+  // (#matches-toggle was a standalone control that no longer renders anywhere;
+  // the sidebar checkbox below is the only one left.)
   const sidebarToggle = document.querySelector('#filters-form [name="onlyMatches"]');
   if (sidebarToggle) sidebarToggle.checked = !!currentFilters.onlyMatches;
 

@@ -3,7 +3,7 @@ const {
   Header, Footer, icons, sb, toast, escapeAttr, isUuid,
   authReady, getAuthUser, onAuth, openAuthModal,
   bustListingCaches, searchMakes, searchModels, FUEL_LABELS,
-  placeComboList,
+  placeComboList, georgianError,
 } = window.AutoSwap;
 
 const MAX_PHOTOS = 6;
@@ -45,29 +45,6 @@ function sellSection(index, bodyHTML, extraClass = '') {
   `;
 }
 
-
-// Supabase/PostgREST errors arrive in English. Users see Georgian; the raw
-// message still goes to the console for debugging.
-function georgianError(err) {
-  const raw = String(err?.message || err || '');
-  const m = raw.toLowerCase();
-
-  // Schema drift: a column the code writes is missing from the database.
-  const missingCol = /could not find the '([^']+)' column/i.exec(raw);
-  if (missingCol) {
-    return `ბაზა არ არის განახლებული (აკლია ველი „${missingCol[1]}“). გაუშვი supabase/schema.sql.`;
-  }
-  if (m.includes('duplicate key') || m.includes('already exists')) return 'ასეთი ჩანაწერი უკვე არსებობს.';
-  if (m.includes('violates row-level security') || m.includes('row-level security')) return 'ამ მოქმედების უფლება არ გაქვს.';
-  if (m.includes('violates foreign key')) return 'დაკავშირებული ჩანაწერი ვერ მოიძებნა.';
-  if (m.includes('violates check constraint')) return 'ერთ-ერთი ველი დაუშვებელ მნიშვნელობას შეიცავს.';
-  if (m.includes('not-null') || m.includes('null value in column')) return 'სავალდებულო ველი შეუვსებელია.';
-  if (m.includes('jwt') || m.includes('unauthorized') || m.includes('401')) return 'სესია ამოიწურა, გაიარე ავტორიზაცია ხელახლა.';
-  if (m.includes('payload too large') || m.includes('413')) return 'ფაილი ძალიან დიდია.';
-  if (m.includes('failed to fetch') || m.includes('networkerror')) return 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი.';
-  if (m.includes('rate limit') || m.includes('429')) return 'ბევრი მცდელობა იყო, სცადე ცოტა ხანში.';
-  return raw || 'უცნობი შეცდომა.';
-}
 
 function iconField(icon, label, controlHTML, extraClass = '') {
   return `

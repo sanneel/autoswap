@@ -155,6 +155,29 @@
     return String(make || '').toLowerCase().includes('bmw') ? assets.bmw : assets.audi;
   }
 
+  // Supabase/PostgREST errors arrive in English. Users see Georgian; the raw
+  // message still goes to the console for debugging.
+  function georgianError(err) {
+    const raw = String(err?.message || err || '');
+    const m = raw.toLowerCase();
+
+    // Schema drift: a column the code writes is missing from the database.
+    const missingCol = /could not find the '([^']+)' column/i.exec(raw);
+    if (missingCol) {
+      return `ბაზა არ არის განახლებული (აკლია ველი „${missingCol[1]}“). გაუშვი supabase/schema.sql.`;
+    }
+    if (m.includes('duplicate key') || m.includes('already exists')) return 'ასეთი ჩანაწერი უკვე არსებობს.';
+    if (m.includes('violates row-level security') || m.includes('row-level security')) return 'ამ მოქმედების უფლება არ გაქვს.';
+    if (m.includes('violates foreign key')) return 'დაკავშირებული ჩანაწერი ვერ მოიძებნა.';
+    if (m.includes('violates check constraint')) return 'ერთ-ერთი ველი დაუშვებელ მნიშვნელობას შეიცავს.';
+    if (m.includes('not-null') || m.includes('null value in column')) return 'სავალდებულო ველი შეუვსებელია.';
+    if (m.includes('jwt') || m.includes('unauthorized') || m.includes('401')) return 'სესია ამოიწურა, გაიარე ავტორიზაცია ხელახლა.';
+    if (m.includes('payload too large') || m.includes('413')) return 'ფაილი ძალიან დიდია.';
+    if (m.includes('failed to fetch') || m.includes('networkerror')) return 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი.';
+    if (m.includes('rate limit') || m.includes('429')) return 'ბევრი მცდელობა იყო, სცადე ცოტა ხანში.';
+    return raw || 'უცნობი შეცდომა.';
+  }
+
   // "Equal swap" and "by agreement" carry no figure, so the amount input is
   // hidden for them rather than sitting there showing a meaningless 0.
   function bindOfferAmount(form) {
@@ -1419,7 +1442,7 @@
       return { user: authUser };
     }
     const { data, error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'sms' });
-    return error ? { error: `კოდი ვერ დადასტურდა: ${error.message}` } : { user: data.user };
+    return error ? { error: `კოდი ვერ დადასტურდა: ${georgianError(error)}` } : { user: data.user };
   }
 
   // ---- Display name (asked once, after the number is verified) -------------
@@ -1438,7 +1461,7 @@
       return {};
     }
     const { data, error } = await sbClient.auth.updateUser({ data: { full_name: name } });
-    if (error) return { error: `სახელი ვერ შეინახა: ${error.message}` };
+    if (error) return { error: `სახელი ვერ შეინახა: ${georgianError(error)}` };
     authUser = data.user;
     notifyAuth();
     return {};
@@ -1511,10 +1534,10 @@
     if (isDemo) {
       if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი, დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
       const { error } = await sbClient.auth.updateUser({ data: { phone } });
-      return error ? { error: `ნომერი ვერ შეინახა: ${error.message}` } : {};
+      return error ? { error: `ნომერი ვერ შეინახა: ${georgianError(error)}` } : {};
     }
     const { error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'phone_change' });
-    return error ? { error: `კოდი ვერ დადასტურდა: ${error.message}` } : {};
+    return error ? { error: `კოდი ვერ დადასტურდა: ${georgianError(error)}` } : {};
   }
 
   function openPhoneRequiredModal() {
@@ -2266,6 +2289,7 @@
     getLogoUrl,
     formatCash,
     fallbackImageFor,
+    georgianError,
     placeComboList,
     repositionComboLists,
     mapFeedRow,
