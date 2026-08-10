@@ -12723,7 +12723,7 @@ select[data-aselect]:focus-visible,
 /* Tab bar is phone-only; the header nav covers larger screens. */
 .tabbar { display: none; }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   :root {
     /* Height of the bar plus the home-indicator inset, so page content and
        any sticky element can reserve exactly the right amount of space. */
@@ -12923,9 +12923,12 @@ select[data-aselect]:focus-visible,
     border-left: 0;
   }
 
-  /* Secondary detail is noise at this width; the row must stay scannable. */
+  /* Secondary detail is noise at this width; the row must stay scannable.
+     The spec strip goes entirely: fuel, gearbox and mileage are things you
+     check once you are interested, and they cost a whole line on every row. */
   .car-card .listing-meta,
-  .car-card .spec-strip .spec-chip:nth-child(n + 4),
+  .car-card .spec-strip,
+  .car-card .listing-age,
   .car-card-owner { display: none; }
 
   /* A list row navigates; the offer and save actions live on the detail
@@ -13068,13 +13071,20 @@ select[data-aselect]:focus-visible,
 
   /* The road photo was being washed out to nothing by an overlay running up to
      0.98 alpha, so the hero read as flat paint. Let it through. */
-  .hero--garage .hero-backdrop {
+  .hero--garage .hero-backdrop,
+  .hero-backdrop {
     opacity: 1;
+    /* Only enough wash at the bottom for the search card to stay legible;
+       the top two thirds show the road. */
     background-image:
-      linear-gradient(180deg, rgba(243, 246, 241, 0.28), rgba(243, 246, 241, 0.55) 62%, rgba(243, 246, 241, 0.94)),
+      linear-gradient(180deg, rgba(243, 246, 241, 0.08), rgba(243, 246, 241, 0.34) 58%, rgba(243, 246, 241, 0.92)),
       url("assets/hero-road-bg.png");
-    background-position: 50% 62%;
+    background-position: 50% 58%;
+    background-size: cover;
   }
+
+  /* The hero's own bottom fade stacked on top of the backdrop wash. */
+  .hero--garage::after { height: 30%; }
 
   /* The cash slider is the hero's one interactive control and on a phone it
      was a 10px hairline with the value crammed beside it. Give it the full
@@ -13129,4 +13139,39 @@ select[data-aselect]:focus-visible,
   .quick-chip:hover,
   .brand-chip:hover,
   .browse-pill:hover { transform: none; }
+}
+
+/* ─── Filters panel header: brand green, desktop and mobile ─────────────
+   The panel title was the same ink as every other heading, so the filter
+   drawer opened with nothing signalling what it was. */
+.filters-title {
+  color: var(--copper);
+}
+
+.filters-title svg {
+  color: var(--copper);
+  stroke-width: 2.2;
+}
+
+.filters-head {
+  border-bottom-color: rgba(30, 77, 52, 0.18);
+}
+
+/* The advanced-filters sheet gets the same treatment so the two read as one
+   family. */
+.adv-modal-head strong {
+  color: var(--copper);
+}
+
+/* ─── Brand logo on the selected (green) quick chip ─────────────────────
+   The marks are dark or silver on transparency. Dropped straight onto the
+   solid green active chip, the Mercedes star lost its fill and read as a
+   bare outline. A white disc keeps every mark on the background it was
+   drawn for, selected or not. */
+.catalog-quickbar-pills a .quick-chip-brand-logo,
+.quick-chip .quick-chip-brand-logo {
+  box-sizing: content-box;
+  padding: 3px;
+  border-radius: 50%;
+  background: #fff;
 }

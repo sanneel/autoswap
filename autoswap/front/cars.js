@@ -1746,6 +1746,19 @@ document.addEventListener('autoswap:mycar', () => {
   renderAll();
 });
 
+// Picking a brand chip navigates, and the reloaded page rendered the strip at
+// scrollLeft 0. A chip further along (Toyota, Porsche) was then off-screen, so
+// the filter you just applied looked like it had scrolled away on its own.
+// Centre it instead, without scrolling the page.
+function revealActiveQuickChip() {
+  const strip = document.querySelector('.catalog-quickbar-pills');
+  const active = strip?.querySelector('a.is-active');
+  if (!strip || !active) return;
+  if (strip.scrollWidth <= strip.clientWidth) return;
+  const centred = active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2;
+  strip.scrollLeft = Math.max(0, Math.min(centred, strip.scrollWidth - strip.clientWidth));
+}
+
 function renderAll() {
   // Before the markup: CarRow reads the baselines to decide the good-price badge.
   recomputePriceBaselines();
@@ -1753,6 +1766,7 @@ function renderAll() {
   bindEvents();
   initCombos();
   bindQuerySuggest();
+  revealActiveQuickChip();
 }
 
 async function hydrateFromSupabase() {
