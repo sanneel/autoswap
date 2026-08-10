@@ -13075,6 +13075,11 @@ select[data-aselect]:focus-visible,
      clipped by its top edge. */
   .hero--garage .swap-stage { padding-bottom: 30px; }
 
+  /* Drop the whole block down the page. The cars and the search card were
+     pinned just under the header with the photo squeezed into a sliver above
+     them; this gives the landscape room to read before the content starts. */
+  .hero--garage { padding-top: 54px; }
+
   .hero--garage .sound-btn svg,
   .sound-btn svg { width: 15px; height: 15px; }
 
