@@ -13033,11 +13033,34 @@ select[data-aselect]:focus-visible,
      Cars were set to 122% of their column for a deliberate bleed. On a 375px
      phone that column is 147px, so each car ran ~18px past the screen edge and
      the pair read as cropped rather than staged. Contain them. */
+  /* Bigger, and allowed to spill a little past their column so the pair reads
+     as staged rather than as two small thumbnails. The stage columns are
+     widened below to keep both inside the viewport at this size. */
+  /* Exactly the column: at 105% the right-hand car ran 27px past the screen
+     edge, because the images are not centred in their columns. The full-bleed
+     stage above is what makes 100% here still noticeably bigger. */
   .hero--garage .hero-car img,
   .hero-car img {
     width: 100%;
     max-width: 100%;
   }
+
+  /* Full-bleed the stage and shrink the glyph column, so both cars can be as
+     large as the screen allows while still landing inside it. */
+  .hero--garage .swap-stage {
+    grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
+    column-gap: 0;
+    /* Correct full-bleed: margin-left:50% is 50% of the PARENT, which left the
+       stage offset by the container's own inset and pushed the right-hand car
+       off screen. calc(50% - 50vw) is measured against the viewport. */
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+  }
+
+  /* Each car leans toward the centre, so the two face each other instead of
+     sitting flat and parallel. */
+  .hero--garage .hero-car-left img { transform: perspective(900px) rotateY(11deg) scale(1.04); }
+  .hero--garage .hero-car-right img { transform: perspective(900px) rotateY(-11deg) scale(1.04); }
 
   /* The car container is exactly the image height, so an absolutely-positioned
      button inside it could only ever sit on the bodywork. Park it just below,
@@ -13199,4 +13222,38 @@ select[data-aselect]:focus-visible,
   padding: 3px;
   border-radius: 50%;
   background: #fff;
+}
+
+/* ─── Select popup as a bottom sheet on phones ──────────────────────────
+   The OS picker is what made these fields read as "default". The styled
+   panel now runs on touch too, and on a phone it comes up from the bottom
+   with thumb-sized rows, the way a native app presents a picker. */
+.aselect-panel--sheet {
+  border-radius: 18px 18px 0 0;
+  padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -18px 44px -20px rgba(15, 20, 15, 0.45);
+}
+
+.aselect-panel--sheet::before {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 2px auto 10px;
+  border-radius: 2px;
+  background: rgba(20, 26, 20, 0.18);
+}
+
+.aselect-panel--sheet .aselect-option {
+  min-height: 48px;
+  font-size: 15px;
+  border-radius: 10px;
+}
+
+/* A tapped select must not keep the focus ring of a text field. */
+@media (max-width: 1023px) {
+  select[data-aselect] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
 }

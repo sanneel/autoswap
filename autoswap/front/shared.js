@@ -2141,6 +2141,21 @@
       aselectClose();
       return;
     }
+    // Phone: full-width sheet from the bottom, the way a native app presents a
+    // picker. Anchoring a small dropdown to the field wastes the screen and
+    // puts the options out of thumb reach.
+    if (isPhone()) {
+      panel.classList.add('aselect-panel--sheet');
+      panel.style.left = '0px';
+      panel.style.right = '0px';
+      panel.style.top = 'auto';
+      panel.style.bottom = '0px';
+      panel.style.minWidth = '0px';
+      panel.style.maxHeight = '62vh';
+      return;
+    }
+    panel.classList.remove('aselect-panel--sheet');
+    panel.style.right = 'auto';
     panel.style.left = `${Math.round(rect.left)}px`;
     panel.style.minWidth = `${Math.round(rect.width)}px`;
     const spaceBelow = window.innerHeight - rect.bottom - 16;
@@ -2237,8 +2252,9 @@
     }
   }
 
+  const isPhone = () => window.matchMedia('(max-width: 1023px)').matches;
+
   function enhanceSelects(root = document) {
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     root.querySelectorAll('select:not([data-native]):not([data-aselect])').forEach((select) => {
       select.dataset.aselect = '1';
       select.setAttribute('role', 'combobox');
@@ -2251,6 +2267,12 @@
       });
       select.addEventListener('keydown', (event) => aselectKeydown(event, select));
       select.addEventListener('blur', aselectClose);
+      // Touch: suppress the OS picker and open the styled sheet instead.
+      select.addEventListener('touchstart', (event) => {
+        event.preventDefault();
+        if (aselect.select === select) aselectClose();
+        else aselectOpen(select);
+      }, { passive: false });
     });
   }
 
