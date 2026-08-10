@@ -198,7 +198,7 @@ function DetailPage(car, photos, comparables) {
         </section>
       </section>
     </main>
-    ${Footer()}
+    ${Footer({ active: 'listings' })}
   `;
 }
 
@@ -215,7 +215,7 @@ function NotFound() {
         </div>
       </section>
     </main>
-    ${Footer()}
+    ${Footer({ active: 'listings' })}
   `;
 }
 

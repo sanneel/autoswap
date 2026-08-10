@@ -788,7 +788,7 @@ function CatalogPage() {
       ${AdvFiltersModal()}
       ${StickyCTA()}
     </main>
-    ${Footer()}
+    ${Footer({ active: 'listings' })}
   `;
 }
 

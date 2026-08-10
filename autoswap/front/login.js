@@ -28,7 +28,7 @@ function Shell(inner) {
         <div class="auth-card">${inner}</div>
       </section>
     </main>
-    ${Footer()}
+    ${Footer({ active: 'account' })}
   `;
 }
 

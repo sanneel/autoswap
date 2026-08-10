@@ -465,8 +465,34 @@
     `;
   }
 
-  function Footer() {
+  // Phone-only bottom navigation. On a phone the desktop header collapses to a
+  // logo and the primary destinations become unreachable without scrolling to
+  // the footer; a fixed tab bar is what a native app would do and what a thumb
+  // can reach. Hidden at >=768px, where the header nav is visible.
+  const TAB_ITEMS = [
+    { id: 'home', label: 'მთავარი', href: 'index.html', icon: 'car' },
+    { id: 'listings', label: 'გაცვლები', href: 'cars.html', icon: 'search' },
+    { id: 'sell', label: 'დამატება', href: 'sell.html', icon: 'plus', primary: true },
+    { id: 'offers', label: 'შეთავაზებები', href: 'account.html?tab=offers', icon: 'swap' },
+    { id: 'account', label: 'პროფილი', href: 'account.html', icon: 'user' },
+  ];
+
+  function MobileTabBar(active) {
     return `
+      <nav class="tabbar" aria-label="მთავარი ნავიგაცია">
+        ${TAB_ITEMS.map((t) => `
+          <a class="tabbar-item${t.primary ? ' tabbar-item--primary' : ''}${t.id === active ? ' is-active' : ''}"
+             href="${t.href}"${t.id === active ? ' aria-current="page"' : ''}>
+            <span class="tabbar-icon" aria-hidden="true">${icons[t.icon]}</span>
+            <span class="tabbar-label">${t.label}</span>
+          </a>`).join('')}
+      </nav>`;
+  }
+
+  function Footer(opts) {
+    const active = (opts && opts.active) || '';
+    return `
+      ${MobileTabBar(active)}
       <footer class="site-footer" id="contact">
         <div class="container footer-grid">
           <div class="footer-brand">

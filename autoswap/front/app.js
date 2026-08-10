@@ -1162,7 +1162,7 @@ function App() {
       ${HowItWorks()}
       ${ClosingStrip()}
     </main>
-    ${Footer()}
+    ${Footer({ active: 'home' })}
   `;
 }
 

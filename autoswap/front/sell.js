@@ -216,7 +216,7 @@ function SellPage(vehicle, prefs, wantsValue) {
         </div>
       </section>
     </main>
-    ${Footer()}
+    ${Footer({ active: 'sell' })}
   `;
 }
 
@@ -233,7 +233,7 @@ function GatePanel(title, text, actions) {
         </div>
       </section>
     </main>
-    ${Footer()}
+    ${Footer({ active: 'sell' })}
   `;
 }
 

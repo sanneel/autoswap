@@ -41,7 +41,7 @@ function AboutPage() {
         </div>
       </section>
     </main>
-    ${Footer()}
+    ${Footer({ active: '' })}
   `;
 }
 
