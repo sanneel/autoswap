@@ -13048,43 +13048,63 @@ select[data-aselect]:focus-visible,
      rule loses no matter where it sits in the file. Match the specificity. */
   /* Specificity ladder on this element is steep: .hero--garage
      .hero-car-left .sound-btn (0,3,0) inside a 680px query centres it on the
-     bodywork with translate(-50%, -50%). Match that depth, for both sides, or
-     the button stays on the car. */
+     bodywork. Match that depth, for both sides, or the button stays put.
+
+     Below the car does not fit: there are only ~22px between the car and the
+     search card, so a 34px button was cut in half by the card. The upper outer
+     corner of each car photo is empty sky, so it is the one spot that is
+     neither on the bodywork nor under the card. */
   .hero--garage .hero-car-left .sound-btn,
   .hero--garage .hero-car-right .sound-btn,
   .hero--garage .sound-btn,
   .sound-btn {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
+    top: -4px;
     bottom: auto;
-    top: calc(100% + 6px);
-    left: 50%;
-    /* X centring only: the Y half pulled it back up over the car. */
-    transform: translateX(-50%);
+    transform: none;
   }
+
+  .hero--garage .hero-car-left .sound-btn,
+  .hero-car-left .sound-btn { left: 2px; right: auto; }
+
+  .hero--garage .hero-car-right .sound-btn,
+  .hero-car-right .sound-btn { left: auto; right: 2px; }
+
+  /* Clearance so the cars sit above the search card instead of being
+     clipped by its top edge. */
+  .hero--garage .swap-stage { padding-bottom: 30px; }
 
   .hero--garage .sound-btn svg,
   .sound-btn svg { width: 15px; height: 15px; }
 
   /* Room for the buttons now that they hang below the cars. */
-  .hero--garage .swap-stage { padding-bottom: 46px; }
 
   /* The road photo was being washed out to nothing by an overlay running up to
      0.98 alpha, so the hero read as flat paint. Let it through. */
+  /* The photo is a wide landscape: hazy near-white sky on top, mountains and
+     treeline through the middle, asphalt below. With `cover` on a 403px box the
+     whole height fits, so the only band left visible above the search card was
+     that pale sky, which is almost exactly the page colour. Hence "the
+     background is not loading" when it was loading fine.
+     Scale past the frame and pan to the mountains so the visible strip carries
+     the part of the photo you can actually recognise. */
   .hero--garage .hero-backdrop,
   .hero-backdrop {
     opacity: 1;
-    /* Only enough wash at the bottom for the search card to stay legible;
-       the top two thirds show the road. */
     background-image:
-      linear-gradient(180deg, rgba(243, 246, 241, 0.08), rgba(243, 246, 241, 0.34) 58%, rgba(243, 246, 241, 0.92)),
+      linear-gradient(180deg, rgba(243, 246, 241, 0) 0%, rgba(243, 246, 241, 0.06) 42%, rgba(243, 246, 241, 0.72) 78%, rgba(243, 246, 241, 0.96) 100%),
       url("assets/hero-road-bg.png");
-    background-position: 50% 58%;
-    background-size: cover;
+    background-size: auto 205%, auto 205%;
+    /* 68% puts the visible 176px strip over 35-52% of the photo: the
+       mountain range and treeline. At 34% it showed 17-35%, which is the
+       hazy near-white sky and reads as no image at all. */
+    background-position: 50% 68%, 50% 68%;
+    background-repeat: no-repeat, no-repeat;
   }
 
-  /* The hero's own bottom fade stacked on top of the backdrop wash. */
-  .hero--garage::after { height: 30%; }
+  /* The hero's own bottom fade stacked on top of the backdrop wash, doubling it. */
+  .hero--garage::after { height: 22%; }
 
   /* The cash slider is the hero's one interactive control and on a phone it
      was a 10px hairline with the value crammed beside it. Give it the full
