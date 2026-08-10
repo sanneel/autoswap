@@ -388,7 +388,7 @@ function SearchBar() {
         <div class="search-field have-search-field" data-have-picker>
           <span>${icons.car}</span>
           <span class="brand-picker-selected-logo have-picker-selected-logo" data-have-selected-logo aria-hidden="true" hidden></span>
-          <input name="have" data-have-input type="text" placeholder="რა მანქანა გყავს?" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="have-brand-list">
+          <input name="have" data-have-input type="text" aria-label="რა მანქანა გყავს" placeholder="რა მანქანა გყავს?" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="have-brand-list">
           <input name="haveMake" data-have-make type="hidden">
           <input name="haveModel" data-have-model type="hidden">
           <div class="brand-picker-panel" data-have-panel hidden>
@@ -399,7 +399,7 @@ function SearchBar() {
         <div class="search-field search-brand-field" data-brand-picker>
           <span>${icons.search}</span>
           <span class="brand-picker-selected-logo" data-brand-selected-logo aria-hidden="true" hidden></span>
-          <input name="want" data-brand-input type="search" placeholder="მარკა ან მოდელი" autocomplete="off" aria-controls="hero-brand-list" aria-expanded="false">
+          <input name="want" data-brand-input type="search" aria-label="რა მანქანა გინდა, მარკა ან მოდელი" placeholder="მარკა ან მოდელი" autocomplete="off" aria-controls="hero-brand-list" aria-expanded="false">
           <input name="make" data-brand-hidden type="hidden">
           <button class="brand-picker-clear" type="button" data-brand-clear aria-label="გასუფთავება" hidden>&times;</button>
           <div class="brand-picker-panel" id="hero-brand-panel" data-brand-panel hidden>

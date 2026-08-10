@@ -231,12 +231,15 @@ function comboField(kind, labelText, value, placeholder, disabled = false) {
   const disabledClass = disabled ? ' is-disabled' : '';
   const clearHidden = disabled || !value ? ' hidden' : '';
   const displayPlaceholder = disabled ? 'ჯერ აირჩიე მარკა…' : placeholder;
+  // The visible label is a <span>, not a <label>, so it has to be wired to the
+  // input by id or a screen reader announces the field with no name at all.
+  const labelId = `${kind}-combo-label`;
   return `
     <div class="filter-field">
-      <span class="filter-label">${labelText}</span>
+      <span class="filter-label" id="${labelId}">${labelText}</span>
       <div class="combo${disabledClass}" data-combo="${kind}">
         <span class="filter-search combo-control" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-owns="${listId}">
-          <input type="text" class="combo-input" name="${kind}" autocomplete="off" placeholder="${displayPlaceholder}" data-placeholder="${placeholder}" value="${escapeHtml(value || '')}" aria-autocomplete="list" aria-controls="${listId}" aria-expanded="false"${disabledAttr}>
+          <input type="text" class="combo-input" name="${kind}" autocomplete="off" aria-labelledby="${labelId}" placeholder="${displayPlaceholder}" data-placeholder="${placeholder}" value="${escapeHtml(value || '')}" aria-autocomplete="list" aria-controls="${listId}" aria-expanded="false"${disabledAttr}>
           <button type="button" class="combo-clear" aria-label="გასუფთავება"${clearHidden}>&times;</button>
         </span>
         <ul class="combo-list" id="${listId}" role="listbox" hidden></ul>
@@ -420,11 +423,11 @@ function AdvFiltersModal() {
           <div class="adv-section">
             <h4 class="adv-section-head">გამოშვების წელი</h4>
             <div class="adv-range">
-              <select name="yearFrom" data-adv-field>
+              <select name="yearFrom" data-adv-field aria-label="გამოშვების წელი დან">
                 <option value="">მინ.</option>${optionTags(years, f.yearFrom)}
               </select>
               <span class="adv-range-sep">–</span>
-              <select name="yearTo" data-adv-field>
+              <select name="yearTo" data-adv-field aria-label="გამოშვების წელი მდე">
                 <option value="">მაქს.</option>${optionTags(years, f.yearTo)}
               </select>
             </div>
@@ -432,17 +435,17 @@ function AdvFiltersModal() {
           <div class="adv-section">
             <h4 class="adv-section-head">ღირებულება (₾)</h4>
             <div class="adv-range">
-              <input type="number" name="valueMin" data-adv-field value="${escapeHtml(f.valueMin || '')}" placeholder="მინ." min="0" inputmode="numeric">
+              <input type="number" name="valueMin" data-adv-field aria-label="ღირებულება დან" value="${escapeHtml(f.valueMin || '')}" placeholder="მინ." min="0" inputmode="numeric">
               <span class="adv-range-sep">–</span>
-              <input type="number" name="valueMax" data-adv-field value="${escapeHtml(f.valueMax || '')}" placeholder="მაქს." min="0" inputmode="numeric">
+              <input type="number" name="valueMax" data-adv-field aria-label="ღირებულება მდე" value="${escapeHtml(f.valueMax || '')}" placeholder="მაქს." min="0" inputmode="numeric">
             </div>
           </div>
           <div class="adv-section">
             <h4 class="adv-section-head">გარბენი (კმ)</h4>
             <div class="adv-range">
-              <input type="number" name="mileageMin" data-adv-field value="${escapeHtml(f.mileageMin || '')}" placeholder="მინ." min="0" inputmode="numeric">
+              <input type="number" name="mileageMin" data-adv-field aria-label="გარბენი დან" value="${escapeHtml(f.mileageMin || '')}" placeholder="მინ." min="0" inputmode="numeric">
               <span class="adv-range-sep">–</span>
-              <input type="number" name="mileageMax" data-adv-field value="${escapeHtml(f.mileageMax || '')}" placeholder="მაქს." min="0" inputmode="numeric">
+              <input type="number" name="mileageMax" data-adv-field aria-label="გარბენი მდე" value="${escapeHtml(f.mileageMax || '')}" placeholder="მაქს." min="0" inputmode="numeric">
             </div>
           </div>
           <div class="adv-section">

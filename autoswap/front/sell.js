@@ -206,7 +206,7 @@ function SellPage(vehicle, prefs, wantsValue) {
             <p class="auth-error" id="sell-error" role="alert" hidden></p>
             <div class="sell-actions">
               <a class="btn btn-ghost" href="${editId ? 'account.html' : 'cars.html'}">${ICON_X} გაუქმება</a>
-              <button class="btn btn-primary" type="submit" id="sell-submit">${icons.plus} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
+              <button class="btn btn-primary" type="submit" id="sell-submit" data-sell-submit>${icons.plus} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
             </div>
           </form>
           <aside class="sell-preview" aria-label="განცხადების გადახედვა">
@@ -683,7 +683,7 @@ function previewPanelHTML(form) {
           <div class="preview-progress-meter"><span style="width:${completion}%"></span></div>
           <span class="preview-progress-num">${completion}%</span>
         </div>
-        <button class="btn btn-primary preview-publish" type="submit" form="sell-form" id="sell-submit">${icons.swap} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
+        <button class="btn btn-primary preview-publish" type="submit" form="sell-form" data-sell-submit>${icons.swap} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
       </div>
     </article>
   `;
@@ -1438,9 +1438,13 @@ async function renderReal(user) {
     }
     errorBox.hidden = true;
 
-    const submit = document.querySelector('#sell-submit');
-    submit.disabled = true;
-    submit.textContent = 'ინახება…';
+    // Two buttons submit this form (the one in the form and the one in the
+    // sticky preview panel). They shared an id, so only the first was ever
+    // disabled and the other stayed live: a second click posted the listing
+    // twice.
+    const submits = [...document.querySelectorAll('[data-sell-submit]')];
+    const submitLabel = editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება';
+    submits.forEach((b) => { b.disabled = true; b.textContent = 'ინახება…'; });
 
     try {
       const vehicleId = await persist(user, values);
@@ -1448,8 +1452,7 @@ async function renderReal(user) {
       toast(editId ? 'განცხადება განახლდა' : 'განცხადება გამოქვეყნდა');
       window.location.href = `vehicle.html?id=${vehicleId}`;
     } catch (err) {
-      submit.disabled = false;
-      submit.textContent = editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება';
+      submits.forEach((b) => { b.disabled = false; b.textContent = submitLabel; });
       errorBox.textContent = `შენახვა ვერ მოხერხდა: ${georgianError(err)}`;
       errorBox.hidden = false;
       // The raw cause stays in the console for us; the user gets Georgian.
