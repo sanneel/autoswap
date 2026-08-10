@@ -357,21 +357,24 @@ function FilterSidebar() {
           <h3 class="filter-group-head">მანქანა</h3>
           ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა…')}
           ${comboField('model', 'მოდელი', f.model, 'მოძებნე მოდელი…', !f.makeId)}
-          ${selectField('category', 'ტიპი', categories, f.category, 'ნებისმიერი ტიპი', CATEGORY_LABELS)}
+          <div class="filter-field">
+            <span class="filter-label">ტიპი</span>
+            ${advChips('category', [{ value: '', label: 'ნებისმიერი' }, ...categories.map((c) => ({ value: c, label: labelFor(CATEGORY_LABELS, c) }))], f.category)}
+          </div>
         </section>
 
         <section class="filter-group">
           <h3 class="filter-group-head">გაცვლის პირობა</h3>
-          <label class="filter-field">
+          <div class="filter-field">
             <span class="filter-label">თანხის სხვაობა</span>
-            <select name="cash">
-              <option value="">ნებისმიერი</option>
-              <option value="none"${f.cash === 'none' ? ' selected' : ''}>თანაბარი გაცვლა</option>
-              <option value="add"${f.cash === 'add' ? ' selected' : ''}>ის ამატებს, მე ვიღებ თანხას</option>
-              <option value="ask"${f.cash === 'ask' ? ' selected' : ''}>ის ითხოვს, მე ვამატებ</option>
-              <option value="flexible"${f.cash === 'flexible' ? ' selected' : ''}>შეთანხმებით</option>
-            </select>
-          </label>
+            ${advChips('cash', [
+              { value: '', label: 'ნებისმიერი' },
+              { value: 'none', label: 'თანაბარი' },
+              { value: 'add', label: 'ის ამატებს' },
+              { value: 'ask', label: 'ის ითხოვს' },
+              { value: 'flexible', label: 'შეთანხმებით' },
+            ], f.cash)}
+          </div>
 
           <div class="filter-field filter-cash-amount" id="filter-cash-amount"${(f.cash === 'add' || f.cash === 'ask') ? '' : ' hidden'}>
             <span class="filter-label">თანხის ოდენობა <span class="cash-cur-tag" data-cash-cur>${getCurrency() === 'USD' ? '$' : '₾'}</span></span>
@@ -967,7 +970,9 @@ function readFiltersFromForm(form) {
   const data = new FormData(form);
   // Start from currentFilters so advanced-modal values (year, mileage, etc.) are preserved.
   const f = { ...currentFilters };
-  ['query', 'make', 'category', 'model', 'cash', 'cashMin', 'cashMax']
+  // category and cash are chip groups now, not form controls: they live on
+  // currentFilters and would be wiped if read from FormData.
+  ['query', 'make', 'model', 'cashMin', 'cashMax']
     .forEach((key) => { f[key] = String(data.get(key) || '').trim(); });
   if (f.cash !== 'add' && f.cash !== 'ask') { f.cashMin = ''; f.cashMax = ''; }
   f.onlyMatches = data.get('onlyMatches') ? '1' : '';
@@ -1604,17 +1609,28 @@ function bindEvents() {
   advModal?.querySelector('.adv-modal-close')?.addEventListener('click', closeAdvModal);
   advModal?.querySelector('.adv-modal-backdrop')?.addEventListener('click', closeAdvModal);
 
-  // Chip toggle buttons inside modal (radio-style per group)
-  advModal?.addEventListener('click', (event) => {
+  // Chip groups are radio-style: one value per group. The same component now
+  // serves the sidebar (type, cash direction) and the advanced sheet, so the
+  // handler is delegated from the document and marks every copy of the group
+  // wherever it is rendered.
+  document.addEventListener('click', (event) => {
     const chip = event.target.closest('[data-adv-chip]');
     if (!chip) return;
     const field = chip.dataset.advChip;
     const value = chip.dataset.value;
     currentFilters[field] = value;
-    advModal.querySelectorAll(`[data-adv-chip="${field}"]`).forEach((c) => {
+    document.querySelectorAll(`[data-adv-chip="${field}"]`).forEach((c) => {
       c.classList.toggle('is-active', c.dataset.value === value);
     });
-    updateAdvBadge();
+    // The amount inputs only apply to the two directional cash modes.
+    if (field === 'cash') {
+      const amountField = document.querySelector('#filter-cash-amount');
+      if (amountField) amountField.hidden = !(value === 'add' || value === 'ask');
+      if (value !== 'add' && value !== 'ask') { currentFilters.cashMin = ''; currentFilters.cashMax = ''; }
+    }
+    // Sidebar chips filter immediately; the sheet waits for its apply button.
+    if (chip.closest('#adv-modal')) updateAdvBadge();
+    else { pagesShown = 1; update(); }
   });
 
   // Range selects and text inputs inside modal
