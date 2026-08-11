@@ -14199,3 +14199,86 @@ html {
   min-width: 40px;
   min-height: 36px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LISTING CARDS AND FOOTER — readability pass
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── "შესთავაზე გაცვლა" button ────────────────────────────────────────
+   height:48px fixed with padding:0 18px and line-height:21px. Two wrapped
+   lines measure 42px, leaving 3px total clearance — enough to look
+   cramped and to clip outright once a font renders slightly taller.
+   Tighter leading, and min-height so the box can grow instead of
+   trapping the text. */
+.btn-accent,
+.car-row-offer,
+.detail-offer,
+.listing-offer {
+  height: auto;
+  min-height: 48px;
+  padding-block: 8px;
+  line-height: 1.25;
+}
+
+.btn-accent > span,
+.car-row-offer > span {
+  line-height: 1.25;
+}
+
+/* ── "ეძებს <model>" on one line ──────────────────────────────────────
+   This undoes my own earlier fix. The 21px padding-left was added when
+   the label and value were stacked on two lines; on the card they sit in
+   the same flex row, where it read as a 27px hole between "ეძებს" and
+   the model. Measured: label ends at x=94.1, value text started at 121. */
+.wanted-label + .wants-primary {
+  padding-left: 0;
+}
+
+.aside-wants {
+  align-items: center;
+  gap: 8px;
+}
+
+.wanted-label {
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+/* "ეძებს" is the label and should outrank the model name it introduces,
+   so it keeps the heavier weight while the value drops to 600. */
+.wanted-label b {
+  font-weight: 800;
+}
+
+.wants-primary,
+.car-card-wants {
+  font-weight: 600;
+}
+
+/* Landing-page card: label and value are inline in one <p>, so the gap
+   comes from the label's own trailing margin. */
+.listing-wants .wanted-label {
+  margin-right: 8px;
+}
+
+/* ── Footer links: bullet separators ──────────────────────────────────
+   The six links ran together as one block of Georgian text with nothing
+   between them. A middot plus real spacing makes each one readable as a
+   separate destination. pointer-events:none so the separator is not part
+   of the click target of the link it follows. */
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+}
+
+.footer-nav a + a::before {
+  content: "•";
+  display: inline-block;
+  margin: 0 10px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
+  pointer-events: none;
+}
