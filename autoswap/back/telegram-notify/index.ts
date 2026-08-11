@@ -21,11 +21,10 @@ Deno.serve(async (req) => {
   }
 
   const secret = Deno.env.get("NOTIFY_WEBHOOK_SECRET");
-  if (secret) {
-    const auth = req.headers.get("Authorization") ?? "";
-    if (auth !== `Bearer ${secret}` && auth !== secret) {
-      return new Response("Forbidden", { status: 403 });
-    }
+  if (!secret) return new Response("Server misconfigured: NOTIFY_WEBHOOK_SECRET not set", { status: 500 });
+  const auth = req.headers.get("Authorization") ?? "";
+  if (auth !== `Bearer ${secret}` && auth !== secret) {
+    return new Response("Forbidden", { status: 403 });
   }
 
   let payload: { record?: { user_id?: string; title?: string; body?: string } };

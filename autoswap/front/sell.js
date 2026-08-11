@@ -1,18 +1,16 @@
-/* AutoSwap — add / edit listing page.
-   Signed in + Supabase configured → real create/edit: vehicle row, photos in
-   the vehicle-photos bucket, swap_preferences (cash terms) and
-   desired_vehicles (wants). Without Supabase the page degrades to the old
-   demo submit. Edit mode: sell.html?id=<own vehicle uuid>. */
+
 const {
   Header, Footer, icons, sb, toast, escapeAttr, isUuid,
   authReady, getAuthUser, onAuth, openAuthModal,
   bustListingCaches, searchMakes, searchModels, FUEL_LABELS,
+  placeComboList, georgianError,
 } = window.AutoSwap;
 
 const MAX_PHOTOS = 6;
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const THIS_YEAR = new Date().getFullYear();
+const SELL_LITE_KEY = 'autoswap.sellLite';
 const CITIES = ['თბილისი', 'ბათუმი', 'ქუთაისი', 'რუსთავი', 'გორი', 'ზუგდიდი', 'ფოთი', 'თელავი'];
 
 const editId = (() => {
@@ -20,28 +18,26 @@ const editId = (() => {
   return isUuid(raw) ? raw : '';
 })();
 
-let existingPhotos = []; // [{id, url, position}] in edit mode
+let existingPhotos = []; 
 let removedPhotoIds = new Set();
-// Close (X) glyph for the cancel action — not in the shared icon set.
+
 const ICON_X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12"></path><path d="M18 6 6 18"></path></svg>';
 
-/* The three form sections, all visible at once. Titles reuse existing
-   in-app Georgian terms verbatim; each carries a copper step numeral and a
-   tinted icon badge (a real order: the car, the terms, the details). */
+
 const SECTIONS = [
   { title: 'ავტომობილი', icon: icons.car },
   { title: 'რა გინდა სანაცვლოდ', icon: icons.tag },
   { title: 'დეტალები', icon: icons.doc },
 ];
 
-// A titled panel: copper numeral + title on the left, a tinted icon badge
-// on the right, then the section body.
+
+
 function sellSection(index, bodyHTML, extraClass = '') {
   const s = SECTIONS[index];
   return `
-    <section class="sell-section ${extraClass}">
+    <section class="sell-section ${extraClass}" id="sell-section-${index + 1}">
       <div class="sell-section-head">
-        <h2><span class="sell-section-num">0${index + 1}</span>${s.title}</h2>
+        <h2>${s.title}</h2>
         <span class="sell-section-badge">${s.icon}</span>
       </div>
       ${bodyHTML}
@@ -49,7 +45,7 @@ function sellSection(index, bodyHTML, extraClass = '') {
   `;
 }
 
-// A labelled field with a leading icon tucked inside the control.
+
 function iconField(icon, label, controlHTML, extraClass = '') {
   return `
     <label class="field field--icon ${extraClass}">
@@ -63,6 +59,7 @@ function fieldRows(vehicle, prefs, wantsValue) {
   const v = vehicle || {};
   const p = prefs || {};
   const sel = (value, current) => (String(value) === String(current ?? '') ? ' selected' : '');
+  const vehicleSearchValue = [v.make, v.model].filter(Boolean).join(' ');
 
   const cityOpts = CITIES.map((c) => `<option value="${c}"${sel(c, v.city)}>${c}</option>`).join('');
   const fuelOpts = [['petrol', 'ბენზინი'], ['diesel', 'დიზელი'], ['hybrid', 'ჰიბრიდი'], ['electric', 'ელექტრო'], ['lpg', 'გაზი']]
@@ -86,16 +83,15 @@ function fieldRows(vehicle, prefs, wantsValue) {
 
   const carBody = `
     <div class="sell-grid">
-      ${iconField(icons.tag, 'მარკა *', `<input name="make" required placeholder="BMW" list="make-list" value="${escapeAttr(v.make || '')}" autocomplete="off"><datalist id="make-list"></datalist>`)}
-      ${iconField(icons.tag, 'მოდელი *', `<input name="model" required placeholder="530i" list="model-list" value="${escapeAttr(v.model || '')}" autocomplete="off"><datalist id="model-list"></datalist>`)}
+      ${iconField(icons.search, 'მარკა და მოდელი *', `<input name="vehicleSearch" required placeholder="BMW 530i" value="${escapeAttr(vehicleSearchValue)}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="vehicle-search-list"><ul class="combo-list" id="vehicle-search-list" role="listbox" hidden></ul><input type="hidden" name="make" value="${escapeAttr(v.make || '')}"><input type="hidden" name="model" value="${escapeAttr(v.model || '')}">`, 'field--wide field--vehicle-search')}
       ${iconField(icons.calendar, 'წელი *', `<input name="year" type="number" min="1980" max="${THIS_YEAR + 1}" required placeholder="2020" value="${v.year ?? ''}">`)}
       ${iconField(icons.gauge, 'გარბენი (კმ) *', `<input name="mileage" type="number" min="0" max="2000000" required placeholder="90000" value="${v.mileage ?? ''}">`)}
       ${iconField(icons.fuel, 'საწვავი *', `<select name="fuel" required>${fuelOpts}</select>`)}
       ${iconField(icons.gear, 'ტრანსმისია *', `<select name="transmission" required>${transOpts}</select>`)}
-      ${iconField(icons.car, 'კატეგორია', `<select name="category">${catOpts}</select>`)}
-      ${iconField(icons.location, 'ქალაქი *', `<select name="city">${cityOpts}</select>`)}
-      ${iconField(icons.engine, 'ძრავი (ლ)', `<input name="engineSize" type="number" min="0.1" max="9.9" step="0.1" placeholder="2.0" value="${v.engine_size ?? ''}">`)}
+      ${iconField(icons.car, 'კატეგორია', `<select name="category">${catOpts}</select>`, 'field--lite-extra')}
+      ${iconField(icons.engine, 'ძრავი (ლ)', `<input name="engineSize" type="number" min="0.1" max="9.9" step="0.1" placeholder="2.0" value="${v.engine_size ?? ''}">`, 'field--lite-extra')}
     </div>
+    <input type="hidden" name="city" value="${escapeAttr(v.city || 'თბილისი')}">
     <input type="hidden" name="condition" value="${escapeAttr(v.condition || 'good')}">
   `;
 
@@ -103,7 +99,7 @@ function fieldRows(vehicle, prefs, wantsValue) {
     <div class="sell-grid">
       ${iconField(icons.swap, 'სასურველი მანქანა', `<input name="desired" placeholder="Audi A6, Mercedes E-Class" value="${escapeAttr(wantsValue || '')}">`)}
       ${iconField(icons.clock, 'თანხის სხვაობა', `<select name="cashMode">${cashOpts}</select>`)}
-      ${iconField(icons.tag, 'თანხა (₾)', `<input name="amount" type="number" min="0" placeholder="0" value="${p.cash_amount || ''}">`)}
+      ${iconField(icons.tag, 'რამდენი (₾)', `<input name="amount" type="number" min="0" placeholder="0" value="${p.cash_amount || ''}" inputmode="numeric">`, 'field--cash-amount')}
     </div>
   `;
 
@@ -141,42 +137,76 @@ function fieldRows(vehicle, prefs, wantsValue) {
   `;
 }
 
-// Decorative section legend in the hero — reuses the section titles, so no
-// new copy. aria-hidden: the form is all-visible, not a real wizard.
+
+
 function HeroSteps() {
   return `
     <ol class="sell-steps" aria-hidden="true">
       ${SECTIONS.map((s, i) => `
         <li class="sell-step-pip${i === 0 ? ' is-active' : ''}">
-          <span class="sell-step-pip-num">${i + 1}</span>
           <span class="sell-step-pip-label">${s.title}</span>
         </li>`).join('')}
     </ol>
   `;
 }
 
-function SellPage(vehicle, prefs, wantsValue) {
+function isLiteMode() {
+  return localStorage.getItem(SELL_LITE_KEY) !== 'off';
+}
+
+function ModeBar() {
   return `
-    ${Header({ active: 'sell' })}
-    <main class="sell-shell sell-shell--v3">
+    <div class="sell-mode-bar" aria-label="ფორმის ნაწილები">
+      ${SECTIONS.map((s, i) => `<a class="sell-mode-chip${i === 0 ? ' is-active' : ''}" href="#sell-section-${i + 1}">${s.title}</a>`).join('')}
+    </div>
+  `;
+}
+
+function applySellMode(lite) {
+  const root = document.querySelector('.sell-shell');
+  const toggle = document.querySelector('[data-lite-toggle]');
+  if (!root || !toggle) return;
+  root.classList.toggle('sell-shell--lite', lite);
+  root.classList.toggle('sell-shell--full', !lite);
+  toggle.classList.toggle('is-on', lite);
+  toggle.setAttribute('aria-pressed', String(lite));
+}
+
+function bindSellMode() {
+  const toggle = document.querySelector('[data-lite-toggle]');
+  if (!toggle) return;
+  applySellMode(isLiteMode());
+  toggle.addEventListener('click', () => {
+    const next = !toggle.classList.contains('is-on');
+    localStorage.setItem(SELL_LITE_KEY, next ? 'on' : 'off');
+    applySellMode(next);
+  });
+}
+
+function SellPage(vehicle, prefs, wantsValue) {
+  const lite = isLiteMode();
+  return `
+    ${Header({ active: 'sell', liteToggle: true })}
+    <main class="sell-shell sell-shell--v3 ${lite ? 'sell-shell--lite' : 'sell-shell--full'}">
       <div class="sell-hero">
         <div class="container sell-hero-inner">
           <span class="sell-hero-icon">${icons.car}</span>
           <div class="sell-head">
             <h1>${editId ? 'განცხადების რედაქტირება' : 'დაამატე შენი ავტომობილი'}</h1>
-            <p class="sell-sub">${editId ? 'შეცვალე დეტალები — ცვლილებები მაშინვე გამოჩნდება ფიდში.' : 'აღწერე მანქანა და რა გინდა სანაცვლოდ — განცხადება გამოჩნდება გაცვლების ფიდში.'}</p>
+            <p class="sell-sub">${editId ? 'შეცვალე დეტალები. ცვლილებები მაშინვე გამოჩნდება ფიდში.' : 'აღწერე მანქანა და რა გინდა სანაცვლოდ. განცხადება გამოჩნდება გაცვლების ფიდში.'}</p>
           </div>
           ${HeroSteps()}
         </div>
       </div>
       <section class="container sell">
+        ${ModeBar()}
         <div class="sell-layout">
           <form class="sell-form" id="sell-form" novalidate>
             ${fieldRows(vehicle, prefs, wantsValue)}
             <p class="auth-error" id="sell-error" role="alert" hidden></p>
             <div class="sell-actions">
               <a class="btn btn-ghost" href="${editId ? 'account.html' : 'cars.html'}">${ICON_X} გაუქმება</a>
-              <button class="btn btn-primary" type="submit" id="sell-submit">${icons.plus} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
+              <button class="btn btn-primary" type="submit" id="sell-submit" data-sell-submit>${icons.plus} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
             </div>
           </form>
           <aside class="sell-preview" aria-label="განცხადების გადახედვა">
@@ -186,7 +216,7 @@ function SellPage(vehicle, prefs, wantsValue) {
         </div>
       </section>
     </main>
-    ${Footer()}
+    ${Footer({ active: 'sell' })}
   `;
 }
 
@@ -203,63 +233,168 @@ function GatePanel(title, text, actions) {
         </div>
       </section>
     </main>
-    ${Footer()}
+    ${Footer({ active: 'sell' })}
   `;
 }
 
-/* ---- demo fallback (Supabase not configured) ---- */
+
 function DemoSuccess(make, model) {
   const name = make ? `${make} ${model}`.trim() : 'შენი ავტომობილი';
   return GatePanel(
-    'დემო რეჟიმი — განცხადება არ შენახულა',
-    `${escapeAttr(name)} ფიდში ვერ მოხვდება, რადგან შენი სესია სატესტოა (SMS კოდი 1234). რეალური შენახვისთვის საჭიროა ნამდვილი ავტორიზაცია — ჩართე Google/Apple პროვაიდერი ან SMS პროვაიდერი Supabase-ის დეშბორდში და შედი თავიდან.`,
+    'განცხადება არ შენახულა',
+    `${escapeAttr(name)} ფიდში ვერ მოხვდა. რეალური შენახვისთვის საჭიროა დადასტურებული ავტორიზაცია.`,
     '<a class="btn btn-primary" href="login.html?next=sell.html">ნამდვილი შესვლა</a><a class="btn btn-ghost" href="cars.html">ნახე გაცვლები</a>',
   );
 }
 
-/* ---- photo picking ---- */
+
 let pickedFiles = [];
 
 function remainingSlots() {
   return MAX_PHOTOS - (existingPhotos.length - removedPhotoIds.size);
 }
 
+// One object URL per picked file, reused across re-renders. Re-creating them on
+// every reorder leaked a URL per drag.
+const previewUrls = new Map();
+
+function previewUrlFor(file) {
+  if (!previewUrls.has(file)) previewUrls.set(file, URL.createObjectURL(file));
+  return previewUrls.get(file);
+}
+
+function releasePreviewUrl(file) {
+  const url = previewUrls.get(file);
+  if (url) {
+    URL.revokeObjectURL(url);
+    previewUrls.delete(file);
+  }
+}
+
+function acceptPhotoFiles(fileList) {
+  const valid = [];
+  for (const file of Array.from(fileList || [])) {
+    if (!PHOTO_TYPES.includes(file.type)) {
+      toast(`${file.name}: მხოლოდ JPG/PNG/WebP`, 'error');
+      continue;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      toast(`${file.name}: მაქს. 5MB`, 'error');
+      continue;
+    }
+    valid.push(file);
+  }
+  // Append rather than replace: picking or dropping a second batch should add
+  // to the set, which is what the remove buttons make safe.
+  const room = remainingSlots() - pickedFiles.length;
+  const added = valid.slice(0, Math.max(0, room));
+  if (added.length < valid.length) toast(`მაქს. ${MAX_PHOTOS} ფოტო თითო განცხადებაზე`, 'error');
+  pickedFiles = pickedFiles.concat(added);
+  renderPickedPhotos();
+}
+
+function renderPickedPhotos() {
+  const previews = document.querySelector('#upload-previews');
+  if (!previews) return;
+  const noExisting = !(existingPhotos.length - removedPhotoIds.size);
+  previews.innerHTML = pickedFiles
+    .map((file, i) => `
+      <figure class="upload-preview" draggable="true" data-pick="${i}">
+        <img src="${previewUrlFor(file)}" alt="ფოტო ${i + 1}" draggable="false">
+        ${i === 0 && noExisting ? '<figcaption>მთავარი</figcaption>' : ''}
+        <button type="button" class="upload-remove" data-remove-pick="${i}" aria-label="ფოტოს წაშლა">&times;</button>
+      </figure>
+    `)
+    .join('');
+  previews.hidden = !pickedFiles.length;
+
+  if (previewPhotoUrl) previewPhotoUrl = null;
+  previewPhotoUrl = pickedFiles[0] ? previewUrlFor(pickedFiles[0]) : null;
+  updatePreview(document.querySelector('#sell-form'));
+}
+
 function bindUploadZone() {
   const input = document.querySelector('.upload-input');
   const previews = document.querySelector('#upload-previews');
+  const zone = document.querySelector('#upload-zone');
   if (!input || !previews) return;
 
   input.addEventListener('change', () => {
-    previews.querySelectorAll('img').forEach((img) => URL.revokeObjectURL(img.src));
-    const files = Array.from(input.files || []);
-    const valid = [];
-    for (const file of files) {
-      if (!PHOTO_TYPES.includes(file.type)) {
-        toast(`${file.name}: მხოლოდ JPG/PNG/WebP`, 'error');
-        continue;
-      }
-      if (file.size > MAX_PHOTO_BYTES) {
-        toast(`${file.name}: მაქს. 5MB`, 'error');
-        continue;
-      }
-      valid.push(file);
+    acceptPhotoFiles(input.files);
+    // Clear so re-picking the same file still fires change.
+    input.value = '';
+  });
+
+  // ---- Drop files onto the zone ----
+  if (zone) {
+    const stop = (event) => { event.preventDefault(); event.stopPropagation(); };
+    ['dragenter', 'dragover'].forEach((type) => zone.addEventListener(type, (event) => {
+      stop(event);
+      event.dataTransfer.dropEffect = 'copy';
+      zone.classList.add('is-dropping');
+    }));
+    ['dragleave', 'dragend'].forEach((type) => zone.addEventListener(type, (event) => {
+      stop(event);
+      if (!zone.contains(event.relatedTarget)) zone.classList.remove('is-dropping');
+    }));
+    zone.addEventListener('drop', (event) => {
+      stop(event);
+      zone.classList.remove('is-dropping');
+      acceptPhotoFiles(event.dataTransfer?.files);
+    });
+  }
+
+  // Dropping anywhere else must not make the browser navigate to the file.
+  ['dragover', 'drop'].forEach((type) => window.addEventListener(type, (event) => {
+    if (!event.target.closest?.('#upload-zone, #upload-previews')) event.preventDefault();
+  }));
+
+  // ---- Reorder picked photos by dragging ----
+  let dragFrom = null;
+  previews.addEventListener('dragstart', (event) => {
+    const fig = event.target.closest('[data-pick]');
+    if (!fig) return;
+    dragFrom = Number(fig.dataset.pick);
+    fig.classList.add('is-dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    // Firefox requires data to be set for a drag to start at all.
+    event.dataTransfer.setData('text/plain', String(dragFrom));
+  });
+
+  previews.addEventListener('dragover', (event) => {
+    if (dragFrom === null) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const over = event.target.closest('[data-pick]');
+    previews.querySelectorAll('.is-drop-target').forEach((f) => f.classList.remove('is-drop-target'));
+    if (over && Number(over.dataset.pick) !== dragFrom) over.classList.add('is-drop-target');
+  });
+
+  previews.addEventListener('drop', (event) => {
+    if (dragFrom === null) return;
+    event.preventDefault();
+    const over = event.target.closest('[data-pick]');
+    const to = over ? Number(over.dataset.pick) : pickedFiles.length - 1;
+    if (to !== dragFrom) {
+      const [moved] = pickedFiles.splice(dragFrom, 1);
+      pickedFiles.splice(to, 0, moved);
+      renderPickedPhotos();
     }
-    pickedFiles = valid.slice(0, remainingSlots());
-    if (valid.length > pickedFiles.length) toast(`მაქს. ${MAX_PHOTOS} ფოტო თითო განცხადებაზე`, 'error');
+    dragFrom = null;
+  });
 
-    previews.innerHTML = pickedFiles
-      .map((file, i) => `
-        <figure class="upload-preview">
-          <img src="${URL.createObjectURL(file)}" alt="ფოტო ${i + 1}">
-          ${i === 0 && !(existingPhotos.length - removedPhotoIds.size) ? '<figcaption>მთავარი</figcaption>' : ''}
-        </figure>
-      `)
-      .join('');
-    previews.hidden = !pickedFiles.length;
+  previews.addEventListener('dragend', () => {
+    previews.querySelectorAll('.is-dragging, .is-drop-target')
+      .forEach((f) => f.classList.remove('is-dragging', 'is-drop-target'));
+    dragFrom = null;
+  });
 
-    if (previewPhotoUrl) URL.revokeObjectURL(previewPhotoUrl);
-    previewPhotoUrl = pickedFiles[0] ? URL.createObjectURL(pickedFiles[0]) : null;
-    updatePreview(document.querySelector('#sell-form'));
+  previews.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-remove-pick]');
+    if (!btn) return;
+    const [removed] = pickedFiles.splice(Number(btn.dataset.removePick), 1);
+    releasePreviewUrl(removed);
+    renderPickedPhotos();
   });
 
   document.querySelector('#existing-photos')?.addEventListener('click', (event) => {
@@ -268,49 +403,216 @@ function bindUploadZone() {
     const fig = btn.closest('[data-photo]');
     removedPhotoIds.add(fig.dataset.photo);
     fig.remove();
-    updatePreview(document.querySelector('#sell-form'));
+    renderPickedPhotos();
   });
 }
 
-/* ---- catalog-backed datalists ---- */
+
 function bindCatalogSuggestions() {
+  const searchInput = document.querySelector('[name="vehicleSearch"]');
   const makeInput = document.querySelector('[name="make"]');
   const modelInput = document.querySelector('[name="model"]');
-  const makeList = document.querySelector('#make-list');
-  const modelList = document.querySelector('#model-list');
-  if (!makeInput || !makeList) return;
+  const list = document.querySelector('#vehicle-search-list');
+  if (!searchInput || !makeInput || !modelInput || !list) return;
 
-  let makeId = null;
   let timer = null;
+  let lastSuggestions = [];
 
-  const fillMakes = async (term) => {
-    const makes = await searchMakes(term, 12);
-    makeList.innerHTML = makes.map((m) => `<option value="${escapeAttr(m.name)}"></option>`).join('');
-    const exact = makes.find((m) => m.name.toLowerCase() === makeInput.value.trim().toLowerCase());
-    makeId = exact ? exact.id : null;
-    if (modelList) modelList.innerHTML = '';
-    if (makeId && modelInput) fillModels(modelInput.value);
+  const setVehicle = (make, model, label) => {
+    makeInput.value = make || '';
+    modelInput.value = model || '';
+    if (label) searchInput.value = label;
+    makeInput.dispatchEvent(new Event('input', { bubbles: true }));
+    modelInput.dispatchEvent(new Event('input', { bubbles: true }));
   };
 
-  const fillModels = async (term) => {
-    if (!makeId || !modelList) return;
-    const models = await searchModels(term, makeId, 16);
-    modelList.innerHTML = models.map((m) => `<option value="${escapeAttr(m.name)}"></option>`).join('');
+  const candidateMake = async (term) => {
+    const tokens = tokenize(term);
+    const makes = await loadCatalogMakes();
+    const hit = matchMake(tokens, makes);
+    if (hit) return hit.make;
+    const quick = await searchMakes(term.split(/\s+/)[0] || term, 8);
+    if (quick[0]) return quick[0];
+    const q = normName(term.split(/\s+/)[0] || term);
+    const localMake = Array.from(new Set((window.AutoSwap.DEMO_CARS || []).map((car) => car.make)))
+      .find((name) => normName(name).startsWith(q) || q.startsWith(normName(name)));
+    return localMake ? { id: '', name: localMake } : null;
   };
 
-  makeInput.addEventListener('input', () => {
+  const suggestionsFor = async (term) => {
+    const query = term.trim();
+    if (!query) return [];
+    const make = await candidateMake(query);
+    if (!make) {
+      const makes = await searchMakes(query, 8);
+      return makes.map((m) => ({ make: m.name, model: '', label: m.name }));
+    }
+    const makeNorm = normName(make.name);
+    const queryNorm = normName(query);
+    const modelQuery = queryNorm.startsWith(makeNorm) ? query.slice(make.name.length).trim() : query.split(/\s+/).slice(1).join(' ');
+    const localModels = Array.from(new Set((window.AutoSwap.DEMO_CARS || [])
+      .filter((car) => car.make.toLowerCase() === make.name.toLowerCase())
+      .map((car) => car.model)))
+      .filter((model) => !modelQuery || normName(model).includes(normName(modelQuery)) || normName(modelQuery).includes(normName(model)));
+    const models = make.id ? await searchModels(modelQuery, make.id, 12) : [];
+    const broadModels = models.length || !make.id ? [] : await searchModels('', make.id, 12);
+    const rows = models.length ? models : (broadModels.length ? broadModels : localModels.map((name) => ({ name })));
+    const output = rows.map((m) => ({ make: make.name, model: m.name, label: `${make.name} ${m.name}`.trim() }));
+    output.unshift({ make: make.name, model: modelQuery, label: `${make.name} ${modelQuery}`.trim() });
+    return output.filter((item, index, arr) => item.label && arr.findIndex((x) => x.label.toLowerCase() === item.label.toLowerCase()) === index).slice(0, 12);
+  };
+
+  let activeIndex = -1;
+
+  const closeList = () => {
+    list.hidden = true;
+    activeIndex = -1;
+    searchInput.setAttribute('aria-expanded', 'false');
+  };
+
+  const renderList = () => {
+    if (!lastSuggestions.length || document.activeElement !== searchInput) {
+      closeList();
+      return;
+    }
+    // Make and model as separate parts: one run-on uppercase string was hard
+    // to scan when every row starts with the same make.
+    list.innerHTML = lastSuggestions
+      .map((item, index) => `
+        <li class="combo-option vehicle-option${index === activeIndex ? ' is-active' : ''}" role="option" data-index="${index}">
+          <span class="vs-make">${escapeAttr(item.make || '')}</span>
+          ${item.model ? `<span class="vs-model">${escapeAttr(item.model)}</span>` : ''}
+        </li>`)
+      .join('');
+    list.hidden = false;
+    // .combo-list is position:fixed; without this it lands at its static spot
+    // and covers the label above the input. Anchor to the input, not its
+    // .field-control wrapper: the wrapper contains the list, so its rect grows
+    // to include it and each placement pushes the list further down.
+    placeComboList(list, searchInput);
+    searchInput.setAttribute('aria-expanded', 'true');
+  };
+
+  // Flags the field when the typed text matches no make in the catalog, so the
+  // user can correct it instead of silently saving an unknown vehicle.
+  const setUnknown = (unknown) => {
+    const field = searchInput.closest('.field');
+    if (!field) return;
+    field.classList.toggle('field--unknown', unknown);
+    searchInput.setAttribute('aria-invalid', unknown ? 'true' : 'false');
+  };
+
+  // Enter with nothing highlighted: take what was typed, resolve it against the
+  // catalog, and either accept it or mark it unknown.
+  const commitTyped = async () => {
+    const raw = searchInput.value.trim();
+    if (!raw) { setUnknown(false); setVehicle('', ''); return; }
+    const exact = lastSuggestions.find((item) => item.label.toLowerCase() === raw.toLowerCase());
+    if (exact) {
+      setUnknown(false);
+      setVehicle(exact.make, exact.model, exact.label);
+      closeList();
+      return;
+    }
+    const make = await candidateMake(raw);
+    if (!make) {
+      setUnknown(true);
+      setVehicle('', '');
+      return;
+    }
+    setUnknown(false);
+    const model = raw.toLowerCase().startsWith(make.name.toLowerCase())
+      ? raw.slice(make.name.length).trim()
+      : raw.split(/\s+/).slice(1).join(' ');
+    setVehicle(make.name, model);
+    closeList();
+  };
+
+  // Double-click on an empty or committed field opens the browse list rather
+  // than forcing the user to delete characters to see options.
+  const showBrowseList = async () => {
+    const term = searchInput.value.trim();
+    lastSuggestions = term
+      ? await suggestionsFor(term)
+      : (await searchMakes('', 20)).map((m) => ({ make: m.name, model: '', label: m.name }));
+    activeIndex = -1;
+    renderList();
+  };
+
+  const refresh = async () => {
+    lastSuggestions = await suggestionsFor(searchInput.value);
+    renderList();
+    const exact = lastSuggestions.find((item) => item.label.toLowerCase() === searchInput.value.trim().toLowerCase());
+    if (exact) {
+      setVehicle(exact.make, exact.model);
+      return;
+    }
+    const make = await candidateMake(searchInput.value);
+    if (make) {
+      const makeLabel = make.name;
+      const raw = searchInput.value.trim();
+      const model = raw.toLowerCase().startsWith(makeLabel.toLowerCase()) ? raw.slice(makeLabel.length).trim() : raw.split(/\s+/).slice(1).join(' ');
+      setVehicle(makeLabel, model);
+      return;
+    }
+    setVehicle('', '');
+  };
+
+  const pick = (index) => {
+    const item = lastSuggestions[Number(index)];
+    if (!item) return;
     clearTimeout(timer);
-    timer = setTimeout(() => fillMakes(makeInput.value), 200);
-  });
-  modelInput?.addEventListener('input', () => {
+    setUnknown(false);
+    setVehicle(item.make, item.model, item.label);
+    closeList();
+  };
+
+  searchInput.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(() => fillModels(modelInput.value), 200);
+    timer = setTimeout(refresh, 160);
   });
-  if (makeInput.value) fillMakes(makeInput.value);
+  searchInput.addEventListener('focus', () => {
+    if (searchInput.value.trim()) refresh();
+  });
+  searchInput.addEventListener('blur', () => setTimeout(closeList, 140));
+  searchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (list.hidden) return;
+      event.preventDefault();
+      const count = lastSuggestions.length;
+      activeIndex = ((activeIndex + (event.key === 'ArrowDown' ? 1 : -1)) % count + count) % count;
+      renderList();
+      list.querySelector('.combo-option.is-active')?.scrollIntoView({ block: 'nearest' });
+    } else if (event.key === 'Enter') {
+      // Never submit the form from this field: Enter resolves the vehicle.
+      event.preventDefault();
+      if (!list.hidden && activeIndex >= 0) pick(activeIndex);
+      else commitTyped();
+    } else if (event.key === 'Escape') {
+      closeList();
+    }
+  });
+
+  searchInput.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+    showBrowseList();
+  });
+  list.addEventListener('mousedown', (event) => {
+    const option = event.target.closest('.combo-option');
+    if (!option) return;
+    event.preventDefault();
+    pick(option.dataset.index);
+  });
+  searchInput.addEventListener('change', () => {
+    const exact = lastSuggestions.find((item) => item.label.toLowerCase() === searchInput.value.trim().toLowerCase());
+    if (exact) setVehicle(exact.make, exact.model, exact.label);
+    else refresh();
+  });
+  if (searchInput.value) refresh();
 }
 
-/* ---- live card preview: the form mirrored as a feed card ---- */
-let previewPhotoUrl = null; // objectURL of the first picked file
+
+let previewPhotoUrl = null; 
 
 function cashLine(mode, amount) {
   const gel = Number(amount) > 0 ? `${Number(amount).toLocaleString('en-US')} ₾` : '';
@@ -320,16 +622,16 @@ function cashLine(mode, amount) {
   return { type: 'none', icon: icons.equals, text: 'თანაბარი გაცვლა' };
 }
 
-// The exact Georgian label shown for a <select> value.
+
 function selText(form, name) {
   const s = form.querySelector(`[name="${name}"]`);
   return s && s.selectedOptions && s.selectedOptions[0] ? s.selectedOptions[0].textContent.trim() : '';
 }
 
-// Listing completion: required fields + a couple of "nice to have" ones.
+
 function computeCompletion(form) {
   const val = (n) => String(new FormData(form).get(n) || '').trim();
-  const required = ['make', 'model', 'year', 'mileage', 'fuel', 'transmission', 'city'];
+  const required = ['make', 'model', 'year', 'mileage', 'fuel', 'transmission'];
   const optional = ['desired', 'description'];
   let done = required.filter((n) => val(n)).length + optional.filter((n) => val(n)).length;
   if (previewPhotoUrl || existingPhotos.some((p) => !removedPhotoIds.has(p.id))) done += 1;
@@ -381,7 +683,7 @@ function previewPanelHTML(form) {
           <div class="preview-progress-meter"><span style="width:${completion}%"></span></div>
           <span class="preview-progress-num">${completion}%</span>
         </div>
-        <button class="btn btn-primary preview-publish" type="submit" form="sell-form" id="sell-submit">${icons.swap} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
+        <button class="btn btn-primary preview-publish" type="submit" form="sell-form" data-sell-submit>${icons.swap} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
       </div>
     </article>
   `;
@@ -392,8 +694,8 @@ function updatePreview(form) {
   if (slot && form) slot.innerHTML = previewPanelHTML(form);
 }
 
-/* ---- Step navigation: expand one step, collapse the rest ---- */
-// Live character count under the description field.
+
+
 function bindCounter(form) {
   if (!form) return;
   const counter = form.querySelector('#desc-counter');
@@ -411,18 +713,60 @@ function bindPreview(form) {
   form.addEventListener('change', () => updatePreview(form));
 }
 
-/* ---- voice fill: speak the listing, the form types itself ----
-   Web Speech API (Chrome/Edge/Safari), lang ka-GE. One tap records an
-   utterance; the transcript is parsed into form fields (year, mileage,
-   fuel, transmission, category, city, make/model, engine size) and the
-   raw text lands in the description so nothing said is lost. */
-const FUEL_STEMS = { 'ბენზინ': 'petrol', 'დიზელ': 'diesel', 'ჰიბრიდ': 'hybrid', 'ელექტრო': 'electric', 'გაზ': 'lpg' };
+function bindCashAmount(form) {
+  if (!form) return;
+  const mode = form.querySelector('[name="cashMode"]');
+  const amount = form.querySelector('[name="amount"]');
+  const field = amount?.closest('.field');
+  if (!mode || !amount || !field) return;
+  const update = () => {
+    const needsAmount = mode.value === 'add_money' || mode.value === 'ask_money';
+    field.hidden = !needsAmount;
+    amount.required = needsAmount;
+    if (!needsAmount) amount.value = '';
+    updatePreview(form);
+  };
+  mode.addEventListener('change', update);
+  update();
+}
+
+// An electric car has no engine displacement, so the field is set to 0.0 and
+// locked rather than left for the user to fill with a number that cannot exist.
+// The previous value is restored if they switch back to a combustion fuel.
+function bindEngineSizeToFuel(form) {
+  const fuel = form.querySelector('[name="fuel"]');
+  const engine = form.querySelector('[name="engineSize"]');
+  if (!fuel || !engine) return;
+  let lastCombustionValue = engine.value;
+  const update = () => {
+    const isElectric = fuel.value === 'electric';
+    if (isElectric) {
+      if (engine.value && engine.value !== '0.0') lastCombustionValue = engine.value;
+      engine.value = '0.0';
+      // min is 0.1, so 0.0 would fail validation while disabled inputs are
+      // skipped by the constraint API and omitted from FormData.
+      engine.min = '0';
+      engine.readOnly = true;
+      engine.setAttribute('aria-readonly', 'true');
+    } else {
+      engine.min = '0.1';
+      engine.readOnly = false;
+      engine.removeAttribute('aria-readonly');
+      if (engine.value === '0.0') engine.value = lastCombustionValue === '0.0' ? '' : lastCombustionValue;
+    }
+    engine.closest('.field')?.classList.toggle('field--locked', isElectric);
+    updatePreview(form);
+  };
+  fuel.addEventListener('change', update);
+  update();
+}
+
+
+const FUEL_STEMS ={ 'ბენზინ': 'petrol', 'დიზელ': 'diesel', 'ჰიბრიდ': 'hybrid', 'ელექტრო': 'electric', 'გაზ': 'lpg' };
 const TRANSMISSION_STEMS = { 'ავტომატ': 'automatic', 'მექანიკ': 'manual', 'ტიპტრონიკ': 'tiptronic', 'ვარიატორ': 'variator' };
 const CATEGORY_STEMS = { 'სედან': 'sedan', 'ჯიპ': 'suv', 'კროსოვერ': 'crossover', 'ჰეჩბექ': 'hatchback', 'კუპე': 'coupe', 'მინივენ': 'minivan', 'პიკაპ': 'pickup', 'უნივერსალ': 'universal' };
 const CITY_STEMS = ['თბილის', 'ბათუმ', 'ქუთაის', 'რუსთავ', 'გორ', 'ზუგდიდ', 'ფოთ', 'თელავ'];
-/* Make/model come ONLY from the catalog (car_makes / car_models): speech is
-   fuzzy-matched against real DB rows, so "BM" resolves to BMW and nothing
-   that doesn't exist in the catalog is ever written into the fields. */
+
 const GE_TO_LAT = {
   ა: 'a', ბ: 'b', გ: 'g', დ: 'd', ე: 'e', ვ: 'v', ზ: 'z', თ: 't', ი: 'i',
   კ: 'k', ლ: 'l', მ: 'm', ნ: 'n', ო: 'o', პ: 'p', ჟ: 'zh', რ: 'r', ს: 's',
@@ -430,7 +774,7 @@ const GE_TO_LAT = {
   ც: 'ts', ძ: 'dz', წ: 'ts', ჭ: 'ch', ხ: 'kh', ჯ: 'j', ჰ: 'h',
 };
 
-// Georgian spellings whose transliteration lands too far from the Latin name.
+
 const MAKE_ALIASES = {
   'ბმვ': 'bmw', 'ბემვე': 'bmw', 'მერსედეს': 'mercedesbenz', 'შევროლეტ': 'chevrolet',
   'ფოლკსვაგენ': 'volkswagen', 'ფოლცვაგენ': 'volkswagen', 'ტოიოტ': 'toyota',
@@ -476,16 +820,16 @@ function loadCatalogModels(makeId) {
   return catalogModelsCache.get(makeId);
 }
 
-// Common Georgian function/domain words never name a car.
+
 const SPEECH_STOP_WORDS = new Set([
   'და', 'ან', 'არის', 'მაქვს', 'მინდა', 'მყავს', 'ეს', 'ის', 'რომ', 'კმ',
   'წლის', 'წელი', 'წელს', 'გარბენი', 'ძრავი', 'ლიტრი', 'მთელი', 'ფერი',
 ]);
 
-// Spoken-token candidates: single tokens and two-token spans ("alfa romeo",
-// "e class"), normalized; Georgian aliases applied first. Short candidates
-// are only trusted when typed in Latin ("BM") — short Georgian words are
-// function words, not car names.
+
+
+
+
 function speechCandidates(tokens) {
   const out = [];
   for (let i = 0; i < tokens.length; i++) {
@@ -502,7 +846,7 @@ function speechCandidates(tokens) {
   return out;
 }
 
-// exact > prefix (≥2 chars) > small edit distance; null when nothing is close.
+
 function bestNameMatch(candidate, rows) {
   let best = null;
   for (const row of rows) {
@@ -525,7 +869,7 @@ function matchMake(tokens, makes) {
   for (const cand of speechCandidates(tokens)) {
     const hit = bestNameMatch(cand.norm, makes);
     if (!hit) continue;
-    // Prefer cheaper matches; on ties, longer spoken evidence wins.
+    
     if (!best || hit.cost < best.cost || (hit.cost === best.cost && cand.norm.length > best.norm.length)) {
       best = { make: hit.row, index: cand.index, span: cand.span, cost: hit.cost, norm: cand.norm };
     }
@@ -533,8 +877,8 @@ function matchMake(tokens, makes) {
   return best;
 }
 
-// The model is spoken right after the make — match the next few tokens
-// against that make's real model list only.
+
+
 function matchModel(tokens, afterIndex, models) {
   const windowTokens = tokens.slice(afterIndex, afterIndex + 3);
   let best = null;
@@ -548,8 +892,7 @@ function matchModel(tokens, afterIndex, models) {
   return best ? best.model : null;
 }
 
-/* ---- Georgian spoken numbers → digits ----
-   "ორი ათას თვრამეტი" → 2018, "ას ოცი ათასი" → 120000, "ოცდახუთი" → 25. */
+
 const NUM_STEMS = [
   ['ცხრაას', 900], ['რვაას', 800], ['შვიდას', 700], ['ექვსას', 600], ['ხუთას', 500],
   ['ოთხას', 400], ['სამას', 300], ['ორას', 200], ['ას', 100],
@@ -578,8 +921,8 @@ function wordNum(token) {
   return null;
 }
 
-// Collapses runs of spoken numbers (words, and a digit multiplier before
-// "ათასი") into single digit tokens, so the rest of the parser sees digits.
+
+
 function normalizeNumbers(tokens) {
   const out = [];
   let i = 0;
@@ -627,10 +970,16 @@ function flashField(form, name, value, filled) {
   const input = form.querySelector(`[name="${name}"]`);
   if (!input || value == null || value === '') return;
   input.value = value;
+  if (name === 'make' || name === 'model') {
+    const vehicleSearch = form.querySelector('[name="vehicleSearch"]');
+    const make = form.querySelector('[name="make"]')?.value || '';
+    const model = form.querySelector('[name="model"]')?.value || '';
+    if (vehicleSearch) vehicleSearch.value = [make, model].filter(Boolean).join(' ');
+  }
   input.classList.add('field-flash');
   setTimeout(() => input.classList.remove('field-flash'), 1800);
   filled.push(name);
-  // Programmatic .value writes don't fire events — the live preview needs one.
+  
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
@@ -647,8 +996,8 @@ const FIELD_LABELS = {
   city: 'ქალაქი', engineSize: 'ძრავი',
 };
 
-// Speech spells big numbers as groups ("180 000") — glue them back together.
-// A 4-digit year never swallows a following group.
+
+
 function tokenize(text) {
   const raw = String(text).toLowerCase().split(/[^a-z0-9ა-ჰ.,]+/).filter(Boolean);
   const merged = [];
@@ -671,7 +1020,7 @@ function numberNear(tokens, numbers, idx, test) {
   return null;
 }
 
-// Spoken engine sizes: "ორი და ხუთი" / "2 მთელი 5" → 2.5, "ორნახევარი" → 2.5.
+
 function spokenEngine(tokens) {
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
@@ -700,10 +1049,10 @@ async function parseTranscript(form, text) {
   const isYear = (n) => Number.isInteger(n) && n >= 1980 && n <= THIS_YEAR + 1;
   const isMileage = (n) => Number.isInteger(n) && n >= 1000 && n <= 2000000;
 
-  // Spoken decimals first — they would otherwise read as separate integers.
+  
   let engine = spokenEngine(tokens);
 
-  // Context keywords beat bare-number guessing: "2012 წლის", "გარბენი 180000".
+  
   let year = null;
   const yearCtx = stemIdx(['წელ', 'წლის']);
   if (yearCtx !== -1) year = numberNear(tokens, numbers, yearCtx, isYear);
@@ -720,7 +1069,7 @@ async function parseTranscript(form, text) {
     if (engCtx !== -1) engine = numberNear(tokens, numbers, engCtx, (n) => n > 0.5 && n < 10);
   }
 
-  // Fallback heuristics for bare numbers.
+  
   if (year == null) year = numbers.find(isYear) ?? null;
   if (mileage == null) mileage = numbers.find((n) => isMileage(n) && n !== year) ?? null;
 
@@ -735,7 +1084,7 @@ async function parseTranscript(form, text) {
   const cityIdx = CITY_STEMS.findIndex((stem) => tokens.some((t) => t.startsWith(stem)));
   if (cityIdx !== -1) flashField(form, 'city', CITIES[cityIdx], filled);
 
-  // Make/model only from the catalog — never write unvalidated text.
+  
   try {
     const makes = await loadCatalogMakes();
     const makeHit = matchMake(tokens, makes);
@@ -745,7 +1094,7 @@ async function parseTranscript(form, text) {
       const model = matchModel(tokens, makeHit.index + makeHit.span, models);
       if (model) flashField(form, 'model', model.name, filled);
     }
-  } catch (_err) { /* catalog unavailable — leave make/model for typing */ }
+  } catch (_err) {  }
 
   return filled;
 }
@@ -770,7 +1119,7 @@ function bindVoiceFill(form) {
     }
     recognition = new SpeechRecognitionCtor();
     recognition.lang = 'ka-GE';
-    recognition.continuous = true; // keep listening through pauses, stop on tap
+    recognition.continuous = true; 
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
@@ -796,7 +1145,7 @@ function bindVoiceFill(form) {
           continue;
         }
         if (i >= parsedUpto) {
-          // Each finalized chunk fills fields immediately — while you talk.
+          
           finalText += `${result[0].transcript} `;
           pendingParses.push(parseTranscript(form, result[0].transcript).then((names) => {
             names.forEach((n) => filledAll.add(n));
@@ -807,13 +1156,13 @@ function bindVoiceFill(form) {
       }
       const heard = interim.trim();
       interimActive = !!heard;
-      if (heard) hint.textContent = `🎙 ${heard}`;
+      if (heard) hint.textContent = heard;
       else refreshChips();
     };
     recognition.onerror = (event) => {
       hint.textContent = event.error === 'not-allowed'
-        ? 'მიკროფონზე წვდომა აკრძალულია — ჩართე ბრაუზერის ნებართვა.'
-        : 'ხმის ამოცნობა ვერ მოხერხდა — სცადე თავიდან.';
+        ? 'მიკროფონზე წვდომა აკრძალულია. ჩართე ბრაუზერის ნებართვა.'
+        : 'ხმის ამოცნობა ვერ მოხერხდა. სცადე თავიდან.';
     };
     recognition.onend = async () => {
       btn.classList.remove('is-listening');
@@ -825,15 +1174,15 @@ function bindVoiceFill(form) {
         return;
       }
       await Promise.allSettled(pendingParses);
-      // Nothing said gets lost: the whole transcript lands in the description.
+      
       const desc = form.querySelector('[name="description"]');
       if (desc && !desc.value.trim()) {
         desc.value = text;
         desc.dispatchEvent(new Event('input', { bubbles: true }));
       }
       hint.textContent = filledAll.size
-        ? `${chips([...filledAll])} — გადაამოწმე და შეასწორე.`
-        : 'ველები ვერ ამოვიცანი — ნათქვამი ჩავწერე აღწერაში.';
+        ? `${chips([...filledAll])}. გადაამოწმე და შეასწორე.`
+        : 'ველები ვერ ამოვიცანი. ნათქვამი ჩავწერე აღწერაში.';
       toast(filledAll.size ? `ხმით შეივსო ${filledAll.size} ველი` : 'ჩაწერა აღწერაში გადავიდა');
     };
 
@@ -846,14 +1195,18 @@ function bindVoiceFill(form) {
   });
 }
 
-/* ---- validation + persistence ---- */
+
 function readForm(form) {
   const data = new FormData(form);
   const str = (name) => String(data.get(name) || '').trim();
   const num = (name) => (data.get(name) === null || str(name) === '' ? null : Number(data.get(name)));
+  const typedVehicle = str('vehicleSearch');
+  const typedParts = typedVehicle.split(/\s+/).filter(Boolean);
+  const typedMake = typedParts[0] || '';
+  const typedModel = typedParts.slice(1).join(' ');
   return {
-    make: str('make'),
-    model: str('model'),
+    make: str('make') || typedMake,
+    model: str('model') || typedModel,
     year: num('year'),
     mileage: num('mileage'),
     fuel_type: str('fuel'),
@@ -869,19 +1222,86 @@ function readForm(form) {
   };
 }
 
+// Returns { message, field } so the caller can mark the offending input,
+// instead of only printing a sentence the user then has to hunt through the
+// form to act on.
 function validate(values) {
-  if (!values.make || !values.model) return 'მარკა და მოდელი სავალდებულოა.';
-  if (!values.year || values.year < 1980 || values.year > THIS_YEAR + 1) return `წელი უნდა იყოს 1980–${THIS_YEAR + 1} შუალედში.`;
-  if (values.mileage == null || values.mileage < 0) return 'გარბენი უნდა იყოს დადებითი რიცხვი.';
-  if (!values.fuel_type || !values.transmission) return 'საწვავი და ტრანსმისია სავალდებულოა.';
-  if (!values.city) return 'ქალაქი სავალდებულოა.';
-  if (values.cash_amount < 0) return 'თანხა ვერ იქნება უარყოფითი.';
+  const bad = (message, field) => ({ message, field });
+  if (!values.make || !values.model) return bad('მარკა და მოდელი სავალდებულოა.', 'vehicleSearch');
+  if (!values.year || values.year < 1980 || values.year > THIS_YEAR + 1) return bad(`წელი უნდა იყოს 1980-${THIS_YEAR + 1} შუალედში.`, 'year');
+  if (values.mileage == null || values.mileage < 0) return bad('გარბენი უნდა იყოს დადებითი რიცხვი.', 'mileage');
+  if (!values.fuel_type) return bad('საწვავი სავალდებულოა.', 'fuel');
+  if (!values.transmission) return bad('ტრანსმისია სავალდებულოა.', 'transmission');
+  if (values.cash_amount < 0) return bad('თანხა ვერ იქნება უარყოფითი.', 'amount');
+  if ((values.cash_mode === 'add_money' || values.cash_mode === 'ask_money') && values.cash_amount <= 0) {
+    return bad('თანხის სხვაობისთვის მიუთითე თანხა.', 'amount');
+  }
   return null;
+}
+
+// Red border + red placeholder on the field at fault, cleared as soon as the
+// user touches it, so the form points at the problem instead of describing it.
+function clearFieldErrors(form) {
+  form.querySelectorAll('.field--invalid').forEach((f) => f.classList.remove('field--invalid'));
+}
+
+function markFieldError(form, name) {
+  if (!name) return;
+  const input = form.querySelector(`[name="${name}"]`);
+  const field = input?.closest('.field');
+  if (!input || !field) return;
+  field.classList.add('field--invalid');
+  input.setAttribute('aria-invalid', 'true');
+  input.focus({ preventScroll: true });
+  field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const clear = () => {
+    field.classList.remove('field--invalid');
+    input.removeAttribute('aria-invalid');
+    input.removeEventListener('input', clear);
+    input.removeEventListener('change', clear);
+  };
+  input.addEventListener('input', clear);
+  input.addEventListener('change', clear);
+}
+
+// Downscale + re-encode photos in the browser before upload so listings stay
+// fast and storage costs stay low. Falls back to the original file if the
+// browser can't decode it or compression doesn't actually help.
+const MAX_IMAGE_DIM = 1600;
+const IMAGE_QUALITY = 0.82;
+
+async function compressImage(file) {
+  if (!file.type.startsWith('image/') || typeof createImageBitmap !== 'function') return file;
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch (_err) {
+    return file;
+  }
+  const scale = Math.min(1, MAX_IMAGE_DIM / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close?.();
+
+  const supportsWebp = canvas.toDataURL('image/webp').startsWith('data:image/webp');
+  const outType = supportsWebp ? 'image/webp' : 'image/jpeg';
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, outType, IMAGE_QUALITY));
+  // Keep the original when re-encoding failed or made the file bigger.
+  if (!blob || blob.size >= file.size) return file;
+  const ext = outType === 'image/webp' ? 'webp' : 'jpg';
+  const base = file.name.replace(/\.[^.]+$/, '') || 'photo';
+  return new File([blob], `${base}.${ext}`, { type: outType });
 }
 
 async function uploadPhotos(vehicleId, files, startPosition) {
   let position = startPosition;
-  for (const file of files) {
+  for (const original of files) {
+    const file = await compressImage(original);
     const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
     const path = `vehicles/${vehicleId}/${crypto.randomUUID()}.${ext}`;
     const { error: upError } = await sb.storage.from('vehicle-photos').upload(path, file, {
@@ -929,7 +1349,7 @@ async function persist(user, values) {
     vehicleId = data.id;
   }
 
-  // Photos: remove the ones the user deleted, then append new ones.
+  
   if (removedPhotoIds.size) {
     const doomed = existingPhotos.filter((p) => removedPhotoIds.has(p.id));
     await sb.from('vehicle_photos').delete().in('id', doomed.map((p) => p.id));
@@ -946,7 +1366,7 @@ async function persist(user, values) {
     await uploadPhotos(vehicleId, pickedFiles, startPosition);
   }
 
-  // Swap terms (1:1) + wants (replace wholesale).
+  
   const { error: prefsError } = await sb.from('swap_preferences').upsert({
     vehicle_id: vehicleId,
     cash_mode: values.cash_mode,
@@ -966,7 +1386,7 @@ async function persist(user, values) {
   return vehicleId;
 }
 
-/* ---- page bootstrap ---- */
+
 async function renderReal(user) {
   let vehicle = null;
   let prefs = null;
@@ -994,10 +1414,13 @@ async function renderReal(user) {
   }
 
   document.querySelector('#app').innerHTML = SellPage(vehicle, prefs, wantsValue);
+  bindSellMode();
   bindUploadZone();
   bindCatalogSuggestions();
   bindVoiceFill(document.querySelector('#sell-form'));
   bindPreview(document.querySelector('#sell-form'));
+  bindCashAmount(document.querySelector('#sell-form'));
+  bindEngineSizeToFuel(document.querySelector('#sell-form'));
   bindCounter(document.querySelector('#sell-form'));
 
   const form = document.querySelector('#sell-form');
@@ -1005,18 +1428,23 @@ async function renderReal(user) {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const values = readForm(form);
+    clearFieldErrors(form);
     const problem = validate(values);
     if (problem) {
-      errorBox.textContent = problem;
+      errorBox.textContent = problem.message;
       errorBox.hidden = false;
-      errorBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      markFieldError(form, problem.field);
       return;
     }
     errorBox.hidden = true;
 
-    const submit = document.querySelector('#sell-submit');
-    submit.disabled = true;
-    submit.textContent = 'ინახება…';
+    // Two buttons submit this form (the one in the form and the one in the
+    // sticky preview panel). They shared an id, so only the first was ever
+    // disabled and the other stayed live: a second click posted the listing
+    // twice.
+    const submits = [...document.querySelectorAll('[data-sell-submit]')];
+    const submitLabel = editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება';
+    submits.forEach((b) => { b.disabled = true; b.textContent = 'ინახება…'; });
 
     try {
       const vehicleId = await persist(user, values);
@@ -1024,28 +1452,39 @@ async function renderReal(user) {
       toast(editId ? 'განცხადება განახლდა' : 'განცხადება გამოქვეყნდა');
       window.location.href = `vehicle.html?id=${vehicleId}`;
     } catch (err) {
-      submit.disabled = false;
-      submit.textContent = editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება';
-      errorBox.textContent = `შენახვა ვერ მოხერხდა: ${err.message}`;
+      submits.forEach((b) => { b.disabled = false; b.textContent = submitLabel; });
+      errorBox.textContent = `შენახვა ვერ მოხერხდა: ${georgianError(err)}`;
       errorBox.hidden = false;
+      // The raw cause stays in the console for us; the user gets Georgian.
       console.error('AutoSwap: listing save failed', err);
     }
   });
 }
 
-// Signed out: the real form stays visible behind a soft gate. We do NOT
-// auto-pop the auth modal — the gate reads as the next step, and the CTA
-// opens login when the user is ready.
+
+
+
 function renderLocked() {
   document.querySelector('#app').innerHTML = SellPage(null, null, '');
+  bindSellMode();
+  bindCatalogSuggestions();
   updatePreview(document.querySelector('#sell-form'));
+  bindCashAmount(document.querySelector('#sell-form'));
+  bindEngineSizeToFuel(document.querySelector('#sell-form'));
   bindCounter(document.querySelector('#sell-form'));
+  // The overlay blocks the pointer, but keyboard focus could still reach the
+  // form behind it, and an Enter there did a native GET submit that dumped
+  // the whole form into the URL. inert + a guarded submit close both holes.
+  const lockedForm = document.querySelector('#sell-form');
+  lockedForm?.setAttribute('inert', '');
+  lockedForm?.addEventListener('submit', (event) => event.preventDefault());
   const section = document.querySelector('.sell');
   section.classList.add('sell-locked');
   const overlay = document.createElement('div');
   overlay.className = 'sell-locked-overlay';
   overlay.innerHTML = `
     <div class="sell-locked-card">
+      <a class="sell-locked-close" href="cars.html" aria-label="დახურვა">${ICON_X}</a>
       <span class="sell-locked-lock">${icons.shield}</span>
       <h2>დაამატე მანქანა ერთ ნაბიჯში</h2>
       <p>შეთავაზებები პირდაპირ შენთან მოვა.</p>
@@ -1053,7 +1492,7 @@ function renderLocked() {
       <small class="sell-locked-note">რეგისტრაცია არ გჭირდება ცალკე.</small>
     </div>`;
   section.appendChild(overlay);
-  // Any successful sign-in (real or demo) unlocks the page.
+  
   onAuth((user) => {
     if (user) window.location.reload();
   });
@@ -1061,9 +1500,13 @@ function renderLocked() {
 
 function renderDemo() {
   document.querySelector('#app').innerHTML = SellPage(null, null, '');
+  bindSellMode();
   bindUploadZone();
+  bindCatalogSuggestions();
   bindVoiceFill(document.querySelector('#sell-form'));
   bindPreview(document.querySelector('#sell-form'));
+  bindCashAmount(document.querySelector('#sell-form'));
+  bindEngineSizeToFuel(document.querySelector('#sell-form'));
   bindCounter(document.querySelector('#sell-form'));
   document.querySelector('#sell-form')?.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -1083,8 +1526,8 @@ async function init() {
   }
   const user = await authReady;
   if (!user) {
-    // A demo session (SMS provider not configured) has no JWT, so it cannot
-    // write to Supabase — give it the labelled demo form, not a login wall.
+    
+    
     const demoUser = getAuthUser();
     if (demoUser && demoUser.demo) {
       renderDemo();

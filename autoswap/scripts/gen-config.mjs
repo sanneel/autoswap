@@ -17,14 +17,24 @@ if (!url || !anonKey) {
   process.exit(1);
 }
 
+// Newer projects issue sb_publishable_… / sb_secret_… instead of JWTs. Those are
+// not parseable as JWTs, so the check below silently passed them through and a
+// secret key could have been written into browser code.
+if (/^sb_secret_/i.test(anonKey)) {
+  console.error('gen-config: refusing a secret key (sb_secret_…) — use the publishable key (sb_publishable_…).');
+  process.exit(1);
+}
+
 // Reject an accidental service-role key (its JWT payload carries role:service_role).
-try {
-  const payload = JSON.parse(Buffer.from(anonKey.split('.')[1] || '', 'base64url').toString());
-  if (payload.role && payload.role !== 'anon') {
-    console.error(`gen-config: refusing a "${payload.role}" key — use the public anon key only.`);
-    process.exit(1);
-  }
-} catch { /* not a JWT we can parse; let the frontend's own guard catch it */ }
+if (!/^sb_publishable_/i.test(anonKey)) {
+  try {
+    const payload = JSON.parse(Buffer.from(anonKey.split('.')[1] || '', 'base64url').toString());
+    if (payload.role && payload.role !== 'anon') {
+      console.error(`gen-config: refusing a "${payload.role}" key — use the public anon key only.`);
+      process.exit(1);
+    }
+  } catch { /* not a JWT we can parse; let the frontend's own guard catch it */ }
+}
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, '..', 'front', 'supabase-config.js');

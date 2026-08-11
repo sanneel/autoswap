@@ -65,7 +65,7 @@ function Shell(inner) {
         <div class="account-body" id="account-body">${inner}</div>
       </section>
     </main>
-    ${Footer()}
+    ${Footer({ active: 'account' })}
   `;
 }
 
@@ -616,7 +616,7 @@ async function init() {
       <main class="account-shell"><section class="container account">
         ${emptyHTML('ანგარიში დროებით მიუწვდომელია. მანამდე შეგიძლია გაცვლების ნახვა.', 'cars.html', 'გაცვლების ნახვა')}
       </section></main>
-      ${Footer()}
+      ${Footer({ active: 'account' })}
     `;
     return;
   }

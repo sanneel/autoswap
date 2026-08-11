@@ -1,9 +1,9 @@
 /* ===================================================================
-   AutoSwap — shared module (window.AutoSwap)
+   AutoSwap, shared module (window.AutoSwap)
    Used by both the landing (app.js) and the cars product page (cars.js).
    Holds: assets, icons, Header/Footer markup, label maps + mappers,
    the Supabase read path, and a feed-shaped demo dataset.
-   No framework — plain script, exposed on window.AutoSwap.
+   No framework, plain script, exposed on window.AutoSwap.
 =================================================================== */
 (function () {
   const assets = {
@@ -26,6 +26,7 @@
 
   const icons = {
     arrowRight: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>',
+    bell: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9Z"></path><path d="M10 20a2.2 2.2 0 0 0 4 0"></path></svg>',
     car: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h14"></path><path d="M6 17v2"></path><path d="M18 17v2"></path><path d="M4 13l2.1-5.1A3 3 0 0 1 8.9 6h6.2a3 3 0 0 1 2.8 1.9L20 13"></path><path d="M5 13h14v4H5z"></path><path d="M7.5 15h.1"></path><path d="M16.4 15h.1"></path></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg>',
     heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg>',
@@ -96,15 +97,37 @@
     return labelFor(FUEL_LABELS, value);
   }
 
+  // Get brand logo image URL from the car-logos-dataset (387 brands via jsdelivr CDN).
+  // Converts "Mercedes-Benz" → "mercedes-benz.png" → CDN URL.
+  // Fallback: returns the make name as text if logo unavailable.
+  // Local asset path for a make's logo, and the single place that knows which
+  // file extension each brand ships as. Previously pointed at a jsDelivr CDN
+  // that the CSP does not allow in img-src and that nothing called; the real
+  // logos have always been served from assets/logos.
+  const LOGO_EXT = { bmw: 'svg' };
+
+  function logoSlug(make) {
+    return String(make || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function getLogoUrl(make) {
+    const slug = logoSlug(make);
+    if (!slug) return null;
+    return `assets/logos/${slug}.${LOGO_EXT[slug] || 'png'}`;
+  }
+
   // Cash sentence with an explicit subject ("ის" = the listing owner) so the
   // reader never has to compute who pays whom.
   function formatCash(mode, amount) {
     const money = `${(Number(amount) || 0).toLocaleString('en-US')} ₾`;
     switch (mode) {
       case 'add_money':
-        return { cash: `ის ამატებს ${money}`, cashType: 'add' };
+        return { cash: `ამატებს ${money}`, cashType: 'add' };
       case 'ask_money':
-        return { cash: `ის ითხოვს ${money}`, cashType: 'ask' };
+        return { cash: `ითხოვს ${money}`, cashType: 'ask' };
       case 'flexible':
         return { cash: 'სხვაობა შეთანხმებით', cashType: 'flexible' };
       default:
@@ -132,9 +155,132 @@
     return String(make || '').toLowerCase().includes('bmw') ? assets.bmw : assets.audi;
   }
 
+  // Supabase/PostgREST errors arrive in English. Users see Georgian; the raw
+  // message still goes to the console for debugging.
+  function georgianError(err) {
+    const raw = String(err?.message || err || '');
+    const m = raw.toLowerCase();
+
+    // Schema drift: a column the code writes is missing from the database.
+    const missingCol = /could not find the '([^']+)' column/i.exec(raw);
+    if (missingCol) {
+      return `ბაზა არ არის განახლებული (აკლია ველი „${missingCol[1]}“). გაუშვი supabase/schema.sql.`;
+    }
+    if (m.includes('duplicate key') || m.includes('already exists')) return 'ასეთი ჩანაწერი უკვე არსებობს.';
+    if (m.includes('violates row-level security') || m.includes('row-level security')) return 'ამ მოქმედების უფლება არ გაქვს.';
+    if (m.includes('violates foreign key')) return 'დაკავშირებული ჩანაწერი ვერ მოიძებნა.';
+    if (m.includes('violates check constraint')) return 'ერთ-ერთი ველი დაუშვებელ მნიშვნელობას შეიცავს.';
+    if (m.includes('not-null') || m.includes('null value in column')) return 'სავალდებულო ველი შეუვსებელია.';
+    if (m.includes('jwt') || m.includes('unauthorized') || m.includes('401')) return 'სესია ამოიწურა, გაიარე ავტორიზაცია ხელახლა.';
+    if (m.includes('payload too large') || m.includes('413')) return 'ფაილი ძალიან დიდია.';
+    if (m.includes('failed to fetch') || m.includes('networkerror')) return 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი.';
+    if (m.includes('rate limit') || m.includes('429')) return 'ბევრი მცდელობა იყო, სცადე ცოტა ხანში.';
+    return raw || 'უცნობი შეცდომა.';
+  }
+
+  // "Equal swap" and "by agreement" carry no figure, so the amount input is
+  // hidden for them rather than sitting there showing a meaningless 0.
+  function bindOfferAmount(form) {
+    const mode = form?.querySelector('[name="cashMode"]');
+    const field = form?.querySelector('[data-offer-amount]');
+    const amount = form?.querySelector('[name="amount"]');
+    if (!mode || !field || !amount) return;
+    const update = () => {
+      const needs = mode.value !== 'none' && mode.value !== 'flexible';
+      field.hidden = !needs;
+      if (!needs) amount.value = '';
+    };
+    mode.addEventListener('change', update);
+    update();
+  }
+
+  // Offers are stored in GEL. The user may enter the figure in dollars, so it
+  // is converted here rather than silently saving a USD number as if it were
+  // lari.
+  function offerAmountInGel(form) {
+    const raw = Number(form?.querySelector('[name="amount"]')?.value) || 0;
+    if (raw <= 0) return 0;
+    const currency = form?.querySelector('[name="amountCurrency"]')?.value || 'GEL';
+    return currency === 'USD' ? Math.round(raw * getUsdRate()) : Math.round(raw);
+  }
+
+  // Every .combo-list is position:fixed so it can escape a scrolling or
+  // overflow-hidden ancestor. Fixed means the coordinates must be computed, and
+  // an unpositioned list falls back to its static spot, which sat over the label
+  // above the input. Shared so every page with a dropdown positions it the same
+  // way instead of each re-implementing it.
+  const COMBO_LIST_MAX_H = 264;
+
+  function placeComboList(list, anchor) {
+    if (!list || !anchor || list.hidden) return;
+    const r = anchor.getBoundingClientRect();
+    if (!r.width && !r.height) return; // anchor hidden; nothing to align to
+    const gap = 4;
+    const margin = 8;
+    const spaceBelow = window.innerHeight - r.bottom - gap - margin;
+    const spaceAbove = r.top - gap - margin;
+    // Prefer downward; flip up only when below is cramped and above has more.
+    const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+    const avail = Math.max(120, Math.min(COMBO_LIST_MAX_H, openUp ? spaceAbove : spaceBelow));
+    list.style.left = `${Math.round(r.left)}px`;
+    list.style.width = `${Math.round(r.width)}px`;
+    list.style.maxHeight = `${Math.round(avail)}px`;
+    if (openUp) {
+      list.style.top = 'auto';
+      list.style.bottom = `${Math.round(window.innerHeight - r.top + gap)}px`;
+    } else {
+      list.style.bottom = 'auto';
+      list.style.top = `${Math.round(r.bottom + gap)}px`;
+    }
+  }
+
+  // Repositions any open list against its own anchor: the .combo-control when
+  // there is one (catalog filters), otherwise the input it belongs to. Never an
+  // ancestor that contains the list, whose rect would grow to include it and
+  // walk the list down the page on every reposition.
+  function repositionComboLists() {
+    document.querySelectorAll('.combo-list').forEach((list) => {
+      if (list.hidden) return;
+      const anchor = list.closest('.combo')?.querySelector('.combo-control')
+        || list.parentElement?.querySelector('input, select');
+      if (anchor) placeComboList(list, anchor);
+    });
+  }
+
+  window.addEventListener('scroll', repositionComboLists, true);
+  window.addEventListener('resize', repositionComboLists);
+
+  // Neutral "no photo" tile. Deliberately not a stock car photo: substituting a
+  // real BMW shot for a listing whose photo failed would misrepresent the car.
+  // Inline data URI so it needs no request and cannot itself fail.
+  const PHOTO_PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,'
+    + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+<rect width="400" height="300" fill="#eceee9"/>
+<g fill="none" stroke="#a8b0a4" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+<path d="M96 176h208M110 176l16-42a18 18 0 0 1 17-12h114a18 18 0 0 1 17 12l16 42"/>
+<path d="M96 176v30h208v-30"/><circle cx="140" cy="206" r="15"/><circle cx="260" cy="206" r="15"/>
+</g></svg>`);
+
+  // Photos are third-party URLs: buckets get locked down and links rot. Without
+  // this a failed image left the browser's broken-image glyph in the card.
+  // `error` does not bubble, so the listener has to run in the capture phase,
+  // and it is wired in JS because the CSP forbids inline onerror handlers.
+  function bindImageFallbacks() {
+    document.addEventListener('error', (event) => {
+      const img = event.target;
+      if (!img || img.tagName !== 'IMG' || img.dataset.imgFallbackDone) return;
+      const next = img.dataset.fallback || PHOTO_PLACEHOLDER;
+      if (img.src === next) return;
+      img.dataset.imgFallbackDone = '1';
+      img.classList.add('img-placeholder');
+      img.src = next;
+    }, true);
+  }
+  bindImageFallbacks();
+
   // Maps a public_vehicle_feed row (also the shape of DEMO_FEED) to a uniform
   // card object carrying BOTH display strings and raw values for filtering.
-  // Bare "any car" labels carry zero swap intent — strip them so such
+  // Bare "any car" labels carry zero swap intent, strip them so such
   // listings fall into the open-to-offers category instead of faking a want.
   // Qualified wants like "ნებისმიერი SUV" are real intent and stay.
   function isAnyCarLabel(label) {
@@ -152,7 +298,7 @@
 
     return {
       id: row.id,
-      ownerId: row.owner_id || '',
+      ownerId: row.owner_id || row.owner_name || '',
       badge: row.is_boosted ? 'TOP შეთავაზება' : 'ახალი',
       boosted: !!row.is_boosted,
 
@@ -183,7 +329,7 @@
       city: row.city || '',
 
       // Structured wants. Listings with no targets are honestly categorized
-      // as "open to offers" — they must never pretend to want "any car".
+      // as "open to offers", they must never pretend to want "any car".
       wantsList: labels,
       openToOffers: labels.length === 0,
       wants: labels.length ? labels.join(' / ') : 'ღიაა შემოთავაზებებისთვის',
@@ -223,7 +369,7 @@
   function setMyCar(car) {
     try {
       window.localStorage.setItem(MY_CAR_KEY, JSON.stringify(car));
-    } catch (_err) { /* private mode — context just won't persist */ }
+    } catch (_err) { /* private mode, context just won't persist */ }
     document.dispatchEvent(new CustomEvent('autoswap:mycar'));
   }
 
@@ -250,15 +396,16 @@
     if (mk && w.startsWith(mk)) {
       const rest = w.slice(mk.length);
       if (!rest) return true;
+      if (!md) return true;
       if (md && (md.includes(rest) || rest.includes(md))) return true;
       if (md && rest[0] && md[0] === rest[0]) return true; // "5series" ≈ "530i"
     }
     return false;
   }
 
-  // 'mutual'  — they want your car AND you want theirs.
-  // 'reverse' — they want your car.
-  // ''        — no compatibility signal.
+  // 'mutual' , they want your car AND you want theirs.
+  // 'reverse', they want your car.
+  // ''       , no compatibility signal.
   // Open-to-offers listings never claim to want your car.
   function matchLevel(car, myCar) {
     if (!myCar || !myCar.make || !Array.isArray(car.wantsList) || !car.wantsList.length) return '';
@@ -274,11 +421,14 @@
     // No default: pages without a matching nav item (landing, login, …)
     // render the nav with nothing highlighted.
     const active = options.active || '';
-    // "Add your car" moved from the nav into the CTA — it is the conversion
+    // options.currency: the ₾/$ switch is opt-in and only the catalog passes it.
+    // It converts prices in a list of results; on pages with no prices to
+    // convert it was a control that appeared to do nothing.
+    // "Add your car" moved from the nav into the CTA, it is the conversion
     // action, not a navigation item.
     const nav = [
       { id: 'listings', label: 'გაცვლები', href: 'cars.html' },
-      { id: 'contact', label: 'კონტაქტი', href: 'index.html#contact' },
+      { id: 'about', label: 'ჩვენ შესახებ', href: 'about.html' },
     ];
 
     return `
@@ -290,9 +440,24 @@
           </a>
           <div class="header-actions">
             <nav class="site-nav" aria-label="მთავარი ნავიგაცია">
-              ${nav.map((item) => `<a class="${item.id === active ? 'is-active' : ''}" href="${item.href}">${item.label}</a>`).join('')}
+              ${nav.map((item) => `<a class="${item.id === active ? 'is-active' : ''}" href="${item.href}"${item.id === active ? ' aria-current="page"' : ''}>${item.label}</a>`).join('')}
             </nav>
             <a class="btn btn-accent header-cta" href="sell.html">${icons.plus}<span>დაამატე მანქანა</span></a>
+            ${options.currency ? `
+            <div class="currency-switch" role="group" aria-label="ფასების ვალუტა">
+              <button type="button" data-currency="GEL" aria-pressed="true">₾</button>
+              <button type="button" data-currency="USD" aria-pressed="false">$</button>
+            </div>` : ''}
+            <div class="notify-wrap">
+              <button class="notify-btn" type="button" data-notify-btn aria-haspopup="true" aria-expanded="false" aria-label="შეტყობინებები">
+                ${icons.bell}
+                <span class="notify-badge" data-notify-badge hidden></span>
+              </button>
+              <div class="notify-panel" data-notify-panel hidden>
+                <div class="notify-head">შეტყობინებები</div>
+                <div class="notify-body" data-notify-body></div>
+              </div>
+            </div>
             <div class="header-auth" id="header-auth">${authSlotHTML()}</div>
           </div>
         </div>
@@ -300,8 +465,34 @@
     `;
   }
 
-  function Footer() {
+  // Phone-only bottom navigation. On a phone the desktop header collapses to a
+  // logo and the primary destinations become unreachable without scrolling to
+  // the footer; a fixed tab bar is what a native app would do and what a thumb
+  // can reach. Hidden at >=768px, where the header nav is visible.
+  const TAB_ITEMS = [
+    { id: 'home', label: 'მთავარი', href: 'index.html', icon: 'car' },
+    { id: 'listings', label: 'გაცვლები', href: 'cars.html', icon: 'search' },
+    { id: 'sell', label: 'დამატება', href: 'sell.html', icon: 'plus', primary: true },
+    { id: 'offers', label: 'შეთავაზებები', href: 'account.html?tab=offers', icon: 'swap' },
+    { id: 'account', label: 'პროფილი', href: 'account.html', icon: 'user' },
+  ];
+
+  function MobileTabBar(active) {
     return `
+      <nav class="tabbar" aria-label="მთავარი ნავიგაცია">
+        ${TAB_ITEMS.map((t) => `
+          <a class="tabbar-item${t.primary ? ' tabbar-item--primary' : ''}${t.id === active ? ' is-active' : ''}"
+             href="${t.href}"${t.id === active ? ' aria-current="page"' : ''}>
+            <span class="tabbar-icon" aria-hidden="true">${icons[t.icon]}</span>
+            <span class="tabbar-label">${t.label}</span>
+          </a>`).join('')}
+      </nav>`;
+  }
+
+  function Footer(opts) {
+    const active = (opts && opts.active) || '';
+    return `
+      ${MobileTabBar(active)}
       <footer class="site-footer" id="contact">
         <div class="container footer-grid">
           <div class="footer-brand">
@@ -314,8 +505,10 @@
           <nav class="footer-nav" aria-label="ფუტერის ნავიგაცია">
             <a href="cars.html">გაცვლები</a>
             <a href="sell.html">განცხადების დამატება</a>
-            <a href="vehicle.html?id=demo-bmw-530i">ნიმუშის ნახვა</a>
-            <a href="index.html#contact">კონტაქტი</a>
+            <a href="about.html">ჩვენ შესახებ</a>
+            <a href="terms.html">წესები</a>
+            <a href="privacy.html">კონფიდენციალურობა</a>
+            <a href="about.html#contact">კონტაქტი</a>
           </nav>
         </div>
         <div class="container footer-base">
@@ -355,11 +548,29 @@
     }
   }
 
+  // The committed supabase-config.js ships placeholder values so the site runs
+  // without secrets. Pointing a client at them makes every request fail and log
+  // an error, which buries real problems. Detect it and run in demo mode with a
+  // single explanatory line instead.
+  function isPlaceholderConfig(url, key) {
+    if (/^(dummy|your-|example|placeholder|project)[-.]/i.test(key)) return true;
+    try {
+      return /^(dummy|example|placeholder|project|your-project)\./i.test(new URL(url).host);
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function createClient() {
     const url = String(window.AUTO_SWAP_SUPABASE_URL || '').trim();
     const key = String(window.AUTO_SWAP_SUPABASE_ANON_KEY || '').trim();
 
     if (!url || !key || !window.supabase || typeof window.supabase.createClient !== 'function') {
+      return null;
+    }
+
+    if (isPlaceholderConfig(url, key)) {
+      console.info('AutoSwap: running on demo data. Set real values in supabase-config.js to load live listings.');
       return null;
     }
 
@@ -379,7 +590,7 @@
   const sbClient = createClient();
 
   // ---- Tiny TTL cache (sessionStorage) -------------------------------------
-  // The frontend is a static site talking straight to Supabase — there is no
+  // The frontend is a static site talking straight to Supabase, there is no
   // server runtime to host Redis, so hot read paths (catalog, feed) are cached
   // per-tab instead. Writers call cacheBust() to invalidate.
   const CACHE_PREFIX = 'as:cache:';
@@ -405,7 +616,7 @@
         CACHE_PREFIX + key,
         JSON.stringify({ v: value, exp: Date.now() + ttlMs }),
       );
-    } catch (_err) { /* quota/private mode — just skip caching */ }
+    } catch (_err) { /* quota/private mode, just skip caching */ }
   }
 
   function cacheBust(prefix) {
@@ -438,7 +649,7 @@
 
   // ---- Auth state (one source of truth) --------------------------------------
   // Sign-in paths sharing this state: phone OTP (header modal + login.html)
-  // and Google OAuth. Email registration is intentionally removed — the
+  // and Google OAuth. Email registration is intentionally removed, the
   // phone number is the primary identity; OAuth users are required to attach
   // a number afterwards (openPhoneRequiredModal). Supabase Auth issues the
   // OTP code, stores only its hash, expires it, rate-limits requests, and
@@ -472,7 +683,7 @@
   }
 
   // Resolves once the initial session lookup has finished. Returns the
-  // Supabase user (never the local demo user — gated pages need a real JWT).
+  // Supabase user (never the local demo user, gated pages need a real JWT).
   const authReady = (async () => {
     if (!sbClient) {
       authUser = demoAuthUser();
@@ -498,11 +709,11 @@
     return session ? session.user : null;
   })();
 
-  // Google OAuth — redirects away and back; Supabase restores the
+  // Google OAuth, redirects away and back; Supabase restores the
   // session on return. Configure the provider in the Supabase dashboard
   // (Authentication → Providers) and allow the site URL as a redirect.
   async function signInWithProvider(provider) {
-    if (!sbClient) return { error: 'დემო რეჟიმი — Google-ით შესვლა მოითხოვს Supabase-ის კონფიგურაციას.' };
+    if (!sbClient) return { error: 'დემო რეჟიმი, Google-ით შესვლა მოითხოვს Supabase-ის კონფიგურაციას.' };
     const { error } = await sbClient.auth.signInWithOAuth({
       provider,
       options: { redirectTo: window.location.href.split('#')[0] },
@@ -565,7 +776,7 @@
   });
 
   // Returns mapped listings on success (possibly empty), or null when Supabase
-  // is not configured / the request failed — null means "keep the demo data".
+  // is not configured / the request failed, null means "keep the demo data".
   async function fetchFeed(limit = 48) {
     if (!sbClient) return null;
 
@@ -612,6 +823,7 @@
     { id: 'demo-lexus-rx', estimated_value: 83000, make: 'Lexus', model: 'RX 450h', year: 2019, mileage: 91000, fuel_type: 'hybrid', transmission: 'automatic', city: 'გორი', category: 'suv', cover_photo_url: C[1], desired_vehicle_labels: ['Mercedes GLE'], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-06T13:00:00Z', owner_name: 'სანდრო', owner_phone_verified: false, owner_completed_swaps: 0, owner_response_hours: 8, owner_active_today: false },
     { id: 'demo-vw-tiguan', estimated_value: 48000, make: 'Volkswagen', model: 'Tiguan', year: 2019, mileage: 88000, fuel_type: 'petrol', transmission: 'automatic', city: 'ბათუმი', category: 'crossover', cover_photo_url: C[3], desired_vehicle_labels: ['Toyota Camry', 'Honda Accord'], cash_mode: 'ask_money', cash_amount: 2500, is_boosted: false, created_at: '2026-06-05T17:00:00Z', owner_name: 'ბექა', owner_phone_verified: true, owner_completed_swaps: 0, owner_response_hours: 5, owner_active_today: false },
     { id: 'demo-bmw-x5', estimated_value: 115000, make: 'BMW', model: 'X5 xDrive40i', year: 2021, mileage: 58000, fuel_type: 'petrol', transmission: 'automatic', city: 'თბილისი', category: 'suv', cover_photo_url: assets.bmw, desired_vehicle_labels: [], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-04T10:00:00Z', owner_name: 'ანა', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 2, owner_active_today: true },
+    { id: 'demo-porsche-macan', estimated_value: 132000, make: 'Porsche', model: 'Macan S', year: 2020, mileage: 62000, fuel_type: 'petrol', transmission: 'automatic', city: 'თბილისი', category: 'suv', cover_photo_url: C[3], desired_vehicle_labels: ['BMW X5', 'Mercedes GLE'], cash_mode: 'ask_money', cash_amount: 6000, is_boosted: false, created_at: '2026-06-03T09:00:00Z', owner_name: 'რატი', owner_phone_verified: true, owner_completed_swaps: 2, owner_response_hours: 2, owner_active_today: true },
   ];
 
   // Pre-mapped demo cards (uniform shape, boosted first then newest).
@@ -632,7 +844,7 @@
     return mapFeedRow(data);
   }
 
-  // This vehicle's own photos only — gallery thumbnails must never borrow
+  // This vehicle's own photos only, gallery thumbnails must never borrow
   // images from other listings or shared assets.
   async function fetchVehiclePhotos(vehicleId) {
     if (!sbClient || !vehicleId) return [];
@@ -698,7 +910,7 @@
     console.warn(`AutoSwap: ${kind} catalog query failed; using bundled fallback.`, error.message || error);
   }
 
-  // Catalog reads are cached for 10 minutes per (term, make) — RLS already
+  // Catalog reads are cached for 10 minutes per (term, make), RLS already
   // filters out deactivated makes/models server-side.
   const CATALOG_TTL = 10 * 60 * 1000;
 
@@ -786,7 +998,7 @@
     return { overlay, close };
   }
 
-  // Quick "my car" capture — the viewer's half of the trade. Local-only for
+  // Quick "my car" capture, the viewer's half of the trade. Local-only for
   // now; the full listing flow on sell.html replaces this after auth lands.
   function openMyCarModal() {
     const myCar = getMyCar() || {};
@@ -816,7 +1028,7 @@
               <input type="text" name="wants" value="${escapeAttr(wantsValue)}" placeholder="მაგ: BMW X5, Audi Q7">
             </label>
           </div>
-          <p class="mycar-note">ეს მხოლოდ კატალოგის მორგებაა — სრული განცხადებისთვის <a href="sell.html">დაამატე ფოტოებით</a>.</p>
+          <p class="mycar-note">ეს მხოლოდ კატალოგის მორგებაა, სრული განცხადებისთვის <a href="sell.html">დაამატე ფოტოებით</a>.</p>
           <div class="offer-actions">
             ${myCar.make ? '<button type="button" class="btn btn-ghost" id="mycar-clear">წაშლა</button>' : '<button type="button" class="btn btn-ghost" data-close>გაუქმება</button>'}
             <button type="submit" class="btn btn-primary">შენახვა</button>
@@ -914,7 +1126,7 @@
         <div class="modal-body">
           <p class="modal-eyebrow">გაცვლის შეთავაზება</p>
           <h2 class="modal-title" id="offer-title">ჯერ შენი განცხადება გვჭირდება</h2>
-          <p class="offer-gate-text">შეთავაზებაში შენი აქტიური მანქანა მონაწილეობს — დაამატე განცხადება და მერე შესთავაზე ${escapeAttr(title)}-ის მფლობელს.</p>
+          <p class="offer-gate-text">შეთავაზებაში შენი აქტიური მანქანა მონაწილეობს, დაამატე განცხადება და მერე შესთავაზე ${escapeAttr(title)}-ის მფლობელს.</p>
           <div class="offer-actions">
             <button type="button" class="btn btn-ghost" data-close>გაუქმება</button>
             <a class="btn btn-primary" href="sell.html">დაამატე განცხადება</a>
@@ -948,9 +1160,15 @@
                 <option value="flexible">შეთანხმებით</option>
               </select>
             </label>
-            <label class="field">
-              <span>თანხა (₾)</span>
-              <input type="number" name="amount" min="0" placeholder="0" inputmode="numeric">
+            <label class="field field--offer-amount" data-offer-amount hidden>
+              <span>თანხა</span>
+              <span class="offer-amount-control">
+                <input type="number" name="amount" min="0" placeholder="0" inputmode="numeric">
+                <select name="amountCurrency" aria-label="ვალუტა">
+                  <option value="GEL">₾</option>
+                  <option value="USD">$</option>
+                </select>
+              </span>
             </label>
           </div>
           <label class="field">
@@ -965,6 +1183,7 @@
       </div>
     `, 'offer-title');
 
+    bindOfferAmount(overlay.querySelector('#real-offer-form'));
     overlay.querySelector('#real-offer-form').addEventListener('submit', async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
@@ -979,7 +1198,7 @@
         from_user_id: authUser.id,
         to_user_id: ownerId,
         cash_mode: cashMode,
-        cash_amount: cashMode === 'none' || cashMode === 'flexible' ? 0 : (Number(data.get('amount')) || 0),
+        cash_amount: cashMode === 'none' || cashMode === 'flexible' ? 0 : offerAmountInGel(form),
         message: String(data.get('message') || '').trim() || null,
       });
 
@@ -988,7 +1207,7 @@
         if (String(error.code) === '23505') {
           toast('ამ წყვილზე უკვე გაქვს მოლოდინში მყოფი შეთავაზება', 'error');
         } else {
-          toast('შეთავაზება ვერ გაიგზავნა — სცადე თავიდან', 'error');
+          toast('შეთავაზება ვერ გაიგზავნა, სცადე თავიდან', 'error');
           console.error('AutoSwap: offer insert failed', error.message);
         }
         return;
@@ -1009,10 +1228,10 @@
 
   function openOfferModal(car) {
     // Live listing: real offer when signed in, login gate when not.
-    // The local demo user has no JWT, so RLS would reject the insert — gate it.
+    // The local demo user has no JWT, so RLS would reject the insert, gate it.
     if (sbClient && car && isUuid(car.id)) {
       if (!authUser || authUser.demo) {
-        openLoginGateModal('შეთავაზების გასაგზავნად შედი ერთჯერადი კოდით — ისე, რომ მფლობელმა იცოდეს ვინ სთავაზობს.');
+        openLoginGateModal('შეთავაზების გასაგზავნად შედი ერთჯერადი კოდით, ისე, რომ მფლობელმა იცოდეს ვინ სთავაზობს.');
         return;
       }
       openRealOfferModal(car);
@@ -1022,14 +1241,14 @@
     const title = `${car && car.make ? car.make : ''} ${car && car.model ? car.model : ''}`.trim() || 'ავტომობილი';
     const myCar = getMyCar();
 
-    // No car = no trade. An offer is half a deal — never let users send
+    // No car = no trade. An offer is half a deal, never let users send
     // an empty one; convert the moment into adding their car instead.
     if (!myCar) {
       buildModal(`
         <div class="modal-body">
           <p class="modal-eyebrow">გაცვლის შეთავაზება</p>
           <h2 class="modal-title" id="offer-title">ჯერ შენი მანქანა გვჭირდება</h2>
-          <p class="offer-gate-text">შეთავაზება გაცვლის ნახევარია — ${escapeAttr(title)}-ის მფლობელმა უნდა ნახოს, რას სთავაზობ სანაცვლოდ.</p>
+          <p class="offer-gate-text">შეთავაზება გაცვლის ნახევარია, ${escapeAttr(title)}-ის მფლობელმა უნდა ნახოს, რას სთავაზობ სანაცვლოდ.</p>
           <div class="offer-actions">
             <a class="btn btn-ghost" href="sell.html">სრული განცხადება</a>
             <button type="button" class="btn btn-primary" id="offer-add-mycar">მიუთითე შენი მანქანა</button>
@@ -1063,9 +1282,15 @@
                 <option value="flexible">შეთანხმებით</option>
               </select>
             </label>
-            <label class="field">
-              <span>თანხა (₾)</span>
-              <input type="number" name="amount" min="0" placeholder="0" inputmode="numeric">
+            <label class="field field--offer-amount" data-offer-amount hidden>
+              <span>თანხა</span>
+              <span class="offer-amount-control">
+                <input type="number" name="amount" min="0" placeholder="0" inputmode="numeric">
+                <select name="amountCurrency" aria-label="ვალუტა">
+                  <option value="GEL">₾</option>
+                  <option value="USD">$</option>
+                </select>
+              </span>
             </label>
           </div>
           <label class="field">
@@ -1085,6 +1310,7 @@
       </div>
     `, 'offer-title');
 
+    bindOfferAmount(overlay.querySelector('#offer-form'));
     overlay.querySelector('#offer-form').addEventListener('submit', (event) => {
       event.preventDefault();
       overlay.querySelector('#offer-modal-body').innerHTML = `
@@ -1092,7 +1318,7 @@
           <span class="offer-success-icon">${icons.check}</span>
           <h2 class="modal-title">შეთავაზება გაიგზავნა</h2>
           <p>${escapeAttr(title)}-ის მფლობელი ნახავს შენს ${escapeAttr(myLabel)}-ს და პირობებს. ნახვისთანავე და პასუხისთანავე შეგატყობინებთ.</p>
-          <p class="offer-demo-note">დემო რეჟიმი — რეალური გაგზავნა ჩაირთვება ანგარიშის დადასტურების შემდეგ.</p>
+          <p class="offer-demo-note">დემო რეჟიმი, რეალური გაგზავნა ჩაირთვება ანგარიშის დადასტურების შემდეგ.</p>
           <button type="button" class="btn btn-primary" data-close>გასაგებია</button>
         </div>
       `;
@@ -1138,7 +1364,7 @@
     // Real sessions link to the account hub; the local demo user has no
     // server-side rows to show there.
     const display = authDisplayName(authUser);
-    // Uppercase only Latin initials — Georgian script has no everyday
+    // Uppercase only Latin initials, Georgian script has no everyday
     // uppercase, and Mtavruli forms look off in an avatar.
     const first = display.trim().charAt(0);
     const initial = /[a-z]/.test(first) ? first.toUpperCase() : first;
@@ -1164,6 +1390,10 @@
       slot.dataset.authState = state;
       slot.innerHTML = authSlotHTML();
     });
+    // Notifications are meaningless before login, hide the bell for guests.
+    document.querySelectorAll('.notify-wrap').forEach((wrap) => {
+      wrap.hidden = !authUser;
+    });
   }
 
   // Georgian mobile numbers: 5XX XX XX XX, with or without the +995 prefix.
@@ -1174,7 +1404,7 @@
     return null;
   }
 
-  // Direct Supabase send — last-resort fallback if the rate-limited Edge
+  // Direct Supabase send, last-resort fallback if the rate-limited Edge
   // Function is not reachable. Carries no IP-based protection; the deployed
   // `request-otp` function is the intended path.
   async function sendOtpDirect(phone) {
@@ -1182,14 +1412,18 @@
     if (!error) return { demo: false };
     const message = String(error.message || '');
     if (/provider|not enabled|disabled|unsupported/i.test(message)) return { demo: true };
+    // Raw fetch errors ("Failed to fetch") mean nothing to the user.
+    if (/failed to fetch|network|load failed/i.test(message)) {
+      return { error: 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი და სცადე თავიდან.' };
+    }
     return { error: `კოდი ვერ გაიგზავნა: ${message}` };
   }
 
   // → { demo: boolean } on success, { error: string } on failure.
-  // The account is auto-created on first login — one flow for everyone.
+  // The account is auto-created on first login, one flow for everyone.
   // Routes through the `request-otp` Edge Function so the server-side rate
   // limiter (per-IP burst, per-phone bombing, distributed velocity) is the
-  // authority — a check in this client could just be skipped.
+  // authority, a check in this client could just be skipped.
   async function requestOtp(phone) {
     if (!sbClient) return { demo: true };
     const base = String(window.AUTO_SWAP_SUPABASE_URL || '').trim().replace(/\/$/, '');
@@ -1202,10 +1436,13 @@
         body: JSON.stringify({ phone }),
       });
     } catch (_err) {
-      // Function unreachable (offline / not deployed yet) — keep auth working.
-      return sendOtpDirect(phone);
+      return { error: 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი და სცადე თავიდან.' };
     }
-    if (res.status === 404) return sendOtpDirect(phone);
+    if (res.status === 404) {
+      // Edge Function not deployed — surface the problem rather than silently
+      // bypassing rate limiting by calling signInWithOtp directly.
+      return { error: 'SMS სერვისი დროებით მიუწვდომელია. სცადე მოგვიანებით.' };
+    }
     let data = {};
     try { data = await res.json(); } catch (_err) { /* fall through to status check */ }
     if (res.status === 429 || data.blocked) {
@@ -1221,7 +1458,7 @@
   // → { user } on success (header updates via auth listener), { error } on failure.
   async function confirmOtp(phone, code, isDemo) {
     if (isDemo) {
-      if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი — დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
+      if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი, დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
       // A returning demo user keeps the name they already gave.
       const existing = getDemoUser();
       const demoUser = { name: (existing && existing.phone === phone && existing.name) || '', phone };
@@ -1231,7 +1468,7 @@
       return { user: authUser };
     }
     const { data, error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'sms' });
-    return error ? { error: `კოდი ვერ დადასტურდა: ${error.message}` } : { user: data.user };
+    return error ? { error: `კოდი ვერ დადასტურდა: ${georgianError(error)}` } : { user: data.user };
   }
 
   // ---- Display name (asked once, after the number is verified) -------------
@@ -1250,7 +1487,7 @@
       return {};
     }
     const { data, error } = await sbClient.auth.updateUser({ data: { full_name: name } });
-    if (error) return { error: `სახელი ვერ შეინახა: ${error.message}` };
+    if (error) return { error: `სახელი ვერ შეინახა: ${georgianError(error)}` };
     authUser = data.user;
     notifyAuth();
     return {};
@@ -1321,19 +1558,19 @@
 
   async function confirmPhoneAttach(phone, code, isDemo) {
     if (isDemo) {
-      if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი — დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
+      if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი, დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
       const { error } = await sbClient.auth.updateUser({ data: { phone } });
-      return error ? { error: `ნომერი ვერ შეინახა: ${error.message}` } : {};
+      return error ? { error: `ნომერი ვერ შეინახა: ${georgianError(error)}` } : {};
     }
     const { error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'phone_change' });
-    return error ? { error: `კოდი ვერ დადასტურდა: ${error.message}` } : {};
+    return error ? { error: `კოდი ვერ დადასტურდა: ${georgianError(error)}` } : {};
   }
 
   function openPhoneRequiredModal() {
     const { overlay, close } = buildModal(`
       <div class="modal-body auth-modal">
         <h2 class="modal-title" id="phone-req-title">დაამატე ტელეფონის ნომერი</h2>
-        <p class="auth-sub">ნომერი სავალდებულოა — გაცვლის შეთავაზებები და კონტაქტი ნომერზე დგას.</p>
+        <p class="auth-sub">ნომერი სავალდებულოა, გაცვლის შეთავაზებები და კონტაქტი ნომერზე დგას.</p>
         <div id="phone-req-step">
           <form class="offer-form" id="phone-req-form" novalidate>
             <label class="field">
@@ -1372,7 +1609,7 @@
         return;
       }
       step.innerHTML = `
-        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${result.demo ? ` დემო რეჟიმი — შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
+        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${result.demo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
         <form class="offer-form" id="phone-req-otp" novalidate>
           <label class="field">
             <span>SMS კოდი</span>
@@ -1409,7 +1646,7 @@
 
   // One nudge per page load: an OAuth account without a number gets the
   // required-phone modal until it attaches one; a verified account without
-  // a name gets the name popup (dismissable — re-asked next session).
+  // a name gets the name popup (dismissable, re-asked next session).
   const NAME_LATER_KEY = 'autoswap.nameLater';
 
   function maybeRequireProfile() {
@@ -1447,6 +1684,7 @@
         <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">კოდის გაგზავნა</button>
       </form>
       <p class="auth-note">პირველი შესვლისას ანგარიში ავტომატურად შეიქმნება.</p>
+      <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით, SMS-ის გარეშე</button>
     `;
   }
 
@@ -1468,6 +1706,13 @@
     };
 
     function bindPhoneStep() {
+      // Try-it-out account: same local demo path the OTP fallback uses, no SMS.
+      step.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
+        await confirmOtp('+995555000000', DEMO_OTP_CODE, true);
+        toast('დემო ანგარიშით შეხვედი, ტესტირებისთვის');
+        close();
+      });
+
       step.querySelectorAll('.btn-provider').forEach((btn) => {
         btn.addEventListener('click', async () => {
           btn.disabled = true;
@@ -1503,7 +1748,7 @@
 
     function bindOtpStep(phone, isDemo) {
       step.innerHTML = `
-        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი — შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
+        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
         <form class="offer-form" id="otp-form" novalidate>
           <label class="field">
             <span>SMS კოდი</span>
@@ -1542,10 +1787,10 @@
       step.querySelector('.otp-input').focus();
     }
 
-    // Asked once, right after the number is verified — never before.
+    // Asked once, right after the number is verified, never before.
     function bindNameStep() {
       step.innerHTML = `
-        <p class="auth-sub">ნომერი დადასტურდა — როგორ მოგმართოთ?</p>
+        <p class="auth-sub">ნომერი დადასტურდა, როგორ მოგმართოთ?</p>
         <form class="offer-form" id="name-form" novalidate>
           <label class="field">
             <span>სახელი</span>
@@ -1644,6 +1889,402 @@
     if (event.target.closest('[data-logout]')) logout();
   });
 
+  // ---- Display currency (GEL ⇄ USD) ---------------------------------------
+  // Prices are stored and rendered in GEL; the header toggle converts every
+  // visible "N ₾" amount to USD using the National Bank of Georgia rate
+  // (cached 12h, bundled fallback offline). Filters keep GEL semantics.
+  const CURRENCY_KEY = 'autoswap.currency';
+  const USD_RATE_CACHE_KEY = 'autoswap.usdRate';
+  const USD_RATE_TTL = 12 * 60 * 60 * 1000;
+  const FALLBACK_GEL_PER_USD = 2.70;
+  const MONEY_RE = /(\d[\d\s,.]*\d|\d)\s*₾/g;
+
+  let currency = 'GEL';
+  try {
+    currency = localStorage.getItem(CURRENCY_KEY) === 'USD' ? 'USD' : 'GEL';
+  } catch (_err) { /* private mode */ }
+  let gelPerUsd = FALLBACK_GEL_PER_USD;
+
+  async function loadUsdRate() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(USD_RATE_CACHE_KEY) || 'null');
+      if (cached && cached.rate > 0 && Date.now() - cached.ts < USD_RATE_TTL) {
+        gelPerUsd = cached.rate;
+        return;
+      }
+    } catch (_err) { /* ignore bad cache */ }
+    try {
+      const res = await fetch('https://nbg.gov.ge/gw/api/ct/monetarypolicy/currencies/en/json?currencies=USD');
+      const data = await res.json();
+      const rate = Number(data?.[0]?.currencies?.[0]?.rate);
+      const quantity = Number(data?.[0]?.currencies?.[0]?.quantity) || 1;
+      if (rate > 0) {
+        gelPerUsd = rate / quantity;
+        try { localStorage.setItem(USD_RATE_CACHE_KEY, JSON.stringify({ rate: gelPerUsd, ts: Date.now() })); } catch (_err) { /* private mode */ }
+        if (currency === 'USD') applyCurrency(document.body); // re-render with the live rate
+      }
+    } catch (_err) { /* offline, fallback rate stays */ }
+  }
+
+  function gelToUsdText(match, amount) {
+    const gel = Number(String(amount).replace(/[^\d]/g, ''));
+    if (!Number.isFinite(gel)) return match;
+    return `$${Math.round(gel / gelPerUsd).toLocaleString('en-US')}`;
+  }
+
+  function convertMoneyNode(node) {
+    if (currency === 'USD') {
+      const source = node.__gelText != null ? node.__gelText : node.nodeValue;
+      if (!/₾/.test(source)) return;
+      // MONEY_RE is /g, so .test() advances lastIndex and the next node starts
+      // mid-string — that silently skipped most prices on the page. Reset
+      // before testing, not after.
+      MONEY_RE.lastIndex = 0;
+      if (!MONEY_RE.test(source)) return;
+      MONEY_RE.lastIndex = 0;
+      node.__gelText = source;
+      node.nodeValue = source.replace(MONEY_RE, gelToUsdText);
+    } else if (node.__gelText != null) {
+      node.nodeValue = node.__gelText;
+      delete node.__gelText;
+    }
+  }
+
+  function applyCurrency(root) {
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = node.parentElement;
+        if (!parent || parent.closest('script, style')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(convertMoneyNode);
+    syncCurrencyUI();
+  }
+
+  function syncCurrencyUI() {
+    document.querySelectorAll('[data-currency]').forEach((btn) => {
+      const active = btn.dataset.currency === currency;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  const currencySubs = [];
+  function onCurrencyChange(cb) {
+    if (typeof cb === 'function') currencySubs.push(cb);
+  }
+
+  // Inline flip rendered next to a price, so the currency can be switched
+  // without scrolling back to the header toggle. The label is a lone symbol
+  // with no digits, so the money text-walker in applyCurrency leaves it alone;
+  // syncFlipLabels keeps it pointing at the *target* currency.
+  function priceCurrencyToggle() {
+    const target = currency === 'USD' ? '₾' : '$';
+    return `<button type="button" class="cur-flip" data-currency-flip aria-label="ვალუტის შეცვლა" title="ვალუტის შეცვლა">${target}</button>`;
+  }
+
+  function syncFlipLabels() {
+    const target = currency === 'USD' ? '₾' : '$';
+    document.querySelectorAll('[data-currency-flip]').forEach((btn) => {
+      btn.textContent = target;
+    });
+  }
+
+  function setCurrency(next) {
+    if (next !== 'GEL' && next !== 'USD') return;
+    currency = next;
+    try { localStorage.setItem(CURRENCY_KEY, next); } catch (_err) { /* private mode */ }
+    // Subscribers re-render markup from the GEL source data (cars.js reruns
+    // the filters, which rebuilds every card). Converting before that ran meant
+    // the rewrite was immediately overwritten and prices never changed, so the
+    // conversion has to be the last thing that touches the DOM.
+    currencySubs.forEach((cb) => { try { cb(currency, gelPerUsd); } catch (_err) { /* ignore */ } });
+    applyCurrency(document.body);
+    syncFlipLabels();
+  }
+
+  // Delegated so it works on re-rendered markup. stopPropagation keeps the
+  // flip from triggering the surrounding card's navigation.
+  document.addEventListener('click', (event) => {
+    const flip = event.target.closest('[data-currency-flip]');
+    if (!flip) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setCurrency(currency === 'USD' ? 'GEL' : 'USD');
+  });
+
+  loadUsdRate();
+
+  // ---- Notifications (demand matches for "my car") -------------------------
+  // Derived, not push: who in the current feed is looking for the visitor's
+  // car. Badge counts matches the visitor hasn't opened the panel on yet.
+  const NOTIFY_SEEN_KEY = 'autoswap.notifySeen';
+  let notifyMatches = [];
+
+  function notifySeenIds() {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(NOTIFY_SEEN_KEY) || '[]'));
+    } catch (_err) {
+      return new Set();
+    }
+  }
+
+  async function refreshNotifications() {
+    const myCar = getMyCar();
+    if (!authUser || !myCar) {
+      notifyMatches = [];
+    } else {
+      const feed = await fetchFeed().catch(() => null);
+      const cars = feed && feed.length ? feed : DEMO_CARS;
+      notifyMatches = cars.filter((car) => matchLevel(car, myCar)).slice(0, 8);
+    }
+    const seen = notifySeenIds();
+    const unseen = notifyMatches.filter((car) => !seen.has(String(car.id))).length;
+    document.querySelectorAll('[data-notify-badge]').forEach((badge) => {
+      badge.textContent = unseen ? String(unseen) : '';
+      badge.hidden = !unseen;
+    });
+  }
+
+  function renderNotifyPanel() {
+    const body = document.querySelector('[data-notify-body]');
+    if (!body) return;
+    const myCar = getMyCar();
+    if (!myCar) {
+      body.innerHTML = `
+        <p class="notify-empty">მიუთითე შენი მანქანა და აქ გამოჩნდება, ვინ ეძებს მას.</p>
+        <button class="btn btn-primary notify-cta" type="button" data-notify-addcar>${icons.car} მიუთითე მანქანა</button>
+      `;
+      return;
+    }
+    if (!notifyMatches.length) {
+      body.innerHTML = `<p class="notify-empty">ჯერ არავინ ეძებს შენს ${escapeAttr(myCar.make)}-ს. შეტყობინება აქ გამოჩნდება, როგორც კი მატჩი იქნება.</p>`;
+      return;
+    }
+    body.innerHTML = `
+      ${notifyMatches.map((car) => `
+        <a class="notify-item" href="vehicle.html?id=${encodeURIComponent(car.id)}">
+          <span class="notify-item-title">${escapeAttr(car.ownerName || 'მფლობელი')} ეძებს შენს ${escapeAttr(myCar.make)}-ს</span>
+          <span class="notify-item-meta">სთავაზობს: ${escapeAttr(`${car.make} ${car.model}`)} · ${escapeAttr(car.city || '')}</span>
+        </a>
+      `).join('')}
+      <a class="notify-all" href="cars.html?onlyMatches=1">ყველა მატჩის ნახვა ${icons.arrowRight}</a>
+    `;
+  }
+
+  function setNotifyOpen(open) {
+    const panel = document.querySelector('[data-notify-panel]');
+    const btn = document.querySelector('[data-notify-btn]');
+    if (!panel || !btn) return;
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    if (open) {
+      renderNotifyPanel();
+      // opening marks everything as seen
+      try { localStorage.setItem(NOTIFY_SEEN_KEY, JSON.stringify(notifyMatches.map((car) => String(car.id)))); } catch (_err) { /* private mode */ }
+      document.querySelectorAll('[data-notify-badge]').forEach((badge) => { badge.hidden = true; });
+    }
+  }
+
+  document.addEventListener('click', (event) => {
+    const currencyBtn = event.target.closest('[data-currency]');
+    if (currencyBtn) {
+      setCurrency(currencyBtn.dataset.currency);
+      return;
+    }
+    const bell = event.target.closest('[data-notify-btn]');
+    if (bell) {
+      const panel = document.querySelector('[data-notify-panel]');
+      setNotifyOpen(panel ? panel.hidden : true);
+      return;
+    }
+    if (event.target.closest('[data-notify-addcar]')) {
+      setNotifyOpen(false);
+      openMyCarModal();
+      return;
+    }
+    if (!event.target.closest('.notify-wrap')) setNotifyOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setNotifyOpen(false);
+  });
+
+  document.addEventListener('autoswap:mycar', refreshNotifications);
+
+  // ---- Styled select popup -------------------------------------------------
+  // The native <select> stays in the DOM as the visible trigger (so every
+  // context keeps its field styling, form serialization, and semantics), but
+  // on fine-pointer devices its OS popup is replaced with a brand-styled
+  // fixed-position panel. Touch devices keep the native picker, which is
+  // better UX on phones. One shared controller; only one panel at a time.
+  const ASELECT_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.6 4.5L19 7"></path></svg>';
+  const aselect = { select: null, panel: null, activeIndex: -1 };
+
+  function aselectClose() {
+    aselect.panel?.remove();
+    if (aselect.select) aselect.select.setAttribute('aria-expanded', 'false');
+    aselect.panel = null;
+    aselect.select = null;
+    aselect.activeIndex = -1;
+  }
+
+  function aselectPosition() {
+    const { select, panel } = aselect;
+    if (!select || !panel) return;
+    const rect = select.getBoundingClientRect();
+    if (!rect.width) {
+      aselectClose();
+      return;
+    }
+    panel.style.left = `${Math.round(rect.left)}px`;
+    panel.style.minWidth = `${Math.round(rect.width)}px`;
+    const spaceBelow = window.innerHeight - rect.bottom - 16;
+    if (spaceBelow < 200 && rect.top > window.innerHeight - rect.bottom) {
+      panel.style.top = 'auto';
+      panel.style.bottom = `${Math.round(window.innerHeight - rect.top + 6)}px`;
+      panel.style.maxHeight = `${Math.min(300, Math.max(140, rect.top - 16))}px`;
+    } else {
+      panel.style.bottom = 'auto';
+      panel.style.top = `${Math.round(rect.bottom + 6)}px`;
+      panel.style.maxHeight = `${Math.min(300, Math.max(140, spaceBelow))}px`;
+    }
+  }
+
+  function aselectRender() {
+    const { select, panel, activeIndex } = aselect;
+    if (!select || !panel) return;
+    panel.innerHTML = Array.from(select.options).map((option, index) => {
+      const selected = index === select.selectedIndex;
+      const classes = `aselect-option${selected ? ' is-selected' : ''}${index === activeIndex ? ' is-active' : ''}`;
+      return `<button type="button" class="${classes}" role="option" aria-selected="${selected}" data-index="${index}"${option.disabled ? ' disabled' : ''}>
+        <span>${escapeAttr(option.textContent.trim()) || '&nbsp;'}</span>
+        ${selected ? ASELECT_CHECK : ''}
+      </button>`;
+    }).join('');
+    panel.querySelector('.aselect-option.is-active')?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function aselectCommit(index) {
+    const { select } = aselect;
+    if (!select) return;
+    const option = select.options[index];
+    if (!option || option.disabled) return;
+    if (select.selectedIndex !== index) {
+      select.selectedIndex = index;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const focusTarget = select;
+    aselectClose();
+    focusTarget.focus({ preventScroll: true });
+  }
+
+  function aselectOpen(select) {
+    if (aselect.select === select) return;
+    aselectClose();
+    if (select.disabled || !select.options.length) return;
+    aselect.select = select;
+    aselect.activeIndex = Math.max(0, select.selectedIndex);
+    const panel = document.createElement('div');
+    panel.className = 'aselect-panel';
+    panel.setAttribute('role', 'listbox');
+    aselect.panel = panel;
+    document.body.appendChild(panel);
+    select.setAttribute('aria-expanded', 'true');
+    aselectPosition();
+    aselectRender();
+    panel.addEventListener('mousedown', (event) => {
+      const optionBtn = event.target.closest('.aselect-option');
+      if (!optionBtn) return;
+      event.preventDefault();
+      aselectCommit(Number(optionBtn.dataset.index));
+    });
+  }
+
+  function aselectKeydown(event, select) {
+    const { key } = event;
+    const isOpen = aselect.select === select;
+    if (!isOpen) {
+      if (key === 'Enter' || key === ' ' || key === 'ArrowDown' || key === 'ArrowUp') {
+        event.preventDefault();
+        aselectOpen(select);
+      }
+      return;
+    }
+    const count = select.options.length;
+    if (key === 'ArrowDown' || key === 'ArrowUp') {
+      event.preventDefault();
+      const delta = key === 'ArrowDown' ? 1 : -1;
+      aselect.activeIndex = ((aselect.activeIndex + delta) % count + count) % count;
+      aselectRender();
+    } else if (key === 'Home' || key === 'End') {
+      event.preventDefault();
+      aselect.activeIndex = key === 'Home' ? 0 : count - 1;
+      aselectRender();
+    } else if (key === 'Enter' || key === ' ') {
+      event.preventDefault();
+      aselectCommit(aselect.activeIndex);
+    } else if (key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation(); // close only the popup, not a host modal
+      aselectClose();
+    } else if (key === 'Tab') {
+      aselectClose();
+    }
+  }
+
+  function enhanceSelects(root = document) {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    root.querySelectorAll('select:not([data-native]):not([data-aselect])').forEach((select) => {
+      select.dataset.aselect = '1';
+      select.setAttribute('role', 'combobox');
+      select.setAttribute('aria-expanded', 'false');
+      select.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+        select.focus({ preventScroll: true });
+        if (aselect.select === select) aselectClose();
+        else aselectOpen(select);
+      });
+      select.addEventListener('keydown', (event) => aselectKeydown(event, select));
+      select.addEventListener('blur', aselectClose);
+    });
+  }
+
+  window.addEventListener('resize', aselectClose);
+  window.addEventListener('scroll', () => aselectPosition(), true);
+  document.addEventListener('pointerdown', (event) => {
+    if (!aselect.select) return;
+    if (event.target === aselect.select || aselect.panel?.contains(event.target)) return;
+    aselectClose();
+  });
+
+  // Pages render into #app with innerHTML and modals mount later, a single
+  // debounced observer keeps selects enhanced, money converted, and the
+  // notification badge alive without per-page wiring. (Text conversion emits
+  // characterData mutations only, so watching childList cannot loop.)
+  enhanceSelects();
+  let domSyncQueued = false;
+  const domObserver = new MutationObserver(() => {
+    if (domSyncQueued) return;
+    domSyncQueued = true;
+    requestAnimationFrame(() => {
+      domSyncQueued = false;
+      enhanceSelects();
+      if (currency === 'USD') applyCurrency(document.body);
+      else syncCurrencyUI();
+      const badge = document.querySelector('[data-notify-badge]');
+      if (badge && !badge.dataset.ready) {
+        badge.dataset.ready = '1';
+        refreshNotifications();
+      }
+    });
+  });
+  domObserver.observe(document.body, { childList: true, subtree: true });
+
   window.AutoSwap = {
     assets,
     icons,
@@ -1671,8 +2312,12 @@
     CATEGORY_LABELS,
     labelFor,
     fuelLabel,
+    getLogoUrl,
     formatCash,
     fallbackImageFor,
+    georgianError,
+    placeComboList,
+    repositionComboLists,
     mapFeedRow,
     Header,
     Footer,
@@ -1693,5 +2338,10 @@
     daysSince,
     DEMO_FEED,
     DEMO_CARS,
+    getCurrency: () => currency,
+    getUsdRate: () => gelPerUsd,
+    setCurrency,
+    onCurrencyChange,
+    priceCurrencyToggle,
   };
 })();
