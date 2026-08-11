@@ -14392,3 +14392,99 @@ html {
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 1px 4px rgba(16, 20, 15, 0.2);
 }
+
+/* ─── Footer separators only where the row fits on one line ─────────────
+   The bullets were a ::before on each link, so when the row wrapped the
+   separator travelled with the link that followed it and landed at the
+   START of line two — "• წესები". Gluing it to the preceding link
+   instead only moves the problem to a trailing bullet at the end of
+   line one.
+
+   The row needs 677px to sit on one line, so it wraps on every phone.
+   Bullets therefore apply only from 720px up, where no wrap can happen
+   and a dangling separator is impossible. Below that the links get a
+   two-column grid, which separates them by position rather than by
+   punctuation — no bullet needed, nothing to dangle.
+
+   The grid also drops the negative margin from the tap-target fix: with
+   margin-block:-12px the 44px hit areas of stacked rows would overlap
+   and a tap between two links would be ambiguous. Plain padding keeps
+   each row's target its own. */
+.footer-nav a + a::before {
+  content: none;
+}
+
+@media (min-width: 1100px) {
+  .footer-nav a + a::before {
+    content: "•";
+    display: inline-block;
+    margin: 0 10px;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 400;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 1099px) {
+  .footer-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 18px;
+    row-gap: 2px;
+    align-items: start;
+  }
+
+  .footer-nav a {
+    padding-block: 10px;
+    margin-block: 0;
+  }
+}
+
+/* Threshold corrected: 720px was measured against the viewport, but the
+   nav shares a flex row with the brand block and only receives
+   (container - ~301px). At an 885px viewport it had 544px against the
+   677px it needs, so it still wrapped and the leading bullet came back.
+   It clears 677px from roughly a 1000px viewport, hence 1024px. Wrapping
+   is disabled in that branch so a bullet can never lead a line, and the
+   negative tap-target margin is dropped there too — wrapped rows made
+   vertically adjacent hit areas overlap. */
+@media (min-width: 1100px) {
+  .footer-nav {
+    flex-wrap: nowrap;
+  }
+
+  .footer-nav a {
+    padding-block: 10px;
+    margin-block: 0;
+  }
+}
+
+/* The separator was display:inline-block, which makes it participate in
+   line-box sizing: links carrying one measured 59px tall against 39.5px
+   for the first link, leaving the row 9.75px out of alignment. Plain
+   inline still honours horizontal margins but cannot inflate the line
+   box, so every link keeps the same height and baseline. */
+@media (min-width: 1100px) {
+  .footer-nav a + a::before {
+    display: inline;
+    vertical-align: baseline;
+    line-height: 1;
+  }
+}
+
+/* Real cause of the 19.5px height difference: .footer-nav a is
+   display:block sized by flex, so the separator plus its 20px of margin
+   pushed the content past the assigned width and the LABEL wrapped
+   inside the link — two 19.5px lines plus padding, 59px against 39.5px.
+   Not a line-box or vertical-align problem at all.
+
+   nowrap keeps each link on one line and flex:0 0 auto lets it size to
+   its content. Threshold also moved 1024 -> 1100: at a 1024px window the
+   nav had 684px against the 677px it needs, a 7px margin that any font
+   or label change would erase. */
+@media (min-width: 1100px) {
+  .footer-nav a {
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+}
