@@ -13337,7 +13337,10 @@ select[data-aselect]:focus-visible,
      or low by eye: more negative lifts it, more positive drops it. Every
      figure here is box-relative, so it holds at every phone width. */
   .hero--garage .swap-stage {
-    --porsche-baseline: -0.774%;
+    /* -0.774% was calibrated against the 4936/4391 proportional columns.
+       Equal columns changed the Porsche's box height, which put its tyre
+       line 0.52px high; +0.589% of its own box height corrects it. */
+    --porsche-baseline: -0.185%;
   }
 
   .hero--garage .hero-car-right img {
@@ -13808,4 +13811,335 @@ html {
    as a gutter marker for the pair and both lines share a left edge. */
 .wanted-label + .wants-primary {
   padding-left: calc(15px + 6px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HERO — bring back what the Jul 3 build did better
+   ─────────────────────────────────────────────────────────────────────
+   Comparing the live site against this one at the same width, the older
+   hero won on three counts: it said what the product is, the cars had
+   real presence, and the search panel was a brand surface rather than a
+   white box. Those are ported here onto the corrected geometry — the
+   ground line, true car scale, badge centring and card overlap all stay
+   as fixed.
+
+   The captions are deliberately NOT restored; asked for, not selected. */
+
+/* ── 1. The headline ──────────────────────────────────────────────────
+   .hero--garage .hero-copy was sr-only, so the hero opened with two
+   unlabelled cars and no statement of what the site does. */
+.hero--garage .hero-copy {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+  max-width: 820px;
+  margin: 0 auto 18px;
+  text-align: center;
+}
+
+.hero--garage .hero-copy h1 {
+  margin: 0 0 10px;
+  color: var(--v4-green);
+  font-size: clamp(28px, 4.2vw, 52px);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.hero--garage .hero-copy p {
+  margin: 0;
+  color: var(--text-secondary, rgba(48, 58, 48, 0.76));
+  font-size: clamp(14px, 1.4vw, 17px);
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+@media (max-width: 680px) {
+  .hero--garage .hero-copy {
+    max-width: 100%;
+    margin-bottom: 12px;
+  }
+  .hero--garage .hero-copy h1 { font-size: clamp(24px, 7.2vw, 34px); }
+  .hero--garage .hero-copy p  { font-size: 14px; }
+}
+
+/* ── 2. Bigger cars ───────────────────────────────────────────────────
+   The stage is sized by the cars, so widening the stage is what grows
+   them. The proportional 4936fr/4391fr columns and the ground-line
+   transform are untouched, so true relative scale still holds. */
+.hero--garage .swap-stage {
+  width: min(100%, 1320px);
+  margin-inline: auto;
+}
+
+@media (max-width: 680px) {
+  /* Phones were already near the edge; the gain here comes from the
+     middle gap, not the gutter, so the cars keep the page margin. */
+  .hero--garage .swap-stage {
+    column-gap: 6px;
+  }
+}
+
+/* ── 3. Green panel, copper CTA ───────────────────────────────────────
+   NOTE: --copper is a false friend. DESIGN.md §2 replaced copper with
+   deep green but kept the token name, so `var(--copper)` resolves to
+   #1e4d34. Redefining it would turn every accent on the site orange, so
+   the real copper is scoped to this one button. This is a deliberate
+   departure from the documented green-only accent rule. */
+.hero--garage .garage-search {
+  --hero-copper: #b8541f;
+  --hero-copper-hover: #a1471a;
+  border-color: rgba(16, 34, 24, 0.28);
+  background: linear-gradient(180deg, #3f6b4f 0%, #365e45 100%);
+  box-shadow: 0 24px 54px -26px rgba(16, 30, 20, 0.62);
+}
+
+/* The fields stay light so they read as inputs against the green. */
+.hero--garage .garage-search .search-field {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.hero--garage .garage-search .slider-edge,
+.hero--garage .garage-search .slider-value {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* .btn-liquid pins this button green with !important
+   (.garage-search .search-submit.btn-liquid), which is the same
+   specificity as a plain .hero--garage descendant selector — so matching
+   the !important and adding .btn-liquid is what it takes to win. */
+.hero--garage .garage-search .search-submit,
+.hero--garage .garage-search .search-submit.btn-liquid {
+  background: var(--hero-copper) !important;
+  border-color: transparent !important;
+  color: #fff;
+}
+
+.hero--garage .garage-search .search-submit:hover,
+.hero--garage .garage-search .search-submit.btn-liquid:hover {
+  background: var(--hero-copper-hover) !important;
+}
+
+/* Proof line sits under the panel on the page background, not the green. */
+.hero--garage .hero-proof {
+  color: var(--text-secondary, rgba(48, 58, 48, 0.76));
+}
+
+/* ─── Cash slider: extend the phone fix up through tablets ──────────────
+   The polarity labels ("ვითხოვ" / "ვამატებ") name the two ENDS of the
+   track, but flex-wrap parked them side by side on the left with the
+   readout floated away — neither pointed at anything. That was fixed at
+   <=680px only, so every width from 681 to 1023 still showed it. Same
+   grid treatment here.
+
+   Also: the track's red->green gradient was designed for a white panel.
+   On the green search panel its green half vanishes, so the control
+   reads as a floating thumb on nothing. Neutral track, copper thumb to
+   match the CTA. */
+@media (max-width: 1023px) {
+  .hero--garage .hero-cash-slider {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 7px;
+  }
+
+  .hero--garage .hero-cash-slider .slider-edge { grid-row: 1; }
+  .hero--garage .hero-cash-slider .slider-edge:first-of-type {
+    grid-column: 1;
+    justify-self: start;
+  }
+  .hero--garage .hero-cash-slider .slider-edge:last-of-type {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .hero--garage .hero-cash-slider .slider-value {
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: center;
+    text-align: center;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .hero--garage .hero-cash-slider .cash-slider {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    width: 100%;
+    margin: 0;
+    height: 34px;
+    background: none;
+    border-radius: 0;
+  }
+}
+
+/* Track + thumb legibility on the green panel, every width. */
+.hero--garage .hero-cash-slider .cash-slider::-webkit-slider-runnable-track {
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.58));
+}
+
+.hero--garage .hero-cash-slider .cash-slider::-moz-range-track {
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.58));
+}
+
+.hero--garage .hero-cash-slider .cash-slider::-webkit-slider-thumb {
+  background: #b8541f;
+  border-color: #fff;
+  margin-top: -10px;
+}
+
+.hero--garage .hero-cash-slider .cash-slider::-moz-range-thumb {
+  background: #b8541f;
+  border-color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HERO — feedback pass
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Porsche was reading too small ────────────────────────────────────
+   The columns carried the true length ratio (4936mm 530i : 4391mm 718),
+   which is accurate but made the Porsche look undersized next to the
+   sedan. Equal columns instead, so it fills the same width as the BMW.
+   --hero-car-ratio is the knob: 1 = equal, 0.89 = physically true. */
+.hero--garage .swap-stage {
+  --hero-car-ratio: 1;
+  grid-template-columns: 1fr calc(1fr * var(--hero-car-ratio));
+}
+
+@media (min-width: 681px) {
+  .hero--garage .swap-stage {
+    grid-template-columns: 1fr 84px 1fr;
+  }
+}
+
+/* ── Panel: lighter green ─────────────────────────────────────────────── */
+.hero--garage .garage-search {
+  background: linear-gradient(180deg, #52846333 0%, #4a7a5b 0%, #427050 100%);
+  background: linear-gradient(180deg, #4f8160 0%, #457356 100%);
+}
+
+/* ── Slider: lighter text, visible track ──────────────────────────────
+   The track was set only on ::-webkit-slider-runnable-track, so anywhere
+   that rule lost — or in a browser that ignores it — the bar vanished
+   entirely and left a thumb floating on nothing. The input now carries a
+   visible background itself, so there is always a line. */
+.hero--garage .hero-cash-slider .slider-edge {
+  font-weight: 500;
+  opacity: 0.92;
+}
+
+.hero--garage .hero-cash-slider .slider-value {
+  font-weight: 600;
+}
+
+.hero--garage .hero-cash-slider .cash-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 34px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to bottom,
+    transparent calc(50% - 6px),
+    rgba(255, 255, 255, 0.55) calc(50% - 6px),
+    rgba(255, 255, 255, 0.55) calc(50% + 6px),
+    transparent calc(50% + 6px)
+  );
+}
+
+.hero--garage .hero-cash-slider .cash-slider::-webkit-slider-runnable-track {
+  height: 12px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.hero--garage .hero-cash-slider .cash-slider::-moz-range-track {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.hero--garage .hero-cash-slider .cash-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #b8541f;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(16, 20, 15, 0.35);
+  margin-top: -7px;
+}
+
+.hero--garage .hero-cash-slider .cash-slider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #b8541f;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(16, 20, 15, 0.35);
+}
+
+/* ─── Search row: two fields, not three columns ─────────────────────────
+   .swap-search-top was `533px 48px 533px` — a column for the ⇄ icon that
+   used to sit between the fields. Removing that icon left the second
+   field to fall into the 48px middle column, where it collapsed to 58px
+   and rendered as a bare magnifier square. It also made the whole panel
+   lopsided, which is what read as "text is not centred". */
+@media (min-width: 681px) {
+  .hero--garage .swap-search-top {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ─── Slider track: rounded, not squared ────────────────────────────────
+   Painting the bar as a linear-gradient on the input gives hard square
+   ends — a gradient stop cannot be rounded. Put it back on the track
+   pseudo-element, which takes border-radius properly. */
+.hero--garage .hero-cash-slider .cash-slider {
+  background: transparent;
+}
+
+.hero--garage .hero-cash-slider .cash-slider::-webkit-slider-runnable-track {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.hero--garage .hero-cash-slider .cash-slider::-moz-range-track {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.hero--garage .hero-cash-slider .cash-slider::-webkit-slider-thumb {
+  margin-top: -7px;
+}
+
+/* ─── Footer must reach the bottom of the screen on phones ──────────────
+   body carries padding-bottom: var(--tabbar-h) so content clears the
+   fixed tab bar. That padding sits OUTSIDE the footer, so below the
+   near-black footer (#161a15) there was a 58px band of light page
+   background — visible through the tab bar, which is only 62% opaque.
+   Measured: document 3777px, footer bottom 3719.2px.
+
+   Pull the footer down over that band and pad its own content back up by
+   the same amount. The body padding still reserves the space (pages with
+   no footer keep their clearance), but the strip is now footer-coloured. */
+@media (max-width: 1023px) {
+  .site-footer {
+    margin-bottom: calc(-1 * var(--tabbar-h, 58px));
+    padding-bottom: calc(var(--tabbar-h, 58px) + env(safe-area-inset-bottom, 0px));
+  }
 }

@@ -161,7 +161,7 @@ function DetailPage(car, photos, comparables) {
   const ownerTag = ownerHref ? 'a' : 'div';
   const ownerAttr = ownerHref ? ` href="${ownerHref}" aria-label="მფლობელის სხვა განცხადებები"` : '';
   return `
-    ${Header({ active: 'listings' })}
+    ${Header({ active: 'listings', currency: true })}
     ${StickyBar(car, cash)}
     <main class="detail-shell">
       <section class="container detail">
@@ -204,7 +204,7 @@ function DetailPage(car, photos, comparables) {
 
 function NotFound() {
   return `
-    ${Header({ active: 'listings' })}
+    ${Header({ active: 'listings', currency: true })}
     <main class="detail-shell">
       <section class="container detail-missing">
         <div class="detail-missing-card">

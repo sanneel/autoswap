@@ -186,7 +186,7 @@ function bindSellMode() {
 function SellPage(vehicle, prefs, wantsValue) {
   const lite = isLiteMode();
   return `
-    ${Header({ active: 'sell', liteToggle: true })}
+    ${Header({ active: 'sell', liteToggle: true, currency: true })}
     <main class="sell-shell sell-shell--v3 ${lite ? 'sell-shell--lite' : 'sell-shell--full'}">
       <div class="sell-hero">
         <div class="container sell-hero-inner">
@@ -222,7 +222,7 @@ function SellPage(vehicle, prefs, wantsValue) {
 
 function GatePanel(title, text, actions) {
   return `
-    ${Header({ active: 'sell' })}
+    ${Header({ active: 'sell', currency: true })}
     <main class="sell-shell">
       <section class="container sell-success-page">
         <div class="sell-success-card">

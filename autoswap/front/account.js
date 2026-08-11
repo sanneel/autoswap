@@ -56,7 +56,7 @@ function threadIdFromHash() {
 function Shell(inner) {
   const tab = currentTab();
   return `
-    ${Header({ active: 'account' })}
+    ${Header({ active: 'account', currency: true })}
     <main class="account-shell">
       <section class="container account">
         <nav class="account-tabs" aria-label="ანგარიშის სექციები">
@@ -612,7 +612,7 @@ async function renderTab() {
 async function init() {
   if (!sb) {
     document.querySelector('#app').innerHTML = `
-      ${Header({ active: 'account' })}
+      ${Header({ active: 'account', currency: true })}
       <main class="account-shell"><section class="container account">
         ${emptyHTML('ანგარიში დროებით მიუწვდომელია. მანამდე შეგიძლია გაცვლების ნახვა.', 'cars.html', 'გაცვლების ნახვა')}
       </section></main>

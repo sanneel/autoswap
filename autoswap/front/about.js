@@ -3,7 +3,7 @@ const { icons, Header, Footer } = window.AutoSwap;
 
 function AboutPage() {
   return `
-    ${Header({ active: 'about' })}
+    ${Header({ active: 'about', currency: true })}
     <main class="about-main">
       <section class="about-hero" aria-labelledby="about-title">
         <div class="container">

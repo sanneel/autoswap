@@ -22,7 +22,7 @@ function nextTarget() {
 
 function Shell(inner) {
   return `
-    ${Header({ active: 'account' })}
+    ${Header({ active: 'account', currency: true })}
     <main class="auth-shell">
       <section class="container auth">
         <div class="auth-card">${inner}</div>

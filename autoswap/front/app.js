@@ -342,22 +342,15 @@ function Hero() {
 
           <article class="hero-car hero-car-left">
             <img src="${assets.bmw}" alt="BMW 530i" width="791" height="396" decoding="async" fetchpriority="high">
-            <button class="sound-btn" type="button" data-rev="bmw" aria-label="BMW 530i ძრავის ხმა">${icons.sound}</button>
             <div class="hero-car-caption">
               <strong>BMW 530i</strong>
               <small>2019 · 90,000 კმ</small>
             </div>
           </article>
 
-          <div class="swap-center" aria-hidden="true">
-            <span class="swap-line"></span>
-            <span class="swap-icon">${icons.swap}</span>
-            <span class="swap-line"></span>
-          </div>
 
           <article class="hero-car hero-car-right">
             <img src="${assets.porsche}" alt="Porsche 718 Spyder" width="1672" height="837" decoding="async" fetchpriority="high" data-fallback="${assets.audi}">
-            <button class="sound-btn" type="button" data-rev="porsche" aria-label="Porsche 718 Spyder ძრავის ხმა">${icons.sound}</button>
             <div class="hero-car-caption">
               <strong>Porsche 718 Spyder</strong>
               <small>2023 · 12,000 კმ</small>
@@ -403,7 +396,6 @@ function SearchBar() {
             <div class="brand-picker-list" id="have-brand-list" role="listbox" aria-label="მარკები და მოდელები"></div>
           </div>
         </div>
-        <span class="swap-search-icon" aria-hidden="true">${icons.swap}</span>
         <div class="search-field search-brand-field" data-brand-picker>
           <span>${icons.search}</span>
           <span class="brand-picker-selected-logo" data-brand-selected-logo aria-hidden="true" hidden></span>
@@ -1162,7 +1154,7 @@ function bindInteractions() {
 
 function App() {
   return `
-    ${Header()}
+    ${Header({ currency: true })}
     <main class="home-main">
       ${Hero()}
       ${BrowseStrip()}
