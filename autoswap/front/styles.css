@@ -14282,3 +14282,113 @@ html {
   font-weight: 400;
   pointer-events: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LIST-VIEW CARD: pills and save button
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Right pill: text was being cut off ───────────────────────────────
+   .trade-cash is white-space:nowrap in a 129px box, and "სხვაობა
+   შეთანხმებით" needs 170px — measured scrollWidth 170 vs clientWidth
+   127, so 43px ran off the right edge. Let it wrap onto a second line
+   and grow instead of clipping; tighter leading keeps two lines compact.
+   min-height keeps single-line pills the same height as before. */
+.trade-cash {
+  white-space: normal;
+  height: auto;
+  min-height: 36px;
+  line-height: 1.25;
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+
+/* ── Left pill: breathing room after "ეძებს" ──────────────────────────
+   6px put the value hard against the label. The extra margin lifts the
+   real separation to 10px without touching the icon-to-word spacing
+   inside the label itself. */
+.aside-wants .wanted-label {
+  margin-right: 4px;
+}
+
+.aside-wants .wants-primary,
+.aside-wants .car-card-wants {
+  line-height: 1.3;
+}
+
+/* ── Save button: smaller disc, same touch target ─────────────────────
+   44x44 is right for a finger but far too big as a graphic on a small
+   thumbnail — it covered a third of the car. The visible disc drops to
+   30px while ::after restores a 44px hit area, so it is easier to see
+   past and no harder to press. */
+.save-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.save-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.save-btn::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+}
+
+/* Both of the above lost to more specific rules scoped at <=1023px:
+   `.car-card .save-btn { width:44px }` and
+   `.car-card-aside .trade-cash { white-space:nowrap }`, each 0,2,0
+   against a plain 0,1,0 class selector. Matched here so order decides.
+   The inner <span> inherits nowrap, so it has to be reset as well —
+   resetting only the flex parent leaves the text unwrappable. */
+.car-card .save-btn {
+  width: 30px;
+  height: 30px;
+}
+
+.car-card-aside .trade-cash,
+.car-card-aside .trade-cash span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.car-card-aside .trade-cash span {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Correction to the above: the ::after hit-area trick did not hold —
+   elementFromPoint 3px outside the disc still returned the <img>, so the
+   touch target really was 30px, not the 44px I intended. Rebuilt without
+   relying on pseudo-element hit-testing: the BUTTON keeps its full 44px
+   box (so the finger target is unchanged) and the visible disc is drawn
+   on the icon itself. Same look, target verified by hit-test instead of
+   assumed. */
+.car-card .save-btn,
+.save-btn {
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.save-btn::after {
+  content: none;
+}
+
+.car-card .save-btn svg,
+.save-btn svg {
+  box-sizing: content-box;
+  width: 15px;
+  height: 15px;
+  padding: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 1px 4px rgba(16, 20, 15, 0.2);
+}
