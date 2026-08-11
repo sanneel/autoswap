@@ -398,7 +398,8 @@ function FilterSidebar() {
         </div>
 
         <div class="filters-actions">
-          <button type="button" class="btn btn-primary filters-search" id="filters-search">${icons.search} შედეგების ნახვა <span class="filters-search-count" id="apply-count">(${getFiltered().length})</span></button>
+          <button type="button" class="btn btn-ghost filters-clear" id="filters-clear">გასუფთავება</button>
+          <button type="button" class="btn btn-primary filters-search" id="filters-search">${icons.search} ძებნა <span class="filters-search-count" id="apply-count">(${getFiltered().length})</span></button>
         </div>
       </form>
     </aside>
@@ -1524,6 +1525,26 @@ function bindDragRails(root = document) {
       rail.scrollBy({ left: direction * Math.max(220, rail.clientWidth * 0.7), behavior: 'smooth' });
     });
   });
+
+  // The landing page hides its rail arrows once the strip fits (app.js
+  // syncRailArrows), but the catalog never did — so the quickbar's prev/next
+  // sat there as dead controls, and on a wide screen the left one clipped
+  // against the edge of the bar. Same rule here.
+  const syncRailArrows = () => {
+    root.querySelectorAll('[data-drag-scroll]').forEach((rail) => {
+      rail.parentElement?.classList.toggle('rail-no-overflow', rail.scrollWidth <= rail.clientWidth + 1);
+    });
+  };
+  syncRailArrows();
+  if (!bindEvents.railResizeBound) {
+    bindEvents.railResizeBound = true;
+    window.addEventListener('resize', () => {
+      const live = document.querySelector('#app') || document;
+      live.querySelectorAll('[data-drag-scroll]').forEach((rail) => {
+        rail.parentElement?.classList.toggle('rail-no-overflow', rail.scrollWidth <= rail.clientWidth + 1);
+      });
+    });
+  }
 }
 
 function applyFormFilters(form) {
@@ -1674,12 +1695,17 @@ function bindEvents() {
     closeAdvModal();
   });
 
-  document.querySelector('#filters-reset')?.addEventListener('click', () => {
+  // Both the icon reset in the sheet header and the გასუფთავება button in the
+  // sticky footer clear everything — same action, two reachable places, the
+  // footer one so it sits beside ძებნა the way the advanced sheet does.
+  const clearAllFilters = () => {
     currentFilters = emptyFilters();
     pagesShown = 1;
     syncFiltersToURL(); // otherwise a refresh re-applies the cleared filters
     renderAll();
-  });
+  };
+  document.querySelector('#filters-reset')?.addEventListener('click', clearAllFilters);
+  document.querySelector('#filters-clear')?.addEventListener('click', clearAllFilters);
 
   document.querySelector('#sort-select')?.addEventListener('change', (event) => {
     currentFilters.sort = event.target.value;

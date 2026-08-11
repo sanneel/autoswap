@@ -191,11 +191,19 @@ async function brandPanelItems(term) {
     return heroBrandNames().map((make) => ({ group: 'make', make, label: displayBrand(make) }));
   }
   const catalog = await heroMakes();
-  const merged = Array.from(new Set([
-    ...heroBrandNames(),
-    ...catalog.map((m) => m.name),
-  ]));
-  const names = merged;
+  // Set dedupes by exact string, so the local list's "Audi" and the
+  // catalog's "AUDI" both survived and the picker listed every brand
+  // twice. Key on the normalized name instead — normalizeBrandText
+  // lowercases and strips punctuation, so "Mercedes-Benz" and
+  // "MERCEDES-BENZ" collapse too. Local names come first and win, since
+  // they carry the display casing.
+  const byBrand = new Map();
+  for (const name of [...heroBrandNames(), ...catalog.map((m) => m.name)]) {
+    if (!name) continue;
+    const key = normalizeBrandText(name);
+    if (key && !byBrand.has(key)) byBrand.set(key, name);
+  }
+  const names = Array.from(byBrand.values());
   const makeItems = names
     .filter((name) => brandMatchesTerm(name, query))
     .slice(0, 6)
@@ -348,7 +356,7 @@ function Hero() {
           </div>
 
           <article class="hero-car hero-car-right">
-            <img src="${assets.porsche}" alt="Porsche 718 Spyder" width="817" height="396" decoding="async" fetchpriority="high" data-fallback="${assets.audi}">
+            <img src="${assets.porsche}" alt="Porsche 718 Spyder" width="1672" height="837" decoding="async" fetchpriority="high" data-fallback="${assets.audi}">
             <button class="sound-btn" type="button" data-rev="porsche" aria-label="Porsche 718 Spyder ძრავის ხმა">${icons.sound}</button>
             <div class="hero-car-caption">
               <strong>Porsche 718 Spyder</strong>

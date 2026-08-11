@@ -447,7 +447,11 @@
             <div class="currency-switch" role="group" aria-label="ფასების ვალუტა">
               <button type="button" data-currency="GEL" aria-pressed="true">₾</button>
               <button type="button" data-currency="USD" aria-pressed="false">$</button>
-            </div>` : ''}
+            </div>` : `
+            <div class="currency-switch currency-switch--ghost" aria-hidden="true">
+              <button type="button" tabindex="-1">₾</button>
+              <button type="button" tabindex="-1">$</button>
+            </div>`}
             <div class="notify-wrap">
               <button class="notify-btn" type="button" data-notify-btn aria-haspopup="true" aria-expanded="false" aria-label="შეტყობინებები">
                 ${icons.bell}

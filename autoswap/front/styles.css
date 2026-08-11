@@ -13200,3 +13200,612 @@ select[data-aselect]:focus-visible,
   border-radius: 50%;
   background: #fff;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PHONE HERO — geometry pass
+   ─────────────────────────────────────────────────────────────────────
+   The garage hero had accumulated ~9 waves of overrides for the same
+   selectors, and the survivors contradicted each other. Measured at 375px
+   before this block:
+
+     · stage row 170px tall + 30px padding, cars only 74px  → 96px of dead
+       space above two cars that looked dropped at random
+     · .swap-center align-self:center centred on the ROW, cars align-items:
+       end sat at its bottom → the swap badge floated 48px above the cars'
+       centreline
+     · .hero--garage .hero-car::before (0,2,0, unmediated) beat the phone
+       rule (0,1,0) → the "ground" shadow rendered bottom:64px + 48px tall,
+       i.e. entirely ABOVE a 74px car
+     · .hero--garage .container used 100%-28px while every other section
+       uses 100%-24px → the whole hero sat 2px off the page gutter
+     · sound buttons pinned top:-4px, hanging off the cars into the void
+     · the cash slider's two polarity labels stacked next to each other on
+       the left instead of marking the ends of the track they describe
+
+   Everything below is one block so the phone hero has a single owner.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 680px) {
+
+  /* Gutter parity: header, cards, headings and footer all use 100% - 24px.
+     The hero was the only section on 100% - 28px. */
+  .hero--garage .container { width: min(100% - 24px, 1240px); }
+
+  /* ── Stage ────────────────────────────────────────────────────────────
+     One row, height driven by the cars themselves. No fixed row, no
+     bottom padding, nothing to leave a gap the cars don't fill. */
+  .hero--garage .swap-stage {
+    display: grid;
+    /* The desktop composition this is matched to has the two cars nearly
+       touching with the badge laid over the seam — not a 44px column
+       wedged between them eating width. Dropping the middle column and
+       letting the cars split the whole gutter takes the BMW from 142px to
+       ~175px drawn.
+
+       The columns themselves carry the real length ratio (4936mm 530i :
+       4391mm 718 Spyder), so each car just fills its own column, both
+       outer edges land on the page gutter, and the size difference costs
+       no symmetry anywhere. */
+    grid-template-columns: 4936fr 4391fr;
+    column-gap: 10px;
+    row-gap: 0;
+    /* end, not center. The columns are different widths now, so the two
+       image boxes are different heights, and centring them floats the
+       narrower Porsche box 4.75px above the BMW's ground line. Sharing a
+       bottom edge is what puts both cars on one floor. */
+    align-items: end;
+    min-height: 0;
+    height: auto;
+    padding: 0;
+    margin: 10px 0 0;
+  }
+
+  .hero--garage .hero-car {
+    grid-row: 1;
+    align-self: end;
+    justify-items: stretch;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    overflow: visible;
+  }
+
+  .hero--garage .hero-car-left  { grid-column: 1; }
+  .hero--garage .hero-car-right { grid-column: 2; }
+
+  .hero--garage .hero-car img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    height: auto;
+  }
+
+  /* ── Matching the two photographs to each other ───────────────────────
+     The source PNGs are not interchangeable, so equal boxes do not give
+     equal cars. Measured from the alpha channel:
+
+       hero-bmw-530i.png       791x396   car spans x 5-769, y 13-387
+       hero-porsche-aligned    1672x837  car spans x 0-1671, y 102-804
+
+     Do NOT measure these with a plain alpha bounding box. The Porsche is
+     a hard-edged cutout (its alpha is binary — identical bounds at every
+     threshold from 16 to 254) and it carries stray opaque pixels at the
+     extreme left and right edges. A bounding box therefore reports its
+     width as a full 1.0 of the frame, when the car body is really 0.971.
+     Scaling to that phantom 1.0 shrank the Porsche ~2.5% too far and it
+     read as the smaller car — the first version of this block did exactly
+     that and looked wrong on the page while measuring as "perfect".
+
+     Measure by column coverage instead: the fraction of a column that is
+     opaque, thresholded so edge strays drop out. At >5% coverage:
+
+       BMW      body spans 0.0076-0.9722 of frame  (width 0.9646)
+       Porsche  body spans 0.0233-0.9946 of frame  (width 0.9713)
+
+     0.9646 / 0.9713 = 0.9931 would draw the two cars the SAME length —
+     and that is wrong. A 530i is 4936mm; a 718 Spyder is 4391mm. Drawn
+     equal, the Porsche reads as an inflated car parked next to the BMW,
+     which is what made the pair look off even when every gap measured
+     perfectly. Scale by the real length ratio on top of the fill-ratio
+     correction:
+
+       4391/4936 x 0.9646/0.9713 = 0.88959 x 0.99310 = 0.88345
+
+     The 4936:4391 grid columns above now carry that length ratio, so the
+     only thing left for the transform is the fill-ratio difference
+     between the two photographs — 0.9646/0.9713 = 0.9931 — plus the drop
+     that puts both cars on one ground line:
+
+     The vertical anchor matters more than it looks. Aligning the bottom
+     of each image's opaque content lines up the SHADOWS, not the cars —
+     and the two shadows are drawn differently. The BMW's fades out to a
+     soft edge 10px below its tyres (alpha bottom 0.9773 vs darkest-pixel
+     bottom 0.9520); the Porsche's stops hard (0.9618 vs 0.9534). Matching
+     shadow edges therefore left the Porsche's wheels ~1.6px high.
+
+     Anchor on the darkest pixels instead (lum<40 — tyre rubber and core
+     shadow, the closest thing to a contact patch either image offers):
+
+       BMW      darkest bottom 0.9520 of frame
+       Porsche  darkest bottom 0.9534 of frame
+
+     Horizontally nothing is needed: once the columns are proportional the
+     Porsche's own right gap lands within 0.04px of the BMW's left gap.
+
+     --porsche-baseline is the one number to touch if it still reads high
+     or low by eye: more negative lifts it, more positive drops it. Every
+     figure here is box-relative, so it holds at every phone width. */
+  .hero--garage .swap-stage {
+    --porsche-baseline: -0.774%;
+  }
+
+  .hero--garage .hero-car-right img {
+    transform: scale(0.9931) translateY(var(--porsche-baseline));
+    transform-origin: 50% 100%;
+  }
+
+  /* ── Swap badge ───────────────────────────────────────────────────────
+     Its own column again (an earlier wave spanned it 1/-1 as an overlay),
+     centred on the row. Both car boxes are the same height, so the row
+     centre is the cars' centre to within half a pixel. */
+  .hero--garage .swap-center {
+    grid-row: 1;
+    grid-column: 1;
+    align-self: center;
+    /* Anchored to the seam between the two columns rather than the page
+       centre: with unequal columns those are different points, and the
+       badge belongs where the two cars meet. justify-self pins its right
+       edge to the seam, the 50% pulls its centre onto it, the +5px is
+       half the column gap. */
+    justify-self: end;
+    transform: translateX(calc(50% + 5px));
+    margin: 0;
+    z-index: 4;
+  }
+
+  /* 46px on a 375px screen is 12% of the viewport — proportionally about
+     twice the reference. Smaller badge, less of the cars' noses hidden. */
+  .hero--garage .swap-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* ── Ground shadow ────────────────────────────────────────────────────
+     Under the wheels, not floating above the roof. The cars' contact
+     point is ~1.5% of the box height off the bottom edge. */
+  .hero--garage .hero-car::before {
+    /* Matched to desktop proportionally rather than invented. Desktop is
+       bottom:64px / height:48px on a 242.3px car box = 26.4% / 19.8%, at
+       8% inset and rgba(21,31,24,0.22). Expressed as percentages it lands
+       in the same place on the car at any width. Blur scales with the car
+       (18px x 180/484 car width ratio = 7px) — a fixed 18px blur on a
+       phone-sized car would smear across the whole body. */
+    left: 8%;
+    right: 8%;
+    bottom: 26.4%;
+    height: 19.8%;
+    border-radius: 6px;
+    background: rgba(21, 31, 24, 0.22);
+    filter: blur(7px);
+  }
+
+  /* ── Sound buttons ────────────────────────────────────────────────────
+     On the car, at its outer edge, centred on the same axis as the badge
+     — not hanging off the top corner. */
+  .hero--garage .hero-car .sound-btn {
+    top: auto;
+    width: 36px;
+    height: 36px;
+    transform: none;
+    /* Anchored up from the shared ground line, not centred on each car's
+       own box — those boxes are different heights now, so centring put
+       the two buttons 5px out of level with each other.
+
+       Percentages resolve against each button's own containing block, so
+       the same number would still land in different places. The Porsche's
+       box is 0.88953 of the BMW's height (0.445325Cb / 0.500632Cb), so
+       its percentage is scaled by the reciprocal to land level. */
+    bottom: 20%;
+  }
+
+  .hero--garage .hero-car-right .sound-btn {
+    bottom: 22.484%;
+  }
+
+  .hero--garage .hero-car-left .sound-btn  { left: 0;    right: auto; }
+  .hero--garage .hero-car-right .sound-btn { left: auto; right: 0; }
+
+  /* ── Search card ──────────────────────────────────────────────────────
+     The card carried margin-top:-24px so it tucked into the stage. That
+     only worked because the stage was 200px tall holding 74px of car —
+     the card was overlapping dead space. With the stage sized to the cars
+     the same -24px eats their wheels and the ground shadow instead
+     (elementFromPoint over the BMW's rear wheel returned the search
+     input, not the car). The tuck has nothing left to tuck into, so it
+     becomes an ordinary gap, wide enough to clear the blurred shadow. */
+  .hero--garage .garage-search {
+    /* The cars must NOT float. On desktop the search card is pulled up
+       over the bottom of the cars (margin-top:-52px on a 242.3px car box
+       = 21.5% of car height) so their wheels run behind the card and they
+       read as planted on the page. I had removed that pull on phones
+       early on, thinking it was "covering the wheels" — covering the
+       wheels is the entire effect.
+
+       Percentage margins resolve against the containing block's WIDTH, so
+       this has to be expressed in container-width terms:
+
+         car box height = (W - 10px gap) x 0.52922 / 1.99747 = 0.264945
+         overlap        = 0.215 x that                        = 0.056963
+         as % of W (at W=351)                                 = 5.53%
+
+       Same 21.5% bite out of the cars as desktop, at every phone width. */
+    margin-top: -5.53%;
+  }
+
+  /* ── Search fields ────────────────────────────────────────────────────
+     The inputs were 23px tall inside 46px shells, and the two brand
+     fields are divs, not labels — so only the 23px strip was tappable.
+     Stretching the control to the shell makes the whole field the target.
+     16px also stops iOS zooming the page on focus. */
+  .hero--garage .garage-search .search-field {
+    min-height: 48px;
+  }
+
+  .hero--garage .garage-search .search-field > input,
+  .hero--garage .garage-search .search-field > select {
+    align-self: stretch;
+    height: auto;
+    min-height: 0;
+    padding-block: 0;
+    font-size: 16px;
+  }
+
+  /* ── Cash slider ──────────────────────────────────────────────────────
+     "ვითხოვ" and "ვამატებ" name the two ENDS of the track; flex-wrap had
+     parked them side by side on the left with the readout floated away,
+     so neither label pointed at anything. Grid puts each one over the end
+     it describes, the readout between them, the track underneath. */
+  .hero--garage .hero-cash-slider {
+    display: grid;
+    /* 1fr auto 1fr, not auto 1fr auto: the two labels are different widths
+       ("ვითხოვ" / "ვამატებ"), so auto side columns would push the readout
+       ~1px off the track's centre. Equal fr columns centre it exactly. */
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 7px;
+  }
+
+  .hero--garage .hero-cash-slider .slider-edge { grid-row: 1; }
+  .hero--garage .hero-cash-slider .slider-edge:first-of-type {
+    grid-column: 1;
+    justify-self: start;
+  }
+  .hero--garage .hero-cash-slider .slider-edge:last-of-type {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .hero--garage .hero-cash-slider .slider-value {
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: center;
+    text-align: center;
+    min-width: 0;
+    margin: 0;
+  }
+
+  /* Track on its own row, full width, and no longer 2px wider than the
+     form it sits in. */
+  .hero--garage .hero-cash-slider .cash-slider {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    width: 100%;
+    margin: 0;
+    /* The 34px thumb was riding a 16px input, so 9px of it top and bottom
+       was outside the hit area. Give the input the thumb's height and move
+       the visible track to the pseudo-element so it stays a hairline. */
+    height: 34px;
+    background: none;
+    border-radius: 0;
+  }
+
+  .hero--garage .hero-cash-slider .cash-slider::-webkit-slider-runnable-track {
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(178,58,46,0.28), rgba(30,77,52,0.14) 50%, rgba(46,119,65,0.32));
+  }
+
+  .hero--garage .hero-cash-slider .cash-slider::-moz-range-track {
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(178,58,46,0.28), rgba(30,77,52,0.14) 50%, rgba(46,119,65,0.32));
+  }
+
+  /* Centre the thumb on the 14px track it now sits on. */
+  .hero--garage .hero-cash-slider .cash-slider::-webkit-slider-thumb {
+    margin-top: -10px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TAB BAR — the raised "+" disc was sitting on its own label
+   ─────────────────────────────────────────────────────────────────────
+   .tabbar-item is grid-template-rows: 26px 12px, and the primary disc is
+   height:46px. A grid item with a definite height cannot stretch, so it
+   resolved to start-alignment: the 46px disc hung 20px past the bottom of
+   its 26px row, straight into the 12px label row. translateY(-9px) took
+   back 9 of those 20, leaving 7px of disc covering the top of the word
+   "დამატება" — measured, disc bottom 799.5 vs label top 792.5.
+
+   The existing comment claims the disc is "centred on the icon row"; it
+   was not, and that is why the -9px looked like enough. Centre it for
+   real, then raise it clear of the label including its 4px ring.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1023px) {
+  .tabbar-item--primary .tabbar-icon {
+    align-self: center;
+    transform: translateY(-12px);
+  }
+
+  .tabbar-item--primary:active .tabbar-icon {
+    transform: translateY(-12px) scale(0.94);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HERO BACKDROP — one treatment at every width
+   ─────────────────────────────────────────────────────────────────────
+   The backdrop changed character at the 1023px breakpoint, so dragging
+   the devtools responsive handle across it made the hero visibly jump.
+   FOUR properties switched at once:
+
+                      <=1023px                    >1023px
+     opacity          1                           0.78
+     background-size  auto 205%                   cover
+     gradient         0 -> .06@42 -> .72@78 -> .96   .52 -> .74@58 -> .98
+     ::after fade     22% of hero                 48% of hero
+
+   The opacity was the least of it. `auto 205%` keys the photo off the
+   HERO'S HEIGHT, so the 1672x941 source rendered ~1967px wide and a
+   375px viewport saw 19% of its width — a 5.2x magnified centre crop,
+   which is what read as washed out. Desktop's `cover` showed 100%.
+   Worse, keying off hero height meant any layout change silently
+   re-cropped the background.
+
+   Unified on the desktop values, with no media query at all, so the
+   backdrop now changes continuously with the viewport instead of
+   snapping. Note this reverts a deliberate earlier fix: `auto 205%` +
+   68% existed to pan past the pale sky on short heroes. Consistency was
+   the explicit ask, so that pan is gone — with `cover` on a narrow
+   viewport the image is height-driven and has no vertical overflow, so
+   background-position has nothing to pan and the sky band returns at the
+   top. If that reads too empty, the fix is the hero's proportions, not
+   another breakpoint here. */
+
+.hero--garage .hero-backdrop,
+.hero-backdrop {
+  opacity: 0.78;
+  background-image:
+    linear-gradient(180deg, rgba(243, 246, 241, 0.52), rgba(243, 246, 241, 0.74) 58%, rgba(243, 246, 241, 0.98)),
+    url("assets/hero-road-bg.png");
+  background-size: cover, cover;
+  background-position: 50% 68%, 50% 68%;
+  background-repeat: no-repeat, no-repeat;
+}
+
+.hero--garage::after,
+.hero::after {
+  height: 48%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HERO: cut the dead space above the cars, make the photo actually show
+   ─────────────────────────────────────────────────────────────────────
+   Two separate causes of empty space, one per size range:
+     <=1023px  .hero--garage { padding-top: 118px }  (line 13081)
+     >1023px   .swap-stage min-height ~350px with the cars bottom-aligned
+               inside it, leaving ~108px reserved above them
+   Both are removed here so the band above the cars is the same modest
+   gap at every width and the stage is sized by the cars themselves.
+
+   And the photo was washed to nothing: opacity 0.78 under a gradient
+   already starting at 0.52 alpha left only 0.78 x 0.48 = 37% of the
+   image coming through, on top of a 48% bottom fade. Opacity back to 1
+   and the overlay starts at 0.10, so the photo reads at ~90% where the
+   mountains are and still fades to page colour under the search card.
+
+   Framing: background-size is keyed to the hero's HEIGHT (205%), which
+   is what makes the vertical crop identical at every width — cover
+   cannot do that, because on a phone it is height-driven, has no
+   vertical overflow, and therefore always shows the pale sky band.
+   The max(...,56.3vw) is the coverage guard cover used to provide:
+   205% of hero height renders the photo 3.64x the hero height wide, so
+   a very wide viewport with a short hero would otherwise not be filled.
+
+   Position 95% puts the visible window over photo rows ~48-97%: treeline
+   at the top of the hero, asphalt under the cars, no sky at all. */
+
+.hero.hero--garage {
+  padding-top: 28px;
+}
+
+.hero--garage .swap-stage {
+  min-height: 0;
+  /* 30px of bottom padding survived from the base rule above 680px, so the
+     stage floor sat 30px below the cars and the search card's pull was
+     spent on padding instead of on the cars — 47px of margin bought only
+     17px of actual overlap. */
+  padding: 0;
+}
+
+.hero--garage .hero-backdrop,
+.hero-backdrop {
+  opacity: 1;
+  background-image:
+    linear-gradient(180deg,
+      rgba(243, 246, 241, 0.10) 0%,
+      rgba(243, 246, 241, 0.20) 46%,
+      rgba(243, 246, 241, 0.74) 84%,
+      rgba(243, 246, 241, 0.97) 100%),
+    url("assets/hero-road-bg.png");
+  background-size: auto max(205%, 56.3vw), auto max(205%, 56.3vw);
+  background-position: 50% 95%, 50% 95%;
+  background-repeat: no-repeat, no-repeat;
+}
+
+.hero--garage::after,
+.hero::after {
+  height: 24%;
+}
+
+/* ─── Hero photo: pan up off the asphalt ────────────────────────────────
+   At 95% the visible window sat on photo rows 49-97%, which is mostly
+   road — "just გზა". Moving it to 78% shifts the window to rows 40-89%,
+   so the top half is treeline and distant mountains and the bottom half
+   is asphalt, with the cars straddling the verge.
+
+   The window is 48.8% of the photo tall (hero height x 205%), so the
+   maths is: top row = 0.512 x --hero-photo-y, bottom row = top + 0.488.
+   Lower the number to climb further up the image; 65% is about the limit
+   before the pale sky band (photo rows 0-30%) starts entering frame. */
+
+.hero {
+  --hero-photo-y: 78%;
+}
+
+.hero--garage .hero-backdrop,
+.hero-backdrop {
+  background-position: 50% var(--hero-photo-y), 50% var(--hero-photo-y);
+}
+
+/* ─── Stop the header jumping between pages ─────────────────────────────
+   Navigating გაცვლები <-> ჩვენ შესახებ shifted the whole header 7.5px.
+   Nothing page-specific about it: cars.html is long enough to scroll and
+   about.html is not, so one page has a 15px scrollbar and the other does
+   not. Every centred .container then centres inside a viewport that is
+   1385px on one page and 1400px on the other, so everything moves by half
+   the scrollbar width.
+
+   Reserving the gutter permanently makes the layout width identical
+   whether or not the page scrolls. */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* ─── Search card overlap above 680px ───────────────────────────────────
+   The card used a flat margin-top:-52px while the car box height changes
+   with the viewport, so the bite it took out of the cars swung wildly:
+
+     994px  -> 22px over a 216.8px car =  10.1%  (cars barely held down)
+     1031px -> 52px over a 226.0px car =  23.0%  (cutting the bumper)
+
+   Phones already use a proportional value (-5.53% of container width) for
+   a steady 21.5%. Same idea here, adjusted for the three-column stage:
+
+     car box height = (W - 88px middle col) / 2 / 1.99747 = (W-M) x 0.25032
+     overlap        = 0.215 x that                        = (W-M) x 0.05382
+     as % of W, across W = 900..1240 with M = 88          = 4.86%..5.00%
+
+   Near enough constant to use one number. */
+@media (min-width: 681px) {
+  .hero--garage .garage-search {
+    margin-top: -4.95%;
+  }
+}
+
+/* ─── Header must not jump between pages ────────────────────────────────
+   The ₾/$ switch is opt-in (only the catalog passes currency:true, since
+   on a page with no prices it would be a control that does nothing). But
+   .header-actions is right-anchored, so adding it pushed everything to
+   its left over by its own width — the nav sat at x=631 on about.html
+   and x=523 on cars.html, a 108px jump when you click between them.
+
+   Pages without the switch now render the same component as a ghost:
+   identical markup, so it reserves a pixel-identical slot at every
+   breakpoint (the real one is 76px base, 88px in the header — a
+   hardcoded placeholder width would have drifted). visibility:hidden
+   keeps it out of the accessibility tree as well as off the screen. */
+.currency-switch--ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE FILTERS SHEET — the apply button was off the bottom of the screen
+   ─────────────────────────────────────────────────────────────────────
+   Measured at 375x812 with the sheet open:
+
+     .filters         fixed, y 82 -> 731.6   (stops 80px short of bottom)
+     .filters-scroll  y 154 -> 812.5         (658px tall inside a 649px box)
+     .filters-actions y 825.5 -> 902.5       (entirely below the viewport)
+
+   Three faults compounding:
+
+   1. .filters keeps `top: 82px` from the desktop sticky rail while ALSO
+      being a `bottom: 0` fixed bottom-sheet, so the panel never reaches
+      the bottom of the screen.
+   2. Both .filters and .filters-scroll scroll. Two nested scroll
+      containers means the form runs past the panel instead of the inner
+      list scrolling within it.
+   3. .filters-actions is handed `bottom: calc(var(--tabbar-h) + 8px)` at
+      <=1023px but its position is `static`, so that offset does nothing
+      and the footer simply flows off the end of the document.
+
+   Result: you scroll the sheet, the last thing you can reach is
+   "დამატებითი ფილტრები", and the search button is unreachable.
+
+   Fixed as a proper three-part sheet — fixed head, one scrolling body,
+   sticky footer — which is what the advanced-filters modal already does
+   and what this was clearly meant to be. */
+
+@media (max-width: 980px) {
+  body.filters-open .filters {
+    /* Anchored to the bottom of the screen, not 82px down from the top. */
+    top: auto;
+    display: flex;
+    flex-direction: column;
+    /* The panel itself must not scroll — .filters-scroll is the scroller. */
+    overflow: hidden;
+  }
+
+  body.filters-open .filters-form {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  body.filters-open .filters-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* The footer the search button lives in. Sticky to the panel floor, and
+     `bottom: 0` not `tabbar-h + 8px`: the sheet is z-index 95 over a
+     z-index 90 tab bar, so it already covers it — offsetting by the tab
+     bar height would leave a dead 58px strip under the buttons. */
+  body.filters-open .filters-actions {
+    position: sticky;
+    bottom: 0;
+    flex: 0 0 auto;
+    z-index: 2;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ─── "ეძებს" label vs the value under it ───────────────────────────────
+   .wanted-label is a flex row of [icon][ეძებს] with gap:6px, so its text
+   started 21px in (15px icon + 6px gap) while .wants-primary below it sat
+   flush at the block's left edge — the label was indented past the word
+   it labels. Indent the value to the same text column so the icon reads
+   as a gutter marker for the pair and both lines share a left edge. */
+.wanted-label + .wants-primary {
+  padding-left: calc(15px + 6px);
+}
