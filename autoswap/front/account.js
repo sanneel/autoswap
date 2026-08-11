@@ -106,14 +106,14 @@ async function renderGarage(body) {
     return;
   }
   if (!data.length) {
-    body.innerHTML = emptyHTML('ჯერ არ გაქვს განცხადება.', 'sell.html', 'დაამატე პირველი მანქანა');
+    body.innerHTML = emptyHTML('ჯერ არ გაქვს განცხადება.', '/sell', 'დაამატე პირველი მანქანა');
     return;
   }
 
   body.innerHTML = `
     <div class="account-head-row">
       <h1>ჩემი განცხადებები</h1>
-      <a class="btn btn-primary" href="sell.html">${icons.plus} ახალი განცხადება</a>
+      <a class="btn btn-primary" href="/sell">${icons.plus} ახალი განცხადება</a>
     </div>
     <div class="account-list">
       ${data.map((v) => {
@@ -128,13 +128,13 @@ async function renderGarage(body) {
           <article class="account-card" data-vehicle="${v.id}">
             <div class="account-card-media">${cover ? `<img src="${escapeAttr(cover.url)}" alt="">` : icons.car}</div>
             <div class="account-card-body">
-              <h3><a href="vehicle.html?id=${v.id}">${escapeAttr(vehicleTitle(v))}</a> ${statusBadge(VEHICLE_STATUS_LABELS, v.status)}</h3>
+              <h3><a href="/vehicle?id=${v.id}">${escapeAttr(vehicleTitle(v))}</a> ${statusBadge(VEHICLE_STATUS_LABELS, v.status)}</h3>
               <p class="account-card-specs">${escapeAttr(specs)}</p>
               <p class="account-card-meta">${escapeAttr(v.city || '')} · ${freshnessLabel(v.created_at)}</p>
             </div>
             <div class="account-card-actions">
               ${v.status === 'completed' ? '' : `
-                <a class="btn btn-ghost btn-sm" href="sell.html?id=${v.id}">რედაქტირება</a>
+                <a class="btn btn-ghost btn-sm" href="/sell?id=${v.id}">რედაქტირება</a>
                 ${v.status === 'active'
                   ? `<button class="btn btn-ghost btn-sm" data-action="pause">პაუზა</button>`
                   : `<button class="btn btn-ghost btn-sm" data-action="activate">გააქტიურება</button>`}
@@ -228,8 +228,8 @@ async function renderOffers(body, direction) {
   }
   if (!data.length) {
     body.innerHTML = direction === 'sent'
-      ? emptyHTML('ჯერ არ გაგიგზავნია შეთავაზება.', 'cars.html', 'ნახე გაცვლები')
-      : emptyHTML('ჯერ არ მიგიღია შეთავაზება. აქტიური განცხადება ზრდის შანსს.', 'sell.html', 'დაამატე განცხადება');
+      ? emptyHTML('ჯერ არ გაგიგზავნია შეთავაზება.', '/cars', 'ნახე გაცვლები')
+      : emptyHTML('ჯერ არ მიგიღია შეთავაზება. აქტიური განცხადება ზრდის შანსს.', '/sell', 'დაამატე განცხადება');
     return;
   }
 
@@ -291,7 +291,7 @@ async function renderFavorites(body) {
     return;
   }
   if (!data.length) {
-    body.innerHTML = emptyHTML('ფავორიტები ჯერ ცარიელია. შეინახე მოწონებული მანქანები გულის ღილაკით.', 'cars.html', 'ნახე გაცვლები');
+    body.innerHTML = emptyHTML('ფავორიტები ჯერ ცარიელია. შეინახე მოწონებული მანქანები გულის ღილაკით.', '/cars', 'ნახე გაცვლები');
     return;
   }
 
@@ -306,7 +306,7 @@ async function renderFavorites(body) {
           <article class="account-card" data-fav="${row.vehicle_id}">
             <div class="account-card-media">${cover ? `<img src="${escapeAttr(cover.url)}" alt="">` : icons.car}</div>
             <div class="account-card-body">
-              <h3>${v ? `<a href="vehicle.html?id=${v.id}">${escapeAttr(vehicleTitle(v))}</a>` : 'განცხადება აღარ არის ხელმისაწვდომი'}</h3>
+              <h3>${v ? `<a href="/vehicle?id=${v.id}">${escapeAttr(vehicleTitle(v))}</a>` : 'განცხადება აღარ არის ხელმისაწვდომი'}</h3>
               ${gone ? '<p class="account-card-meta">აღარ არის აქტიური</p>' : `<p class="account-card-meta">${escapeAttr(v.city || '')}</p>`}
             </div>
             <div class="account-card-actions">
@@ -364,7 +364,7 @@ async function renderConversations(body) {
     return;
   }
   if (!data.length) {
-    body.innerHTML = emptyHTML('ჩატი იხსნება შეთავაზების მიღების შემდეგ.', 'cars.html', 'ნახე გაცვლები');
+    body.innerHTML = emptyHTML('ჩატი იხსნება შეთავაზების მიღების შემდეგ.', '/cars', 'ნახე გაცვლები');
     return;
   }
 
@@ -586,7 +586,7 @@ async function renderProfile(body) {
 
   body.querySelector('#logout-btn').addEventListener('click', async () => {
     await signOut();
-    window.location.replace('index.html');
+    window.location.replace('/');
   });
 }
 
@@ -614,7 +614,7 @@ async function init() {
     document.querySelector('#app').innerHTML = `
       ${Header({ active: 'account', currency: true })}
       <main class="account-shell"><section class="container account">
-        ${emptyHTML('ანგარიში დროებით მიუწვდომელია. მანამდე შეგიძლია გაცვლების ნახვა.', 'cars.html', 'გაცვლების ნახვა')}
+        ${emptyHTML('ანგარიში დროებით მიუწვდომელია. მანამდე შეგიძლია გაცვლების ნახვა.', '/cars', 'გაცვლების ნახვა')}
       </section></main>
       ${Footer({ active: 'account' })}
     `;
@@ -623,8 +623,8 @@ async function init() {
 
   me = await authReady;
   if (!me) {
-    const next = encodeURIComponent('account.html' + window.location.hash);
-    window.location.replace(`login.html?next=${next}`);
+    const next = encodeURIComponent('/account' + window.location.hash);
+    window.location.replace(`/login?next=${next}`);
     return;
   }
 

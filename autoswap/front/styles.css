@@ -14143,3 +14143,59 @@ html {
     padding-bottom: calc(var(--tabbar-h, 58px) + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TAP TARGETS AND FIELD SIZING — audit pass
+   ─────────────────────────────────────────────────────────────────────
+   Measured across index and cars at 375px and 1359px. Recurring defects:
+
+     footer links          20px tall   (every page)
+     card title links      19-28px     (every card)
+     hero search inputs    23px tall, 14px font  — fixed on phones only,
+                           so desktop and tablet still had it
+     city select           21px tall, 14px font
+     sort select           13px font
+     currency toggle       34x30
+
+   The padding/negative-margin pairs grow the hit area without moving
+   anything: the box gets bigger, the layout position does not change.
+   Font sizes go to 16px because anything smaller makes iOS zoom the page
+   on focus, which then leaves the user scrolled sideways. */
+
+/* Footer links: 20px -> 44px hit area, same visual position. */
+.site-footer a {
+  padding-block: 12px;
+  margin-block: -12px;
+}
+
+/* Card titles: same treatment, and they are the primary card action. */
+.card-title-link {
+  padding-block: 8px;
+  margin-block: -8px;
+}
+
+/* Hero search controls at every width, not just phones. */
+.hero--garage .garage-search .search-field {
+  min-height: 48px;
+}
+
+.hero--garage .garage-search .search-field > input,
+.hero--garage .garage-search .search-field > select {
+  align-self: stretch;
+  height: auto;
+  min-height: 0;
+  padding-block: 0;
+  font-size: 16px;
+}
+
+/* Catalog sort control. */
+#sort-select {
+  font-size: 16px;
+  min-height: 40px;
+}
+
+/* Currency toggle was 34x30. */
+.currency-switch button {
+  min-width: 40px;
+  min-height: 36px;
+}

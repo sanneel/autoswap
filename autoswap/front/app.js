@@ -384,7 +384,7 @@ function heroProofText(cars) {
 
 function SearchBar() {
   return `
-    <form class="garage-search" id="search-form" action="cars.html" method="get" aria-label="გაცვლის ძებნა">
+    <form class="garage-search" id="search-form" action="/cars" method="get" aria-label="გაცვლის ძებნა">
       <div class="swap-search-top">
         <div class="search-field have-search-field" data-have-picker>
           <span>${icons.car}</span>
@@ -803,7 +803,7 @@ function trimTitle(title) {
 }
 
 function ListingCard(car) {
-  const detailHref = `vehicle.html?id=${encodeURIComponent(car.id)}`;
+  const detailHref = `/vehicle?id=${encodeURIComponent(car.id)}`;
   const name = esc(`${car.make} ${car.model}`);
   const title = esc(trimTitle(`${car.make} ${car.model}`));
   const wants = car.openToOffers ? '' : esc(car.wants);
@@ -834,7 +834,7 @@ function ListingCard(car) {
 }
 
 function FeaturedSwap(car) {
-  const detailHref = `vehicle.html?id=${encodeURIComponent(car.id)}`;
+  const detailHref = `/vehicle?id=${encodeURIComponent(car.id)}`;
   const name = esc(`${car.make} ${car.model}`);
   const meta = esc([car.year, car.mileage, car.fuel].filter(Boolean).join(' · '));
   const wants = car.openToOffers ? 'ღიაა შეთავაზებებზე' : esc(car.wants);
@@ -877,7 +877,7 @@ function ListingsSection(cars = activeListings) {
           <div>
             <h2 id="listings-title">იცვლება</h2>
           </div>
-          <a class="text-link" href="cars.html">ყველა განცხადება ${icons.arrowRight}</a>
+          <a class="text-link" href="/cars">ყველა განცხადება ${icons.arrowRight}</a>
         </div>
         <div id="landing-listings">
           ${LandingListings(cars)}
@@ -930,7 +930,7 @@ function ClosingStrip() {
     <section class="closing-strip">
       <div class="container closing-strip-inner">
         <p>შენი მანქანა შეიძლება უკვე ვიღაცას უნდა, განცხადება ორ წუთში ემატება.</p>
-        <a class="btn btn-accent btn-liquid" href="sell.html">${icons.plus}<span>დაამატე მანქანა</span></a>
+        <a class="btn btn-accent btn-liquid" href="/sell">${icons.plus}<span>დაამატე მანქანა</span></a>
       </div>
     </section>
   `;
@@ -950,9 +950,9 @@ function BrowseStrip() {
   ].filter((b) => countByMake(b.make) > 0).slice(0, 5);
 
   const filters = [
-    { label: 'სედანი', href: 'cars.html?category=sedan' },
-    { label: 'ქროსოვერი', href: 'cars.html?category=crossover' },
-    { label: 'თანხის გარეშე', href: 'cars.html?cash=none' },
+    { label: 'სედანი', href: '/cars?category=sedan' },
+    { label: 'ქროსოვერი', href: '/cars?category=crossover' },
+    { label: 'თანხის გარეშე', href: '/cars?cash=none' },
   ];
 
   return `
@@ -961,7 +961,7 @@ function BrowseStrip() {
         <button class="rail-arrow rail-arrow--prev" type="button" data-rail-prev aria-label="წინა">${icons.arrowRight}</button>
         <div class="browse-pills" data-drag-scroll>
           ${brands.map((brand) => `
-            <a class="brand-chip" href="cars.html?make=${encodeURIComponent(brand.make)}" aria-label="${brand.label || brand.make}, გაცვლები">
+            <a class="brand-chip" href="/cars?make=${encodeURIComponent(brand.make)}" aria-label="${brand.label || brand.make}, გაცვლები">
               <span class="brand-mark">${brandLogo(brand.make)}</span>
               <span class="brand-chip-text"><strong>${brand.label || brand.make}</strong></span>
             </a>
@@ -1146,7 +1146,7 @@ function bindInteractions() {
     if (diff > 0) params.set('cash', 'ask');
     else if (diff < 0) params.set('cash', 'add');
     const qs = params.toString();
-    window.location.href = qs ? `cars.html?${qs}` : 'cars.html';
+    window.location.href = qs ? `/cars?${qs}` : '/cars';
   });
   
   bindDragRails();

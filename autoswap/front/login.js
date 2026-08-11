@@ -15,7 +15,7 @@ const RESEND_COOLDOWN_S = 60;
 function nextTarget() {
   const raw = new URLSearchParams(window.location.search).get('next') || '';
   if (!raw || raw.includes('//') || raw.includes('..') || !/^[\w.-]+\.html(\?[^#]*)?(#[\w/-]*)?$/.test(raw)) {
-    return 'account.html';
+    return '/account';
   }
   return raw;
 }
@@ -131,7 +131,7 @@ function renderPhoneStep(error) {
   document.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
     await confirmPhoneOtp('+995555000000', AUTH_DEMO_CODE, true);
     toast('დემო ანგარიშით შეხვედი, ტესტირებისთვის');
-    window.location.href = 'index.html';
+    window.location.href = '/';
   });
   const form = document.querySelector('#phone-form');
   form.addEventListener('submit', async (event) => {
@@ -180,7 +180,7 @@ function renderCodeStep(error) {
     toast('შესვლა წარმატებულია');
     // Demo sessions can browse but not write, gated pages would bounce
     // them straight back here, so land on the catalog instead.
-    window.location.replace(currentIsDemo ? 'cars.html' : nextTarget());
+    window.location.replace(currentIsDemo ? '/cars' : nextTarget());
   });
 
   document.querySelector('#resend-btn').addEventListener('click', async (event) => {

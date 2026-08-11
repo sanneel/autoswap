@@ -37,7 +37,7 @@ function AboutPage() {
       <section class="closing-strip">
         <div class="container closing-strip-inner">
           <p>შენი მანქანა შეიძლება უკვე ვიღაცას უნდა, განცხადება ორ წუთში ემატება.</p>
-          <a class="btn btn-accent" href="sell.html">${icons.plus}<span>დაამატე მანქანა</span></a>
+          <a class="btn btn-accent" href="/sell">${icons.plus}<span>დაამატე მანქანა</span></a>
         </div>
       </section>
     </main>

@@ -205,7 +205,7 @@ function SellPage(vehicle, prefs, wantsValue) {
             ${fieldRows(vehicle, prefs, wantsValue)}
             <p class="auth-error" id="sell-error" role="alert" hidden></p>
             <div class="sell-actions">
-              <a class="btn btn-ghost" href="${editId ? 'account.html' : 'cars.html'}">${ICON_X} გაუქმება</a>
+              <a class="btn btn-ghost" href="${editId ? '/account' : '/cars'}">${ICON_X} გაუქმება</a>
               <button class="btn btn-primary" type="submit" id="sell-submit" data-sell-submit>${icons.plus} ${editId ? 'შენახვა' : 'გამოაქვეყნე განცხადება'}</button>
             </div>
           </form>
@@ -243,7 +243,7 @@ function DemoSuccess(make, model) {
   return GatePanel(
     'განცხადება არ შენახულა',
     `${escapeAttr(name)} ფიდში ვერ მოხვდა. რეალური შენახვისთვის საჭიროა დადასტურებული ავტორიზაცია.`,
-    '<a class="btn btn-primary" href="login.html?next=sell.html">ნამდვილი შესვლა</a><a class="btn btn-ghost" href="cars.html">ნახე გაცვლები</a>',
+    '<a class="btn btn-primary" href="/login?next=/sell">ნამდვილი შესვლა</a><a class="btn btn-ghost" href="/cars">ნახე გაცვლები</a>',
   );
 }
 
@@ -1403,7 +1403,7 @@ async function renderReal(user) {
       document.querySelector('#app').innerHTML = GatePanel(
         'განცხადება ვერ მოიძებნა',
         'ეს განცხადება არ არსებობს ან შენი არ არის.',
-        '<a class="btn btn-primary" href="account.html">ჩემი განცხადებები</a>',
+        '<a class="btn btn-primary" href="/account">ჩემი განცხადებები</a>',
       );
       return;
     }
@@ -1450,7 +1450,7 @@ async function renderReal(user) {
       const vehicleId = await persist(user, values);
       bustListingCaches();
       toast(editId ? 'განცხადება განახლდა' : 'განცხადება გამოქვეყნდა');
-      window.location.href = `vehicle.html?id=${vehicleId}`;
+      window.location.href = `/vehicle?id=${vehicleId}`;
     } catch (err) {
       submits.forEach((b) => { b.disabled = false; b.textContent = submitLabel; });
       errorBox.textContent = `შენახვა ვერ მოხერხდა: ${georgianError(err)}`;
@@ -1484,7 +1484,7 @@ function renderLocked() {
   overlay.className = 'sell-locked-overlay';
   overlay.innerHTML = `
     <div class="sell-locked-card">
-      <a class="sell-locked-close" href="cars.html" aria-label="დახურვა">${ICON_X}</a>
+      <a class="sell-locked-close" href="/cars" aria-label="დახურვა">${ICON_X}</a>
       <span class="sell-locked-lock">${icons.shield}</span>
       <h2>დაამატე მანქანა ერთ ნაბიჯში</h2>
       <p>შეთავაზებები პირდაპირ შენთან მოვა.</p>

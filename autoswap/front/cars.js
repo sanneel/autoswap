@@ -596,7 +596,7 @@ function ownerLine(car) {
 
 
 function CarRow(car) {
-  const detailHref = `vehicle.html?id=${encodeURIComponent(car.id)}`;
+  const detailHref = `/vehicle?id=${encodeURIComponent(car.id)}`;
   const name = escapeHtml(`${car.make} ${car.model}`);
   return `
     <article class="car-card" data-id="${escapeHtml(car.id)}">
@@ -735,9 +735,9 @@ function CatalogQuickBar(count) {
   const routeChips = [
     // No icon: sedan and crossover were both showing the same car glyph, which
     // distinguishes nothing and just pads the chip.
-    { label: 'სედანი', href: 'cars.html?category=sedan', count: countByCategory('sedan'), active: currentFilters.category === 'sedan' },
-    { label: 'ქროსოვერი', href: 'cars.html?category=crossover', count: countByCategory('crossover'), active: currentFilters.category === 'crossover' },
-    { label: 'გარეშე', href: 'cars.html?cash=none', count: countByCash('none'), active: currentFilters.cash === 'none', icon: '<span class="quick-chip-symbol">₾</span>' },
+    { label: 'სედანი', href: '/cars?category=sedan', count: countByCategory('sedan'), active: currentFilters.category === 'sedan' },
+    { label: 'ქროსოვერი', href: '/cars?category=crossover', count: countByCategory('crossover'), active: currentFilters.category === 'crossover' },
+    { label: 'გარეშე', href: '/cars?cash=none', count: countByCash('none'), active: currentFilters.cash === 'none', icon: '<span class="quick-chip-symbol">₾</span>' },
   ];
   const noQuickFilter = !currentFilters.make && !currentFilters.category && !currentFilters.cash;
 
@@ -745,10 +745,10 @@ function CatalogQuickBar(count) {
     <div class="catalog-quickbar" aria-label="სწრაფი ფილტრები">
       <button class="rail-arrow rail-arrow--prev" type="button" data-rail-prev aria-label="წინა">${icons.arrowRight}</button>
       <nav class="catalog-quickbar-pills quick-chip-strip" data-drag-scroll>
-        ${quickChip({ href: 'cars.html', label: 'ყველა', count: allCars.length, active: noQuickFilter, extraClass: 'quick-chip--all' })}
+        ${quickChip({ href: '/cars', label: 'ყველა', count: allCars.length, active: noQuickFilter, extraClass: 'quick-chip--all' })}
         <span class="quick-chip-divider" aria-hidden="true"></span>
         ${brandChips.map((brand) => quickChip({
-          href: `cars.html?make=${encodeURIComponent(brand.make)}`,
+          href: `/cars?make=${encodeURIComponent(brand.make)}`,
           label: brand.label || brand.make,
           count: countByMake(brand.make),
           active: currentFilters.make.toLowerCase() === brand.make.toLowerCase(),
@@ -774,7 +774,7 @@ function CatalogPage() {
             <h1>ავტომობილები გაცვლისთვის</h1>
             <p><strong>${filtered.length}</strong> აქტიური განცხადება · მოძებნე მარკით, ქალაქით და თანხის სხვაობით</p>
           </div>
-          <a class="btn btn-primary catalog-topbar-cta" href="sell.html">${icons.plus} დაამატე მანქანა</a>
+          <a class="btn btn-primary catalog-topbar-cta" href="/sell">${icons.plus} დაამატე მანქანა</a>
         </div>
       </header>
       ${CatalogQuickBar()}

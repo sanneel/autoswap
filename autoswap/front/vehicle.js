@@ -64,9 +64,9 @@ function Gallery(car, photos) {
 
 function Breadcrumb(car) {
   const trail = [
-    { label: 'მთავარი', href: 'index.html' },
-    { label: 'განცხადებები', href: 'cars.html' },
-    car.make ? { label: car.make, href: `cars.html?make=${encodeURIComponent(car.make)}` } : null,
+    { label: 'მთავარი', href: '/' },
+    { label: 'განცხადებები', href: '/cars' },
+    car.make ? { label: car.make, href: `/cars?make=${encodeURIComponent(car.make)}` } : null,
     car.model ? { label: car.model, href: '' } : null,
     car.year ? { label: car.year, href: '' } : null,
   ].filter(Boolean);
@@ -157,7 +157,7 @@ function DetailPage(car, photos, comparables) {
     .join('');
 
   const name = esc(`${car.make} ${car.model}`);
-  const ownerHref = car.ownerId ? `cars.html?owner=${encodeURIComponent(car.ownerId)}` : '';
+  const ownerHref = car.ownerId ? `/cars?owner=${encodeURIComponent(car.ownerId)}` : '';
   const ownerTag = ownerHref ? 'a' : 'div';
   const ownerAttr = ownerHref ? ` href="${ownerHref}" aria-label="მფლობელის სხვა განცხადებები"` : '';
   return `
@@ -211,7 +211,7 @@ function NotFound() {
           <span class="detail-missing-icon">${icons.car}</span>
           <h1>განცხადება ვერ მოიძებნა</h1>
           <p>ეს ბმული აღარ მუშაობს ან ავტომობილი წაიშალა.</p>
-          <a class="btn btn-primary detail-missing-btn" href="cars.html">${icons.arrowRight} დაბრუნდი გაცვლებში</a>
+          <a class="btn btn-primary detail-missing-btn" href="/cars">${icons.arrowRight} დაბრუნდი გაცვლებში</a>
         </div>
       </section>
     </main>

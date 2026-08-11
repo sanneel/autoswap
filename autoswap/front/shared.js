@@ -427,14 +427,14 @@
     // "Add your car" moved from the nav into the CTA, it is the conversion
     // action, not a navigation item.
     const nav = [
-      { id: 'listings', label: 'გაცვლები', href: 'cars.html' },
-      { id: 'about', label: 'ჩვენ შესახებ', href: 'about.html' },
+      { id: 'listings', label: 'გაცვლები', href: '/cars' },
+      { id: 'about', label: 'ჩვენ შესახებ', href: '/about' },
     ];
 
     return `
       <header class="site-header">
         <div class="container header-inner">
-          <a class="brand" href="index.html#home" aria-label="AutoSwap მთავარი გვერდი">
+          <a class="brand" href="/#home" aria-label="AutoSwap მთავარი გვერდი">
             <span class="brand-tile" aria-hidden="true">${icons.swap}</span>
             <span class="brand-word">auto<b>swap</b></span>
           </a>
@@ -442,7 +442,7 @@
             <nav class="site-nav" aria-label="მთავარი ნავიგაცია">
               ${nav.map((item) => `<a class="${item.id === active ? 'is-active' : ''}" href="${item.href}"${item.id === active ? ' aria-current="page"' : ''}>${item.label}</a>`).join('')}
             </nav>
-            <a class="btn btn-accent header-cta" href="sell.html">${icons.plus}<span>დაამატე მანქანა</span></a>
+            <a class="btn btn-accent header-cta" href="/sell">${icons.plus}<span>დაამატე მანქანა</span></a>
             ${options.currency ? `
             <div class="currency-switch" role="group" aria-label="ფასების ვალუტა">
               <button type="button" data-currency="GEL" aria-pressed="true">₾</button>
@@ -474,11 +474,11 @@
   // the footer; a fixed tab bar is what a native app would do and what a thumb
   // can reach. Hidden at >=768px, where the header nav is visible.
   const TAB_ITEMS = [
-    { id: 'home', label: 'მთავარი', href: 'index.html', icon: 'car' },
-    { id: 'listings', label: 'გაცვლები', href: 'cars.html', icon: 'search' },
-    { id: 'sell', label: 'დამატება', href: 'sell.html', icon: 'plus', primary: true },
-    { id: 'offers', label: 'შეთავაზებები', href: 'account.html?tab=offers', icon: 'swap' },
-    { id: 'account', label: 'პროფილი', href: 'account.html', icon: 'user' },
+    { id: 'home', label: 'მთავარი', href: '/', icon: 'car' },
+    { id: 'listings', label: 'გაცვლები', href: '/cars', icon: 'search' },
+    { id: 'sell', label: 'დამატება', href: '/sell', icon: 'plus', primary: true },
+    { id: 'offers', label: 'შეთავაზებები', href: '/account?tab=offers', icon: 'swap' },
+    { id: 'account', label: 'პროფილი', href: '/account', icon: 'user' },
   ];
 
   function MobileTabBar(active) {
@@ -507,12 +507,12 @@
             <p>რეალური გაცვლები რეალურ მფლობელებს შორის.</p>
           </div>
           <nav class="footer-nav" aria-label="ფუტერის ნავიგაცია">
-            <a href="cars.html">გაცვლები</a>
-            <a href="sell.html">განცხადების დამატება</a>
-            <a href="about.html">ჩვენ შესახებ</a>
-            <a href="terms.html">წესები</a>
-            <a href="privacy.html">კონფიდენციალურობა</a>
-            <a href="about.html#contact">კონტაქტი</a>
+            <a href="/cars">გაცვლები</a>
+            <a href="/sell">განცხადების დამატება</a>
+            <a href="/about">ჩვენ შესახებ</a>
+            <a href="/terms">წესები</a>
+            <a href="/privacy">კონფიდენციალურობა</a>
+            <a href="/about#contact">კონტაქტი</a>
           </nav>
         </div>
         <div class="container footer-base">
@@ -1032,7 +1032,7 @@
               <input type="text" name="wants" value="${escapeAttr(wantsValue)}" placeholder="მაგ: BMW X5, Audi Q7">
             </label>
           </div>
-          <p class="mycar-note">ეს მხოლოდ კატალოგის მორგებაა, სრული განცხადებისთვის <a href="sell.html">დაამატე ფოტოებით</a>.</p>
+          <p class="mycar-note">ეს მხოლოდ კატალოგის მორგებაა, სრული განცხადებისთვის <a href="/sell">დაამატე ფოტოებით</a>.</p>
           <div class="offer-actions">
             ${myCar.make ? '<button type="button" class="btn btn-ghost" id="mycar-clear">წაშლა</button>' : '<button type="button" class="btn btn-ghost" data-close>გაუქმება</button>'}
             <button type="submit" class="btn btn-primary">შენახვა</button>
@@ -1087,7 +1087,7 @@
         <h2 class="modal-title" id="login-gate-title">ჯერ შესვლაა საჭირო</h2>
         <p class="offer-gate-text">${escapeAttr(message)}</p>
         <div class="offer-actions">
-          <a class="btn btn-ghost" href="login.html?next=${next}">Google-ით</a>
+          <a class="btn btn-ghost" href="/login?next=${next}">Google-ით</a>
           <button type="button" class="btn btn-primary" id="login-gate-phone">ნომრით შესვლა</button>
         </div>
       </div>
@@ -1133,7 +1133,7 @@
           <p class="offer-gate-text">შეთავაზებაში შენი აქტიური მანქანა მონაწილეობს, დაამატე განცხადება და მერე შესთავაზე ${escapeAttr(title)}-ის მფლობელს.</p>
           <div class="offer-actions">
             <button type="button" class="btn btn-ghost" data-close>გაუქმება</button>
-            <a class="btn btn-primary" href="sell.html">დაამატე განცხადება</a>
+            <a class="btn btn-primary" href="/sell">დაამატე განცხადება</a>
           </div>
         </div>
       `, 'offer-title');
@@ -1221,7 +1221,7 @@
         <div class="offer-success">
           <span class="offer-success-icon">${icons.check}</span>
           <h2 class="modal-title">შეთავაზება გაიგზავნა</h2>
-          <p>${escapeAttr(title)}-ის მფლობელი ნახავს შენს შეთავაზებას. პასუხს ნახავ <a href="account.html#sent">შენს გვერდზე</a>.</p>
+          <p>${escapeAttr(title)}-ის მფლობელი ნახავს შენს შეთავაზებას. პასუხს ნახავ <a href="/account#sent">შენს გვერდზე</a>.</p>
           <button type="button" class="btn btn-primary" data-close>გასაგებია</button>
         </div>
       `;
@@ -1254,7 +1254,7 @@
           <h2 class="modal-title" id="offer-title">ჯერ შენი მანქანა გვჭირდება</h2>
           <p class="offer-gate-text">შეთავაზება გაცვლის ნახევარია, ${escapeAttr(title)}-ის მფლობელმა უნდა ნახოს, რას სთავაზობ სანაცვლოდ.</p>
           <div class="offer-actions">
-            <a class="btn btn-ghost" href="sell.html">სრული განცხადება</a>
+            <a class="btn btn-ghost" href="/sell">სრული განცხადება</a>
             <button type="button" class="btn btn-primary" id="offer-add-mycar">მიუთითე შენი მანქანა</button>
           </div>
         </div>
@@ -1379,7 +1379,7 @@
     return `
       ${authUser.demo
         ? `<span class="header-user">${chip}</span>`
-        : `<a class="header-user" href="account.html" title="ჩემი ანგარიში">${chip}</a>`}
+        : `<a class="header-user" href="/account" title="ჩემი ანგარიში">${chip}</a>`}
       <button class="header-logout" type="button" data-logout title="გასვლა" aria-label="გასვლა">${icons.logout}</button>
     `;
   }
@@ -2071,12 +2071,12 @@
     }
     body.innerHTML = `
       ${notifyMatches.map((car) => `
-        <a class="notify-item" href="vehicle.html?id=${encodeURIComponent(car.id)}">
+        <a class="notify-item" href="/vehicle?id=${encodeURIComponent(car.id)}">
           <span class="notify-item-title">${escapeAttr(car.ownerName || 'მფლობელი')} ეძებს შენს ${escapeAttr(myCar.make)}-ს</span>
           <span class="notify-item-meta">სთავაზობს: ${escapeAttr(`${car.make} ${car.model}`)} · ${escapeAttr(car.city || '')}</span>
         </a>
       `).join('')}
-      <a class="notify-all" href="cars.html?onlyMatches=1">ყველა მატჩის ნახვა ${icons.arrowRight}</a>
+      <a class="notify-all" href="/cars?onlyMatches=1">ყველა მატჩის ნახვა ${icons.arrowRight}</a>
     `;
   }
 
