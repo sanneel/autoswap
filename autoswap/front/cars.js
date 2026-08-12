@@ -704,19 +704,23 @@ function StickyCTA() {
   `;
 }
 
-const QUICK_BRAND_SLUGS = {
-  BMW: 'bmw',
-  'Mercedes-Benz': 'mercedes-benz',
-  Audi: 'audi',
-  Toyota: 'toyota',
-  Volkswagen: 'volkswagen',
-  Hyundai: 'hyundai',
-  Lexus: 'lexus',
-};
+// Slugs that actually have a file in assets/logos/. The quickbar used to gate
+// logos on FEATURED_MAKES — a hardcoded five — so Hyundai, Ford, Jeep and
+// Chevrolet sat as bare text next to a badged BMW and Toyota even though their
+// logos were sitting in the repo unused. Gate on what exists instead.
+// (The previous QUICK_BRAND_SLUGS map here was dead code, referenced nowhere.)
+const LOGO_SLUGS = new Set([
+  'audi', 'bmw', 'chevrolet', 'ford', 'honda', 'hyundai', 'jeep', 'kia',
+  'lexus', 'mazda', 'mercedes-benz', 'mitsubishi', 'nissan', 'opel',
+  'peugeot', 'porsche', 'renault', 'skoda', 'subaru', 'toyota',
+  'volkswagen', 'volvo',
+]);
 
-// Featured makes only; unfeatured brands are text, with no filler glyph.
+// A logo whenever one exists. Brands with no file (Alfa Romeo, Bentley) stay
+// text — still no filler glyph, since a generic car icon says nothing the
+// word does not already say.
 function quickBrandLogo(make) {
-  return FEATURED_MAKE_SLUGS.has(makeSlug(make))
+  return LOGO_SLUGS.has(makeSlug(make))
     ? `<img src="${escapeHtml(getLogoUrl(make))}" alt="${escapeHtml(make)}" class="quick-chip-brand-logo" loading="lazy">`
     : '';
 }
