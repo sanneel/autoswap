@@ -106,14 +106,38 @@ Deno.serve(async (req) => {
   // --- verify.ge path (SMS + WhatsApp) ---
   if (verifyGeConfigured()) {
     try {
-      const sent = await sendOtp(phone, channel);
+      // WhatsApp is the default channel, so a WhatsApp-specific failure would
+      // lock every new user out of signing in. verify.ge exposes no way to ask
+      // whether the account carries a WhatsApp entitlement — SdkConfiguration
+      // reports branding, webhooks and test mode, nothing per-channel — so the
+      // only way to find out is to try. On a failed WhatsApp send we retry once
+      // over SMS and report what actually went out; the client then tells the
+      // user the code came by SMS instead of leaving them watching WhatsApp.
+      let sent;
+      let attempted = channel;
+      try {
+        sent = await sendOtp(phone, channel);
+      } catch (err) {
+        const e = err instanceof VerifyGeError ? err : null;
+        const retryable = channel === "WHATSAPP"
+          && e
+          && e.code !== "INSUFFICIENT_BALANCE"
+          && e.code !== "PAYMENT_REQUIRED"
+          && e.code !== "RATE_LIMIT_EXCEEDED";
+        if (!retryable) throw err;
+        console.warn("request-otp: WhatsApp send failed, retrying over SMS", e?.code, e?.message);
+        attempted = "SMS";
+        sent = await sendOtp(phone, "SMS");
+      }
       // Bind requestId → phone before telling the client anything. `verify-otp`
       // reads the phone back from this row and ignores whatever the browser
       // claims, which is what stops a caller from verifying their own code and
       // asking for somebody else's session.
       // What actually went out, which is not always what was asked for: an
       // account without a WhatsApp entitlement gets SMS instead, silently.
-      const delivered = sent.channel || channel;
+      // Falls back to `attempted`, not `channel` — after an SMS retry the
+      // requested channel is the wrong answer.
+      const delivered = sent.channel || attempted;
       const { error: bindError } = await admin.rpc("otp_request_record", {
         p_request_id: sent.requestId,
         p_phone: phone,

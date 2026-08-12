@@ -1423,15 +1423,18 @@
   // Note WhatsApp cannot autofill — WebOTP is an SMS-only mechanism — so the
   // code screen stops promising it when WhatsApp is the chosen channel.
   const CHANNEL_KEY = 'autoswap.otpChannel';
-  const CHANNELS = ['sms', 'whatsapp'];
+  // WhatsApp first: it is the default, and the default reads as the default
+  // when it leads. SMS stays one tap away for anyone without WhatsApp.
+  const CHANNELS = ['whatsapp', 'sms'];
   const CHANNEL_LABEL = { sms: 'SMS', whatsapp: 'WhatsApp' };
+  const DEFAULT_CHANNEL = 'whatsapp';
 
   function preferredChannel() {
     try {
       const saved = localStorage.getItem(CHANNEL_KEY);
-      return CHANNELS.includes(saved) ? saved : 'sms';
+      return CHANNELS.includes(saved) ? saved : DEFAULT_CHANNEL;
     } catch (_err) {
-      return 'sms';
+      return DEFAULT_CHANNEL;
     }
   }
 

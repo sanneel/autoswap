@@ -89,7 +89,9 @@ let resendTimer = null;
 // verify.ge binds the code to a requestId; the server exchanges that for the
 // session. Null means the legacy Supabase path, which verifies client-side.
 let currentRequestId = null;
-let currentChannel = 'sms';
+// Mirrors shared.js's default; the real value arrives with the send response,
+// which reports the channel actually used rather than the one requested.
+let currentChannel = 'whatsapp';
 // True when WhatsApp was asked for but the provider delivered SMS instead.
 let currentFellBack = false;
 let readChannel = () => currentChannel;
