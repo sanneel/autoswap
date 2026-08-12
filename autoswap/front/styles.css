@@ -12855,23 +12855,19 @@ select[data-aselect]:focus-visible,
     background: var(--copper);
     color: #fff;
     transform: translateY(-9px);
+    /* First layer is the ring of bar colour around the disc, so it reads as
+       sitting on top of the bar rather than punched through it. It has to be a
+       box-shadow spread, not a ::before: `transform` above makes this element a
+       stacking context, so a child at z-index:-1 is trapped inside it and
+       paints ABOVE this background instead of behind it — which turned the
+       whole disc into a white blob the moment the ring stopped being
+       translucent. A spread shadow draws strictly outside the border box and
+       cannot cover the fill. Solid, because the disc is raised 9–12px above
+       the bar and the ring's upper half overlaps page content. */
     box-shadow:
+      0 0 0 4px #ffffff,
       0 8px 18px -6px rgba(30, 77, 52, 0.55),
       inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  }
-
-  /* Ring of bar colour around the disc, so it reads as sitting on top of the
-     bar rather than punched through it. Solid white, matching .tabbar: the
-     disc is raised 9–12px above the bar's top edge, so the upper part of this
-     ring overlaps page content — at 55% alpha that was the last place car
-     photos still showed through the bottom chrome. */
-  .tabbar-item--primary .tabbar-icon::before {
-    content: "";
-    position: absolute;
-    inset: -4px;
-    border-radius: 50%;
-    background: #ffffff;
-    z-index: -1;
   }
 
   .tabbar-item--primary { position: relative; }
