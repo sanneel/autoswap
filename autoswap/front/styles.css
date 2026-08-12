@@ -6096,6 +6096,55 @@ a.header-user:hover {
   background: var(--border);
 }
 
+/* SMS / WhatsApp delivery choice. A two-option segmented control rather than
+   a dropdown or a pair of buttons: the options are peers, both always visible,
+   and the pick is a preference rather than an action — so it reads quiet and
+   stays out of the way of the primary submit below it. */
+.otp-channel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--soft-beige);
+}
+
+.otp-channel-opt {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.otp-channel-opt:hover {
+  color: var(--graphite);
+}
+
+.otp-channel-opt.is-on {
+  background: var(--card-white);
+  color: var(--graphite);
+  box-shadow: var(--shadow-subtle);
+}
+
+.otp-channel-opt:focus-visible {
+  outline: 2px solid var(--copper);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .otp-channel-opt {
+    transition: none;
+  }
+}
+
 
 
 .sell-section .field input,

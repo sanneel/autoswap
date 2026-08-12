@@ -41,7 +41,8 @@ The schema, policies, functions, storage, and car catalog tables live in
 4. `storage.sql`
 5. `car_catalog.sql` (make/model reference tables for contains search)
 6. `otp_rate_limit.sql` (OTP throttle tables + `otp_rate_check` RPC)
-7. `seed.sql`     (optional local demo data)
+7. `verify_ge_auth.sql` (requestId↔phone binding + phone→user lookup)
+8. `seed.sql`     (optional local demo data)
 
 Then ingest the catalog from the project root:
 
@@ -87,6 +88,78 @@ wrapper that calls `public.otp_rate_check(<ip>, <phone>)` and returns an error
 payload (`{"error":{"http_code":429,"message":"…"}}`) when `allowed = false`,
 otherwise dispatches the SMS via your provider. The Edge Function and the hook
 share the same `otp_rate_check`, so the policy stays in one place.
+
+## 5. OTP delivery via verify.ge (SMS + WhatsApp)
+
+The login code is delivered by [verify.ge](https://verify.ge), over SMS or
+WhatsApp — the user picks on the login form and the choice is remembered.
+
+### Why this replaces Supabase's own OTP
+
+verify.ge is a *closed-loop* verifier: `POST /otp/send` mints the code and
+returns a `requestId`, `POST /otp/verify` checks it. It never accepts a code
+somebody else generated, and its send API has no message-body field.
+
+Two consequences worth knowing before changing any of this:
+
+- **It cannot be a "Send SMS" auth hook.** That hook hands you the code
+  *Supabase* generated and expects you to deliver that exact string.
+- **WebOTP autofill does not work on this provider.** `autofillOtpFromSms`
+  needs the SMS to end with `@autoswap.ge #123456`, and nothing in the API can
+  put it there — it would have to be set account-side by verify.ge. The code
+  screen therefore skips WebOTP entirely on the WhatsApp channel, where it
+  could never apply (WebOTP reads the SMS inbox only).
+
+So Supabase Auth stops verifying the number, and `verify-otp` issues sessions
+instead. `otp_rate_check` still runs first and is unchanged.
+
+### Configure
+
+Set on the Edge Function secrets (Dashboard → Edge Functions → Secrets, or
+`supabase secrets set`):
+
+| variable | required | notes |
+| --- | --- | --- |
+| `VERIFY_GE_API_KEY` | yes | enables this path; unset falls back to Supabase SMS |
+| `VERIFY_GE_BASE_URL` | no | defaults to `https://api.verify.ge/api/v1` |
+
+Keep **Authentication → Providers → Phone** *enabled*. No SMS provider needs to
+be configured under it — nothing is ever sent through Supabase on this path —
+but `verify-otp` mints the session with `signInWithPassword({ phone })`, which
+the provider toggle gates.
+
+```bash
+supabase functions deploy request-otp && supabase functions deploy verify-otp
+```
+
+### How a login flows
+
+1. `request-otp` rate-checks, calls verify.ge, and records the returned
+   `requestId` against the phone in `public.otp_requests`.
+2. The browser gets only the `requestId` — never the code.
+3. `verify-otp` reads the phone **back from that row**, asks verify.ge to check
+   the code, burns the row, then finds-or-creates the user and returns a
+   session the client applies with `setSession`.
+
+Step 3 is the security-critical one. The phone is deliberately never taken from
+the request body: a caller could otherwise verify a code sent to their own
+number and ask for a session belonging to somebody else's. Wrong codes cost an
+attempt (6 per request) but do not burn the request, so a typo does not force a
+fresh SMS.
+
+### Open questions for verify.ge
+
+Not answerable from their public docs, and each one affects this integration:
+
+- WhatsApp per-message price and which tiers include it (the pricing page
+  lists SMS only, though `OtpChannel.WHATSAPP` is live in their SDK).
+- Whether `GET /otp/{requestId}` — which their SDK documents as a *public*
+  endpoint returning the live `otpCode` — is disabled for production keys. If
+  it is not, anyone holding a `requestId` can read the code.
+- Whether the SMS body can be given the `@autoswap.ge #CODE` suffix
+  account-side, which is the only way autofill comes back.
+- Sender branding is Enterprise-only (59.9 GEL/mo); below that, codes arrive
+  from a generic shortcode.
 
 ## Notes
 

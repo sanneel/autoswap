@@ -6,8 +6,8 @@
    ?next=<page> sends the user back where they came from. */
 const {
   Header, Footer, icons, sb, toast, escapeAttr, authReady,
-  signInWithProvider, normalizePhone, requestPhoneOtp, confirmPhoneOtp, AUTH_DEMO_CODE,
-  autofillOtpFromSms,
+  signInWithProvider, normalizePhone, requestPhoneOtp, confirmPhoneOtp, AUTH_DEMO_CODE,
+  autofillOtpFromSms, channelPickerHTML, bindChannelPicker,
 } = window.AutoSwap;
 
 const RESEND_COOLDOWN_S = 60;
@@ -37,7 +37,7 @@ function PhoneStep(phone, error) {
   return Shell(`
     <span class="auth-icon">${icons.swap}</span>
     <h1>შესვლა ან რეგისტრაცია</h1>
-    <p class="auth-sub">გააგრძელე Google-ით, ან შეიყვანე ნომერი, გამოგიგზავნით ერთჯერად SMS კოდს.</p>
+    <p class="auth-sub">გააგრძელე Google-ით, ან შეიყვანე ნომერი, გამოგიგზავნით ერთჯერად კოდს SMS-ით ან WhatsApp-ით.</p>
     <div class="auth-providers">
       <button type="button" class="btn-provider btn-google" data-provider="google">${icons.google}<span>Google-ით გაგრძელება</span></button>
     </div>
@@ -49,6 +49,10 @@ function PhoneStep(phone, error) {
         <input type="tel" name="phone" required autocomplete="tel-national" inputmode="tel"
                placeholder="5XX XX XX XX" value="${escapeAttr(phone || '')}">
       </label>
+      <div class="field">
+        <span>კოდი მივიღო</span>
+        ${channelPickerHTML()}
+      </div>
       <button class="btn btn-primary auth-submit" type="submit">გამომიგზავნე კოდი</button>
     </form>
     <p class="auth-note">პირველი შესვლისას ანგარიში ავტომატურად შეიქმნება.</p>
@@ -60,7 +64,7 @@ function CodeStep(phone, isDemo, error) {
   return Shell(`
     <span class="auth-icon">${icons.check}</span>
     <h1>შეიყვანე კოდი</h1>
-    <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${AUTH_DEMO_CODE}</strong>.` : ' კოდი მოქმედებს 5 წუთის განმავლობაში.'}</p>
+    <p class="auth-sub">კოდი გაიგზავნა ${currentChannel === 'whatsapp' ? 'WhatsApp-ით' : 'SMS-ით'} ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${AUTH_DEMO_CODE}</strong>.` : ' კოდი მოქმედებს 5 წუთის განმავლობაში.'}</p>
     ${error ? `<p class="auth-error" role="alert">${escapeAttr(error)}</p>` : ''}
     <form class="auth-form" id="code-form" novalidate>
       <label class="field">
@@ -80,6 +84,11 @@ function CodeStep(phone, isDemo, error) {
 let currentPhone = '';
 let currentIsDemo = false;
 let resendTimer = null;
+// verify.ge binds the code to a requestId; the server exchanges that for the
+// session. Null means the legacy Supabase path, which verifies client-side.
+let currentRequestId = null;
+let currentChannel = 'sms';
+let readChannel = () => currentChannel;
 
 function friendlyError(message) {
   const msg = String(message || '');
@@ -128,6 +137,7 @@ function bindProviders() {
 function renderPhoneStep(error) {
   document.querySelector('#app').innerHTML = PhoneStep(currentPhone, error);
   bindProviders();
+  readChannel = bindChannelPicker(document.querySelector('#phone-form'));
   // Try-it-out account: local demo session, no SMS round-trip.
   document.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
     await confirmPhoneOtp('+995555000000', AUTH_DEMO_CODE, true);
@@ -147,7 +157,8 @@ function renderPhoneStep(error) {
     form.querySelector('[type="submit"]').disabled = true;
     // Account is auto-created on first login; the name popup follows the
     // first verified sign-in (shared.js maybeRequireProfile).
-    const result = await requestPhoneOtp(phone);
+    const channel = readChannel();
+    const result = await requestPhoneOtp(phone, channel);
     if (result.error) {
       currentPhone = raw;
       renderPhoneStep(friendlyError(result.error));
@@ -155,6 +166,8 @@ function renderPhoneStep(error) {
     }
     currentPhone = phone;
     currentIsDemo = !!result.demo;
+    currentRequestId = result.requestId || null;
+    currentChannel = result.channel || channel;
     renderCodeStep();
   });
   form.querySelector('[name="phone"]').focus();
@@ -173,7 +186,7 @@ function renderCodeStep(error) {
       return;
     }
     form.querySelector('[type="submit"]').disabled = true;
-    const result = await confirmPhoneOtp(currentPhone, code, currentIsDemo);
+    const result = await confirmPhoneOtp(currentPhone, code, currentIsDemo, currentRequestId);
     if (result.error) {
       renderCodeStep(friendlyError(result.error));
       return;
@@ -186,12 +199,15 @@ function renderCodeStep(error) {
 
   document.querySelector('#resend-btn').addEventListener('click', async (event) => {
     event.currentTarget.disabled = true;
-    const result = await requestPhoneOtp(currentPhone);
+    const result = await requestPhoneOtp(currentPhone, currentChannel);
     if (result.error) {
       renderCodeStep(friendlyError(result.error));
       return;
     }
     currentIsDemo = !!result.demo;
+    // A resend mints a fresh code under a new requestId; the old one is dead.
+    currentRequestId = result.requestId || null;
+    currentChannel = result.channel || currentChannel;
     toast('ახალი კოდი გაიგზავნა');
     renderCodeStep();
   });
@@ -204,8 +220,10 @@ function renderCodeStep(error) {
   const codeInput = form.querySelector('[name="code"]');
   codeInput.focus();
   // Fills straight from the SMS on Chrome for Android and submits, so the
-  // code never has to be read across apps. No-ops elsewhere.
-  autofillOtpFromSms(codeInput, () => form.requestSubmit());
+  // code never has to be read across apps. No-ops elsewhere — and there is
+  // nothing to read at all when the code arrived over WhatsApp, since WebOTP
+  // watches the SMS inbox only.
+  if (currentChannel !== 'whatsapp') autofillOtpFromSms(codeInput, () => form.requestSubmit());
 }
 
 async function init() {

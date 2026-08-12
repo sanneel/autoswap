@@ -1,29 +1,40 @@
 // =============================================================
 // Edge Function: request-otp
-// The single server-side entry point for sending a login SMS code. Every OTP
-// send is funnelled through here so the rate limiter is authoritative — the
-// browser holds only the public anon key, so a check that lived client-side
-// could just be skipped.
+// The single server-side entry point for sending a login code. Every OTP send
+// is funnelled through here so the rate limiter is authoritative — the browser
+// holds only the public anon key, so a check that lived client-side could just
+// be skipped.
 //
 // Flow:
 //   1. Resolve the real client IP from the proxy headers.
 //   2. public.otp_rate_check(ip, phone) (service role) applies per-IP burst,
 //      per-phone bombing, and distributed-velocity rules.
-//   3. If allowed, ask Supabase Auth to dispatch the SMS (anon client, normal
-//      signInWithOtp path; verification stays client-side via verifyOtp).
+//   3. If allowed, dispatch the code:
+//        • verify.ge (SMS or WhatsApp) when VERIFY_GE_API_KEY is set, and
+//          bind the returned requestId to this phone via otp_request_record;
+//        • otherwise Supabase Auth's own SMS (legacy path, SMS only).
 //
-// Request:  POST { "phone": "+9955XXXXXXXX" }
-// Response: 200 { "status": "sent" }                 — code dispatched
+// verify.ge mints and checks the code itself, so verification does NOT happen
+// client-side on that path — the browser posts the requestId to `verify-otp`,
+// which is the only thing that can turn a good code into a session.
+//
+// Request:  POST { "phone": "+9955XXXXXXXX", "channel": "sms" | "whatsapp" }
+// Response: 200 { "status": "sent", "provider": "verify_ge",
+//                 "request_id": "...", "channel": "SMS", "expires_at": "..." }
+//           200 { "status": "sent", "provider": "supabase" }  — legacy path
 //           200 { "status": "provider_disabled" }    — no SMS provider; client
 //                                                       falls back to demo flow
 //           429 { "error", "retry_after", "blocked" } — rate limited
 //           4xx { "error" }                            — bad input / send error
-//
-// For bypass-proof enforcement against the raw /auth/v1/otp endpoint, wire the
-// same otp_rate_check() as a Supabase "Send SMS" auth hook (see SUPABASE_SETUP).
 // =============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
+import {
+  normalizeChannel,
+  sendOtp,
+  VerifyGeError,
+  verifyGeConfigured,
+} from "../_shared/verify-ge.ts";
 
 // Georgian mobile in E.164: +995 followed by 9 digits.
 const PHONE_RE = /^\+995\d{9}$/;
@@ -44,18 +55,37 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
 
   let phone: string | undefined;
+  let channelRaw: unknown;
+  let purpose = "login";
   try {
     const body = await req.json();
     phone = typeof body?.phone === "string" ? body.phone.trim() : undefined;
+    channelRaw = body?.channel;
+    if (body?.purpose === "attach") purpose = "attach";
   } catch {
     return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
   if (!phone || !PHONE_RE.test(phone)) {
     return jsonResponse({ error: "A valid Georgian phone number is required" }, 400);
   }
+  const channel = normalizeChannel(channelRaw);
 
   const url = Deno.env.get("SUPABASE_URL")!;
   const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  // Attaching a number to an existing account is only meaningful for a signed-in
+  // caller, and the resulting request is bound to *that* user — so the identity
+  // is resolved from the JWT here, never from the request body.
+  let attachUserId: string | null = null;
+  if (purpose === "attach") {
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const { data: claims, error: authError } = await admin.auth.getUser(token);
+    if (authError || !claims?.user) {
+      return jsonResponse({ error: "Sign in before attaching a number" }, 401);
+    }
+    attachUserId = claims.user.id;
+  }
 
   // --- Rate limit (authoritative) ---
   const { data: verdict, error: rlError } = await admin.rpc("otp_rate_check", {
@@ -73,13 +103,64 @@ Deno.serve(async (req) => {
     );
   }
 
-  // --- Send the code (only after passing the limiter) ---
+  // --- verify.ge path (SMS + WhatsApp) ---
+  if (verifyGeConfigured()) {
+    try {
+      const sent = await sendOtp(phone, channel);
+      // Bind requestId → phone before telling the client anything. `verify-otp`
+      // reads the phone back from this row and ignores whatever the browser
+      // claims, which is what stops a caller from verifying their own code and
+      // asking for somebody else's session.
+      const { error: bindError } = await admin.rpc("otp_request_record", {
+        p_request_id: sent.requestId,
+        p_phone: phone,
+        p_channel: channel,
+        p_purpose: purpose,
+        p_user_id: attachUserId,
+      });
+      if (bindError) {
+        // The code is already on its way, but without the binding it can never
+        // be exchanged for a session. Fail loudly rather than stranding the user
+        // on a code screen that cannot succeed.
+        console.error("request-otp: otp_request_record failed", bindError.message);
+        return jsonResponse({ error: "Could not start verification. Please try again." }, 500);
+      }
+      return jsonResponse({
+        status: "sent",
+        provider: "verify_ge",
+        request_id: sent.requestId,
+        channel,
+        purpose,
+        expires_at: sent.expiresAt ?? null,
+      });
+    } catch (err) {
+      const e = err instanceof VerifyGeError
+        ? err
+        : new VerifyGeError("PROVIDER_ERROR", String((err as Error)?.message || err));
+      console.error("request-otp: verify.ge send failed", e.code, e.message);
+      // Out of credit is an operator problem, not a user one — the client shows
+      // a neutral "try later" for these rather than leaking billing state.
+      if (e.code === "INSUFFICIENT_BALANCE" || e.code === "PAYMENT_REQUIRED") {
+        return jsonResponse({ error: "SMS service temporarily unavailable", code: e.code }, 503);
+      }
+      if (e.code === "RATE_LIMIT_EXCEEDED") {
+        return jsonResponse({ error: "Too many requests", retry_after: 60, blocked: true }, 429);
+      }
+      return jsonResponse({ error: e.message, code: e.code }, e.status >= 400 && e.status < 600 ? e.status : 502);
+    }
+  }
+
+  // --- Legacy path: Supabase Auth SMS (verification stays client-side) ---
+  // Attaching a number to an existing account has no signInWithOtp equivalent;
+  // on this path the client keeps using updateUser({ phone }) + phone_change.
+  if (purpose === "attach") return jsonResponse({ status: "legacy_attach", provider: "supabase" });
+
   const anon = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!);
   const { error } = await anon.auth.signInWithOtp({
     phone,
     options: { shouldCreateUser: true },
   });
-  if (!error) return jsonResponse({ status: "sent" });
+  if (!error) return jsonResponse({ status: "sent", provider: "supabase" });
 
   const message = String(error.message || "");
   // No SMS provider configured on the project → let the client show its

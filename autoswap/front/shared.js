@@ -1408,47 +1408,114 @@
     return null;
   }
 
-  // Direct Supabase send, last-resort fallback if the rate-limited Edge
-  // Function is not reachable. Carries no IP-based protection; the deployed
-  // `request-otp` function is the intended path.
-  async function sendOtpDirect(phone) {
-    const { error } = await sbClient.auth.signInWithOtp({ phone, options: { shouldCreateUser: true } });
-    if (!error) return { demo: false };
-    const message = String(error.message || '');
-    if (/provider|not enabled|disabled|unsupported/i.test(message)) return { demo: true };
-    // Raw fetch errors ("Failed to fetch") mean nothing to the user.
-    if (/failed to fetch|network|load failed/i.test(message)) {
-      return { error: 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი და სცადე თავიდან.' };
+  // ---- Delivery channel: SMS or WhatsApp ----------------------------------
+  // verify.ge delivers a code over either, and the trade-off belongs to the
+  // user: SMS needs no data connection, WhatsApp arrives in a named thread
+  // rather than from a generic shortcode. The pick is remembered, because
+  // whichever one works for a person tends to keep working.
+  //
+  // Note WhatsApp cannot autofill — WebOTP is an SMS-only mechanism — so the
+  // code screen stops promising it when WhatsApp is the chosen channel.
+  const CHANNEL_KEY = 'autoswap.otpChannel';
+  const CHANNELS = ['sms', 'whatsapp'];
+  const CHANNEL_LABEL = { sms: 'SMS', whatsapp: 'WhatsApp' };
+
+  function preferredChannel() {
+    try {
+      const saved = localStorage.getItem(CHANNEL_KEY);
+      return CHANNELS.includes(saved) ? saved : 'sms';
+    } catch (_err) {
+      return 'sms';
     }
-    return { error: `კოდი ვერ გაიგზავნა: ${message}` };
   }
 
-  // → { demo: boolean } on success, { error: string } on failure.
-  // The account is auto-created on first login, one flow for everyone.
-  // Routes through the `request-otp` Edge Function so the server-side rate
-  // limiter (per-IP burst, per-phone bombing, distributed velocity) is the
-  // authority, a check in this client could just be skipped.
-  async function requestOtp(phone) {
-    if (!sbClient) return { demo: true };
+  function rememberChannel(channel) {
+    try { localStorage.setItem(CHANNEL_KEY, channel); } catch (_err) { /* private mode */ }
+  }
+
+  function channelPickerHTML() {
+    const current = preferredChannel();
+    return `
+      <div class="otp-channel" role="radiogroup" aria-label="კოდის მიღების არხი">
+        ${CHANNELS.map((c) => `
+          <button type="button" class="otp-channel-opt${c === current ? ' is-on' : ''}"
+                  role="radio" aria-checked="${c === current}" data-channel="${c}">${CHANNEL_LABEL[c]}</button>`).join('')}
+      </div>
+    `;
+  }
+
+  // Wires a picker rendered by channelPickerHTML. Returns a getter rather than
+  // a value, because the caller reads the channel at submit time, not render
+  // time. Falls back to the stored preference when no picker is present.
+  function bindChannelPicker(root) {
+    const group = root && root.querySelector('.otp-channel');
+    if (!group) return () => preferredChannel();
+    group.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-channel]');
+      if (!btn) return;
+      group.querySelectorAll('[data-channel]').forEach((el) => {
+        const on = el === btn;
+        el.classList.toggle('is-on', on);
+        el.setAttribute('aria-checked', String(on));
+      });
+      rememberChannel(btn.dataset.channel);
+    });
+    return () => {
+      const on = group.querySelector('.is-on');
+      return (on && on.dataset.channel) || preferredChannel();
+    };
+  }
+
+  // ---- Edge Function transport --------------------------------------------
+  // → { data } | { error } with the network/404 cases already turned into
+  // Georgian. `auth: true` sends the signed-in user's token instead of the
+  // anon key, which the attach-a-number flow needs.
+  async function callAuthFn(name, body, options) {
     const base = String(window.AUTO_SWAP_SUPABASE_URL || '').trim().replace(/\/$/, '');
     const anonKey = String(window.AUTO_SWAP_SUPABASE_ANON_KEY || '').trim();
+    let bearer = anonKey;
+    if (options && options.auth) {
+      const { data: { session } } = await sbClient.auth.getSession();
+      if (session && session.access_token) bearer = session.access_token;
+    }
     let res;
     try {
-      res = await fetch(`${base}/functions/v1/request-otp`, {
+      res = await fetch(`${base}/functions/v1/${name}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: anonKey, Authorization: `Bearer ${anonKey}` },
-        body: JSON.stringify({ phone }),
+        headers: { 'Content-Type': 'application/json', apikey: anonKey, Authorization: `Bearer ${bearer}` },
+        body: JSON.stringify(body),
       });
     } catch (_err) {
       return { error: 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი და სცადე თავიდან.' };
     }
     if (res.status === 404) {
-      // Edge Function not deployed — surface the problem rather than silently
-      // bypassing rate limiting by calling signInWithOtp directly.
-      return { error: 'SMS სერვისი დროებით მიუწვდომელია. სცადე მოგვიანებით.' };
+      // Not deployed — surface it rather than silently falling back to a path
+      // that skips rate limiting.
+      return { error: 'სერვისი დროებით მიუწვდომელია. სცადე მოგვიანებით.' };
     }
     let data = {};
-    try { data = await res.json(); } catch (_err) { /* fall through to status check */ }
+    try { data = await res.json(); } catch (_err) { /* status check still fires */ }
+    return { res, data };
+  }
+
+  // → { demo } | { demo, requestId, channel } | { legacy } | { error }.
+  // The account is auto-created on first login, one flow for everyone.
+  // Routes through the `request-otp` Edge Function so the server-side rate
+  // limiter (per-IP burst, per-phone bombing, distributed velocity) is the
+  // authority, a check in this client could just be skipped.
+  //
+  // A `requestId` coming back means the verify.ge path is live and the code
+  // must be exchanged through `verify-otp`; without one this is still the
+  // legacy Supabase flow that verifies client-side.
+  async function requestOtp(phone, channel, purpose) {
+    if (!sbClient) return { demo: true };
+    const wantsAttach = purpose === 'attach';
+    const { res, data, error } = await callAuthFn(
+      'request-otp',
+      { phone, channel: channel || preferredChannel(), purpose: wantsAttach ? 'attach' : 'login' },
+      { auth: wantsAttach },
+    );
+    if (error) return { error };
     if (res.status === 429 || data.blocked) {
       const wait = Number(data.retry_after) || 60;
       // Reuse the existing "code could not be sent" wrapper; owner owns copy.
@@ -1456,11 +1523,30 @@
     }
     if (!res.ok) return { error: `კოდი ვერ გაიგზავნა: ${data.error || res.statusText}` };
     if (data.status === 'provider_disabled') return { demo: true };
-    return { demo: false };
+    if (data.status === 'legacy_attach') return { demo: false, legacy: true };
+    return {
+      demo: false,
+      requestId: data.request_id || null,
+      channel: String(data.channel || 'SMS').toLowerCase(),
+    };
+  }
+
+  // Turns a verified code into a session. On the verify.ge path the browser
+  // cannot do this itself — verify.ge checks the code, Supabase never learns
+  // the number was proven, so `verify-otp` is the only issuer.
+  async function exchangeOtp(requestId, code, needsAuth) {
+    const { res, data, error } = await callAuthFn(
+      'verify-otp',
+      { request_id: requestId, code },
+      { auth: !!needsAuth },
+    );
+    if (error) return { error };
+    if (!res.ok) return { error: data.error || res.statusText };
+    return { data };
   }
 
   // → { user } on success (header updates via auth listener), { error } on failure.
-  async function confirmOtp(phone, code, isDemo) {
+  async function confirmOtp(phone, code, isDemo, requestId) {
     if (isDemo) {
       if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი, დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
       // A returning demo user keeps the name they already gave.
@@ -1470,6 +1556,16 @@
       authUser = { demo: true, ...demoUser };
       notifyAuth();
       return { user: authUser };
+    }
+    if (requestId) {
+      const { data, error } = await exchangeOtp(requestId, code);
+      if (error) return { error: `კოდი ვერ დადასტურდა: ${error}` };
+      const { data: applied, error: sessionError } = await sbClient.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (sessionError) return { error: `სესია ვერ შეიქმნა: ${georgianError(sessionError)}` };
+      return { user: applied.user || (applied.session && applied.session.user) };
     }
     const { data, error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'sms' });
     return error ? { error: `კოდი ვერ დადასტურდა: ${georgianError(error)}` } : { user: data.user };
@@ -1616,7 +1712,14 @@
     return stop;
   }
 
-  async function requestPhoneAttach(phone) {
+  // Attaching a number to an existing (usually OAuth) account. Same two paths
+  // as login: verify.ge issues a requestId the server exchanges, or the legacy
+  // Supabase phone_change flow when no verify.ge key is configured.
+  async function requestPhoneAttach(phone, channel) {
+    const result = await requestOtp(phone, channel, 'attach');
+    if (result.error) return { error: `ნომერი ვერ დაემატა: ${result.error}` };
+    if (!result.legacy) return result;
+    // Legacy: Supabase sends the code itself and verifies it client-side.
     const { error } = await sbClient.auth.updateUser({ phone });
     if (!error) return { demo: false };
     const message = String(error.message || '');
@@ -1624,11 +1727,25 @@
     return { error: `ნომერი ვერ დაემატა: ${message}` };
   }
 
-  async function confirmPhoneAttach(phone, code, isDemo) {
+  async function confirmPhoneAttach(phone, code, isDemo, requestId) {
     if (isDemo) {
       if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი, დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
       const { error } = await sbClient.auth.updateUser({ data: { phone } });
       return error ? { error: `ნომერი ვერ შეინახა: ${georgianError(error)}` } : {};
+    }
+    if (requestId) {
+      // The caller's own token has to ride along: the server refuses to write a
+      // number onto an account other than the one the request was issued to.
+      const { error } = await exchangeOtp(requestId, code, true);
+      if (error) return { error: `კოდი ვერ დადასტურდა: ${error}` };
+      // The number now lives on the auth user; refresh so the header and the
+      // trust badge see it without a reload.
+      const { data: refreshed } = await sbClient.auth.refreshSession();
+      if (refreshed && refreshed.user) {
+        authUser = refreshed.user;
+        notifyAuth();
+      }
+      return {};
     }
     const { error } = await sbClient.auth.verifyOtp({ phone, token: code, type: 'phone_change' });
     return error ? { error: `კოდი ვერ დადასტურდა: ${georgianError(error)}` } : {};
@@ -1645,6 +1762,10 @@
               <span>ტელეფონის ნომერი</span>
               <input type="tel" name="phone" inputmode="tel" autocomplete="tel-national" placeholder="5XX XX XX XX" required>
             </label>
+            <div class="field">
+              <span>კოდი მივიღო</span>
+              ${channelPickerHTML()}
+            </div>
             <p class="auth-error" hidden></p>
             <button type="submit" class="btn btn-primary auth-submit">კოდის გაგზავნა</button>
           </form>
@@ -1661,6 +1782,8 @@
       el.hidden = false;
     };
 
+    const readChannel = bindChannelPicker(step);
+
     step.querySelector('#phone-req-form').addEventListener('submit', async (event) => {
       event.preventDefault();
       const phone = normalizePhone(new FormData(event.currentTarget).get('phone'));
@@ -1670,17 +1793,20 @@
       }
       const submit = event.currentTarget.querySelector('[type="submit"]');
       submit.disabled = true;
-      const result = await requestPhoneAttach(phone);
+      const channel = readChannel();
+      const result = await requestPhoneAttach(phone, channel);
       if (result.error) {
         submit.disabled = false;
         showError(result.error);
         return;
       }
+      const attachRequestId = result.requestId || null;
+      const viaWhatsApp = (result.channel || channel) === 'whatsapp';
       step.innerHTML = `
-        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${result.demo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
+        <p class="auth-sub">კოდი გაიგზავნა ${viaWhatsApp ? 'WhatsApp-ით' : 'SMS-ით'} ნომერზე <strong>${escapeAttr(phone)}</strong>.${result.demo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
         <form class="offer-form" id="phone-req-otp" novalidate>
           <label class="field">
-            <span>SMS კოდი</span>
+            <span>ერთჯერადი კოდი</span>
             <input class="otp-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••">
           </label>
           <p class="auth-error" hidden></p>
@@ -1690,8 +1816,9 @@
       `;
       const otpInput = step.querySelector('.otp-input');
       otpInput.focus();
-      // Cancelled on close so a pending read cannot outlive the modal.
-      autofillOtpFromSms(otpInput, () => {
+      // WebOTP only sees SMS; skip it when the code went out over WhatsApp.
+      // Cancelled on close either way so a pending read cannot outlive the modal.
+      if (!viaWhatsApp) autofillOtpFromSms(otpInput, () => {
         const liveForm = step.querySelector('form');
         if (liveForm) liveForm.requestSubmit();
       });
@@ -1702,7 +1829,7 @@
           showError('შეიყვანე SMS კოდი.');
           return;
         }
-        const confirmed = await confirmPhoneAttach(phone, code, result.demo);
+        const confirmed = await confirmPhoneAttach(phone, code, result.demo, attachRequestId);
         if (confirmed.error) {
           showError(confirmed.error);
           return;
@@ -1754,6 +1881,10 @@
           <span>ტელეფონის ნომერი</span>
           <input type="tel" name="phone" inputmode="tel" autocomplete="tel-national" placeholder="5XX XX XX XX" required>
         </label>
+        <div class="field">
+          <span>კოდი მივიღო</span>
+          ${channelPickerHTML()}
+        </div>
         <p class="auth-error" id="auth-error" hidden></p>
         <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">კოდის გაგზავნა</button>
       </form>
@@ -1799,6 +1930,8 @@
         });
       });
 
+      const readChannel = bindChannelPicker(step);
+
       step.querySelector('#auth-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         const phone = normalizePhone(new FormData(event.currentTarget).get('phone'));
@@ -1809,23 +1942,25 @@
         const submit = step.querySelector('#auth-submit');
         submit.disabled = true;
         submit.textContent = 'იგზავნება…';
-        const result = await requestOtp(phone);
+        const channel = readChannel();
+        const result = await requestOtp(phone, channel);
         if (result.error) {
           submit.disabled = false;
           submit.textContent = 'კოდის გაგზავნა';
           showError(result.error);
           return;
         }
-        bindOtpStep(phone, result.demo);
+        bindOtpStep(phone, result.demo, result.requestId, result.channel || channel);
       });
     }
 
-    function bindOtpStep(phone, isDemo) {
+    function bindOtpStep(phone, isDemo, requestId, channel) {
+      const viaWhatsApp = channel === 'whatsapp';
       step.innerHTML = `
-        <p class="auth-sub">კოდი გაიგზავნა ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
+        <p class="auth-sub">კოდი გაიგზავნა ${viaWhatsApp ? 'WhatsApp-ით' : 'SMS-ით'} ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
         <form class="offer-form" id="otp-form" novalidate>
           <label class="field">
-            <span>SMS კოდი</span>
+            <span>ერთჯერადი კოდი</span>
             <input class="otp-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••">
           </label>
           <p class="auth-error" hidden></p>
@@ -1846,7 +1981,7 @@
           showError('შეიყვანე SMS კოდი.');
           return;
         }
-        const result = await confirmOtp(phone, code, isDemo);
+        const result = await confirmOtp(phone, code, isDemo, requestId);
         if (result.error) {
           showError(result.error);
           return;
@@ -1860,11 +1995,15 @@
 
       const otpInput = step.querySelector('.otp-input');
       otpInput.focus();
-      // Cancelled on close so a pending read cannot outlive the modal.
-      autofillOtpFromSms(otpInput, () => {
-        const liveForm = step.querySelector('form');
-        if (liveForm) liveForm.requestSubmit();
-      });
+      // WebOTP reads the SMS inbox, so there is nothing for it to match when
+      // the code went out over WhatsApp. Cancelled on close either way, so a
+      // pending read cannot outlive the modal.
+      if (!viaWhatsApp) {
+        autofillOtpFromSms(otpInput, () => {
+          const liveForm = step.querySelector('form');
+          if (liveForm) liveForm.requestSubmit();
+        });
+      }
     }
 
     // Asked once, right after the number is verified, never before.
@@ -2383,6 +2522,8 @@
     requestPhoneOtp: requestOtp,
     confirmPhoneOtp: confirmOtp,
     AUTH_DEMO_CODE: DEMO_OTP_CODE,
+    channelPickerHTML,
+    bindChannelPicker,
     signOut,
     escapeAttr,
     buildModal,
