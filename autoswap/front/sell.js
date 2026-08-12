@@ -101,7 +101,7 @@ function fieldRows(vehicle, prefs, wantsValue) {
 
   const carBody = `
     <div class="sell-grid">
-      ${iconField(icons.search, 'მარკა და მოდელი *', `<input name="vehicleSearch" required placeholder="BMW 530i" value="${escapeAttr(vehicleSearchValue)}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="vehicle-search-list"><ul class="combo-list" id="vehicle-search-list" role="listbox" hidden></ul><input type="hidden" name="make" value="${escapeAttr(v.make || '')}"><input type="hidden" name="model" value="${escapeAttr(v.model || '')}">`, 'field--wide field--vehicle-search')}
+      ${iconField(icons.search, 'მარკა და მოდელი *', `<span class="mm-picker" data-mm-picker data-mm-vehicle><input name="vehicleSearch" required placeholder="BMW 530i" value="${escapeAttr(vehicleSearchValue)}" autocomplete="off" data-mm-input role="combobox" aria-autocomplete="list" aria-expanded="false">${window.AutoSwap.mmPanelHTML()}</span><input type="hidden" name="make" value="${escapeAttr(v.make || '')}"><input type="hidden" name="model" value="${escapeAttr(v.model || '')}">`, 'field--wide field--vehicle-search')}
       ${iconField(icons.calendar, 'წელი *', `<input name="year" type="number" min="1980" max="${THIS_YEAR + 1}" required placeholder="2020" value="${v.year ?? ''}">`)}
       ${iconField(icons.gauge, 'გარბენი (კმ) *', `<input name="mileage" type="number" min="0" max="2000000" required placeholder="90000" value="${v.mileage ?? ''}">`)}
       ${iconField(icons.fuel, 'საწვავი *', `<select name="fuel" required>${fuelOpts}</select>`)}
@@ -115,7 +115,7 @@ function fieldRows(vehicle, prefs, wantsValue) {
 
   const termsBody = `
     <div class="sell-grid">
-      ${iconField(icons.swap, 'სასურველი მანქანა', `<input name="desired" placeholder="Audi A6, Mercedes E-Class" value="${escapeAttr(wantsValue || '')}">`)}
+      ${iconField(icons.swap, 'სასურველი მანქანა', `<span class="mm-picker" data-mm-picker data-mm-desired><input name="desired" placeholder="Audi A6, Mercedes E-Class" value="${escapeAttr(wantsValue || '')}" autocomplete="off" data-mm-input>${window.AutoSwap.mmPanelHTML()}</span>`)}
       ${iconField(icons.clock, 'თანხის სხვაობა', `<select name="cashMode">${cashOpts}</select>`)}
       ${iconField(icons.tag, `რამდენი (<span class="cash-cur-tag" data-cash-cur>${getCurrency() === 'USD' ? '$' : '₾'}</span>)`, `<input name="amount" type="number" min="0" placeholder="0" value="${cashAmountForDisplay(p.cash_amount)}" inputmode="numeric">`, 'field--cash-amount')}
     </div>
@@ -427,206 +427,43 @@ function bindUploadZone() {
 
 
 function bindCatalogSuggestions() {
-  const searchInput = document.querySelector('[name="vehicleSearch"]');
-  const makeInput = document.querySelector('[name="make"]');
-  const modelInput = document.querySelector('[name="model"]');
-  const list = document.querySelector('#vehicle-search-list');
-  if (!searchInput || !makeInput || !modelInput || !list) return;
+  // Both "which car" fields use the shared make → model panel picker, the
+  // same selection idiom as the hero search: featured logo tiles, drill-in to
+  // models, and on touch a keyboard that only appears via the panel's ძებნა
+  // box. Free typing still works — submit falls back to splitting the typed
+  // text into make + model (gatherValues), so a pick is never mandatory.
+  const vehiclePicker = document.querySelector('[data-mm-vehicle]');
+  if (vehiclePicker && !vehiclePicker.__mmBound) {
+    vehiclePicker.__mmBound = true;
+    window.AutoSwap.bindMakeModelPicker(vehiclePicker, {
+      onSelect: (sel) => {
+        const makeInput = document.querySelector('[name="make"]');
+        const modelInput = document.querySelector('[name="model"]');
+        if (makeInput) {
+          makeInput.value = sel.make;
+          makeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (modelInput) {
+          modelInput.value = sel.model;
+          modelInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      },
+    });
+  }
 
-  let timer = null;
-  let lastSuggestions = [];
-
-  const setVehicle = (make, model, label) => {
-    makeInput.value = make || '';
-    modelInput.value = model || '';
-    if (label) searchInput.value = label;
-    makeInput.dispatchEvent(new Event('input', { bubbles: true }));
-    modelInput.dispatchEvent(new Event('input', { bubbles: true }));
-  };
-
-  const candidateMake = async (term) => {
-    const tokens = tokenize(term);
-    const makes = await loadCatalogMakes();
-    const hit = matchMake(tokens, makes);
-    if (hit) return hit.make;
-    const quick = await searchMakes(term.split(/\s+/)[0] || term, 8);
-    if (quick[0]) return quick[0];
-    const q = normName(term.split(/\s+/)[0] || term);
-    const localMake = Array.from(new Set((window.AutoSwap.DEMO_CARS || []).map((car) => car.make)))
-      .find((name) => normName(name).startsWith(q) || q.startsWith(normName(name)));
-    return localMake ? { id: '', name: localMake } : null;
-  };
-
-  const suggestionsFor = async (term) => {
-    const query = term.trim();
-    if (!query) return [];
-    const make = await candidateMake(query);
-    if (!make) {
-      const makes = await searchMakes(query, 8);
-      return makes.map((m) => ({ make: m.name, model: '', label: m.name }));
-    }
-    const makeNorm = normName(make.name);
-    const queryNorm = normName(query);
-    const modelQuery = queryNorm.startsWith(makeNorm) ? query.slice(make.name.length).trim() : query.split(/\s+/).slice(1).join(' ');
-    const localModels = Array.from(new Set((window.AutoSwap.DEMO_CARS || [])
-      .filter((car) => car.make.toLowerCase() === make.name.toLowerCase())
-      .map((car) => car.model)))
-      .filter((model) => !modelQuery || normName(model).includes(normName(modelQuery)) || normName(modelQuery).includes(normName(model)));
-    const models = make.id ? await searchModels(modelQuery, make.id, 12) : [];
-    const broadModels = models.length || !make.id ? [] : await searchModels('', make.id, 12);
-    const rows = models.length ? models : (broadModels.length ? broadModels : localModels.map((name) => ({ name })));
-    const output = rows.map((m) => ({ make: make.name, model: m.name, label: `${make.name} ${m.name}`.trim() }));
-    output.unshift({ make: make.name, model: modelQuery, label: `${make.name} ${modelQuery}`.trim() });
-    return output.filter((item, index, arr) => item.label && arr.findIndex((x) => x.label.toLowerCase() === item.label.toLowerCase()) === index).slice(0, 12);
-  };
-
-  let activeIndex = -1;
-
-  const closeList = () => {
-    list.hidden = true;
-    activeIndex = -1;
-    searchInput.setAttribute('aria-expanded', 'false');
-  };
-
-  const renderList = () => {
-    if (!lastSuggestions.length || document.activeElement !== searchInput) {
-      closeList();
-      return;
-    }
-    // Make and model as separate parts: one run-on uppercase string was hard
-    // to scan when every row starts with the same make.
-    list.innerHTML = lastSuggestions
-      .map((item, index) => `
-        <li class="combo-option vehicle-option${index === activeIndex ? ' is-active' : ''}" role="option" data-index="${index}">
-          <span class="vs-make">${escapeAttr(item.make || '')}</span>
-          ${item.model ? `<span class="vs-model">${escapeAttr(item.model)}</span>` : ''}
-        </li>`)
-      .join('');
-    list.hidden = false;
-    // .combo-list is position:fixed; without this it lands at its static spot
-    // and covers the label above the input. Anchor to the input, not its
-    // .field-control wrapper: the wrapper contains the list, so its rect grows
-    // to include it and each placement pushes the list further down.
-    placeComboList(list, searchInput);
-    searchInput.setAttribute('aria-expanded', 'true');
-  };
-
-  // Flags the field when the typed text matches no make in the catalog, so the
-  // user can correct it instead of silently saving an unknown vehicle.
-  const setUnknown = (unknown) => {
-    const field = searchInput.closest('.field');
-    if (!field) return;
-    field.classList.toggle('field--unknown', unknown);
-    searchInput.setAttribute('aria-invalid', unknown ? 'true' : 'false');
-  };
-
-  // Enter with nothing highlighted: take what was typed, resolve it against the
-  // catalog, and either accept it or mark it unknown.
-  const commitTyped = async () => {
-    const raw = searchInput.value.trim();
-    if (!raw) { setUnknown(false); setVehicle('', ''); return; }
-    const exact = lastSuggestions.find((item) => item.label.toLowerCase() === raw.toLowerCase());
-    if (exact) {
-      setUnknown(false);
-      setVehicle(exact.make, exact.model, exact.label);
-      closeList();
-      return;
-    }
-    const make = await candidateMake(raw);
-    if (!make) {
-      setUnknown(true);
-      setVehicle('', '');
-      return;
-    }
-    setUnknown(false);
-    const model = raw.toLowerCase().startsWith(make.name.toLowerCase())
-      ? raw.slice(make.name.length).trim()
-      : raw.split(/\s+/).slice(1).join(' ');
-    setVehicle(make.name, model);
-    closeList();
-  };
-
-  // Double-click on an empty or committed field opens the browse list rather
-  // than forcing the user to delete characters to see options.
-  const showBrowseList = async () => {
-    const term = searchInput.value.trim();
-    lastSuggestions = term
-      ? await suggestionsFor(term)
-      : (await searchMakes('', 20)).map((m) => ({ make: m.name, model: '', label: m.name }));
-    activeIndex = -1;
-    renderList();
-  };
-
-  const refresh = async () => {
-    lastSuggestions = await suggestionsFor(searchInput.value);
-    renderList();
-    const exact = lastSuggestions.find((item) => item.label.toLowerCase() === searchInput.value.trim().toLowerCase());
-    if (exact) {
-      setVehicle(exact.make, exact.model);
-      return;
-    }
-    const make = await candidateMake(searchInput.value);
-    if (make) {
-      const makeLabel = make.name;
-      const raw = searchInput.value.trim();
-      const model = raw.toLowerCase().startsWith(makeLabel.toLowerCase()) ? raw.slice(makeLabel.length).trim() : raw.split(/\s+/).slice(1).join(' ');
-      setVehicle(makeLabel, model);
-      return;
-    }
-    setVehicle('', '');
-  };
-
-  const pick = (index) => {
-    const item = lastSuggestions[Number(index)];
-    if (!item) return;
-    clearTimeout(timer);
-    setUnknown(false);
-    setVehicle(item.make, item.model, item.label);
-    closeList();
-  };
-
-  searchInput.addEventListener('input', () => {
-    clearTimeout(timer);
-    timer = setTimeout(refresh, 160);
-  });
-  searchInput.addEventListener('focus', () => {
-    if (searchInput.value.trim()) refresh();
-  });
-  searchInput.addEventListener('blur', () => setTimeout(closeList, 140));
-  searchInput.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      if (list.hidden) return;
-      event.preventDefault();
-      const count = lastSuggestions.length;
-      activeIndex = ((activeIndex + (event.key === 'ArrowDown' ? 1 : -1)) % count + count) % count;
-      renderList();
-      list.querySelector('.combo-option.is-active')?.scrollIntoView({ block: 'nearest' });
-    } else if (event.key === 'Enter') {
-      // Never submit the form from this field: Enter resolves the vehicle.
-      event.preventDefault();
-      if (!list.hidden && activeIndex >= 0) pick(activeIndex);
-      else commitTyped();
-    } else if (event.key === 'Escape') {
-      closeList();
-    }
-  });
-
-  searchInput.addEventListener('dblclick', (event) => {
-    event.preventDefault();
-    showBrowseList();
-  });
-  list.addEventListener('mousedown', (event) => {
-    const option = event.target.closest('.combo-option');
-    if (!option) return;
-    event.preventDefault();
-    pick(option.dataset.index);
-  });
-  searchInput.addEventListener('change', () => {
-    const exact = lastSuggestions.find((item) => item.label.toLowerCase() === searchInput.value.trim().toLowerCase());
-    if (exact) setVehicle(exact.make, exact.model, exact.label);
-    else refresh();
-  });
-  if (searchInput.value) refresh();
+  const desiredPicker = document.querySelector('[data-mm-desired]');
+  if (desiredPicker && !desiredPicker.__mmBound) {
+    desiredPicker.__mmBound = true;
+    window.AutoSwap.bindMakeModelPicker(desiredPicker, {
+      onSelect: (sel, { input, previous }) => {
+        // Desired is a comma list — picks append rather than replace, so
+        // "Audi A6, Mercedes E-Class" stays reachable from the picker alone.
+        const parts = previous.split(',').map((s) => s.trim()).filter(Boolean);
+        if (!parts.some((x) => x.toLowerCase() === sel.label.toLowerCase())) parts.push(sel.label);
+        input.value = parts.join(', ');
+      },
+    });
+  }
 }
 
 

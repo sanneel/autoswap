@@ -2562,6 +2562,197 @@
   });
   domObserver.observe(document.body, { childList: true, subtree: true });
 
+  // ---- Make → model panel picker ------------------------------------------
+  // One picker for every "which car" field: the sell form's მარკა და მოდელი
+  // and სასურველი მანქანა use it, and it mirrors the hero pickers' behaviour
+  // so the site has a single selection idiom. Featured logo tiles at rest,
+  // contains-match makes while typing, drill-in to the make's models, and on
+  // touch the field is readOnly with the panel's ძებნა box as the opt-in
+  // typing surface — a tap shows options, never a keyboard.
+  const MM_FEATURED = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Porsche'];
+
+  function mmPanelHTML() {
+    return `
+      <div class="brand-picker-panel" data-mm-panel hidden>
+        <div class="brand-picker-search" data-mm-search-row hidden>
+          <span>${icons.search}</span>
+          <input type="search" data-mm-search placeholder="ძებნა" autocomplete="off" aria-label="ძებნა">
+        </div>
+        <div class="brand-picker-list" role="listbox"></div>
+      </div>`;
+  }
+
+  function bindMakeModelPicker(picker, { onSelect } = {}) {
+    const input = picker.querySelector('[data-mm-input]');
+    const panel = picker.querySelector('[data-mm-panel]');
+    const list = panel && panel.querySelector('.brand-picker-list');
+    const searchRow = picker.querySelector('[data-mm-search-row]');
+    const search = picker.querySelector('[data-mm-search]');
+    if (!input || !panel || !list) return;
+
+    const touch = typeof window.matchMedia === 'function'
+      && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    if (touch && search && searchRow) {
+      input.readOnly = true;
+      searchRow.hidden = false;
+    }
+
+    let stage = 'make';
+    let curMake = null; // { id, name }
+    let seq = 0;
+    let timer = null;
+    let makesCache = null;
+
+    const setOpen = (open) => {
+      panel.hidden = !open;
+      picker.classList.toggle('is-open', open);
+      input.setAttribute('aria-expanded', String(open));
+    };
+
+    // The active query. On touch it lives in the panel box; on desktop it is
+    // the field itself, minus the already-chosen make during the model stage.
+    const term = () => {
+      if (touch && search) return search.value.trim();
+      const raw = input.value.trim();
+      if (stage === 'model' && curMake && raw.toLowerCase().startsWith(curMake.name.toLowerCase())) {
+        return raw.slice(curMake.name.length).trim();
+      }
+      return raw;
+    };
+
+    const row = (label, attrs) => `
+      <button type="button" class="brand-picker-option is-textonly" role="option" ${attrs}>
+        <span class="brand-picker-name">${escapeAttr(label)}</span>
+      </button>`;
+
+    const tiles = () => `
+      <div class="brand-featured" role="group" aria-label="პოპულარული მარკები">
+        ${MM_FEATURED.map((name) => `
+          <button class="brand-featured-tile" type="button" data-mm-make="${escapeAttr(name)}" title="${escapeAttr(name)}" aria-label="${escapeAttr(name)}">
+            <img class="brand-logo-img" src="${escapeAttr(getLogoUrl(name))}" alt="" loading="lazy" width="34" height="34">
+          </button>`).join('')}
+      </div>`;
+
+    const loadMakes = () => {
+      if (!makesCache) makesCache = searchMakes('', 500).catch(() => []);
+      return makesCache;
+    };
+
+    const render = async () => {
+      const stamp = ++seq;
+      const q = term().toLowerCase();
+      let html = '';
+      if (stage === 'make') {
+        const makes = await loadMakes();
+        if (stamp !== seq) return;
+        const rows = (q ? makes.filter((m) => m.name.toLowerCase().includes(q)) : makes).slice(0, 60);
+        html = (q ? '' : tiles())
+          + rows.map((m) => row(m.name, `data-mm-make="${escapeAttr(m.name)}" data-mm-make-id="${escapeAttr(m.id ?? '')}"`)).join('');
+      } else {
+        const models = curMake.id ? await searchModels(term(), curMake.id, 60).catch(() => []) : [];
+        if (stamp !== seq) return;
+        html = row(`← ${curMake.name}`, 'data-mm-back="1"')
+          + row(curMake.name, 'data-mm-any="1"')
+          + models.map((m) => row(`${curMake.name} ${m.name}`, `data-mm-model="${escapeAttr(m.name)}"`)).join('');
+      }
+      list.innerHTML = html || '<div class="brand-picker-empty">ვერ მოიძებნა</div>';
+    };
+
+    const scheduleRender = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(render, 140);
+    };
+
+    const reset = () => {
+      stage = 'make';
+      curMake = null;
+      if (search) search.value = '';
+    };
+
+    const finish = (make, model) => {
+      const previous = input.value;
+      const label = model ? `${make} ${model}` : make;
+      input.value = label;
+      setOpen(false);
+      reset();
+      if (onSelect) onSelect({ make, model: model || '', label }, { input, previous });
+    };
+
+    const enterModelStage = async (name, id) => {
+      let makeId = id;
+      if (!makeId) {
+        const makes = await loadMakes();
+        const hit = makes.find((m) => m.name.toLowerCase() === name.toLowerCase());
+        makeId = hit ? hit.id : '';
+      }
+      // A make we cannot list models for is still a valid pick on its own.
+      if (!makeId) {
+        finish(name, '');
+        return;
+      }
+      stage = 'model';
+      curMake = { id: makeId, name };
+      if (search) search.value = '';
+      if (!touch) input.value = `${name} `;
+      render();
+    };
+
+    input.addEventListener('focus', () => {
+      setOpen(true);
+      render();
+    });
+
+    input.addEventListener('input', () => {
+      setOpen(true);
+      // Erasing back past the chosen make abandons the drill-in.
+      if (stage === 'model' && curMake
+        && !input.value.trim().toLowerCase().startsWith(curMake.name.toLowerCase())) {
+        reset();
+      }
+      scheduleRender();
+    });
+
+    search?.addEventListener('input', scheduleRender);
+
+    const onEscape = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    input.addEventListener('keydown', onEscape);
+    search?.addEventListener('keydown', onEscape);
+
+    // mousedown so the pick wins the race against any blur.
+    list.addEventListener('mousedown', (event) => {
+      const back = event.target.closest('[data-mm-back]');
+      if (back) {
+        event.preventDefault();
+        reset();
+        render();
+        return;
+      }
+      const any = event.target.closest('[data-mm-any]');
+      if (any) {
+        event.preventDefault();
+        finish(curMake.name, '');
+        return;
+      }
+      const makeEl = event.target.closest('[data-mm-make]');
+      if (makeEl) {
+        event.preventDefault();
+        enterModelStage(makeEl.dataset.mmMake, makeEl.dataset.mmMakeId || '');
+        return;
+      }
+      const modelEl = event.target.closest('[data-mm-model]');
+      if (modelEl) {
+        event.preventDefault();
+        finish(curMake.name, modelEl.dataset.mmModel);
+      }
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      if (!picker.contains(event.target)) setOpen(false);
+    });
+  }
+
   window.AutoSwap = {
     assets,
     icons,
@@ -2598,6 +2789,8 @@
     georgianError,
     placeComboList,
     repositionComboLists,
+    mmPanelHTML,
+    bindMakeModelPicker,
     mapFeedRow,
     Header,
     Footer,

@@ -409,7 +409,6 @@ function SearchBar() {
           <input name="want" data-brand-input type="search" aria-label="რა მანქანა გინდა, მარკა ან მოდელი" placeholder="მარკა ან მოდელი" autocomplete="off" aria-controls="hero-brand-list" aria-expanded="false">
           <input name="make" data-brand-hidden type="hidden">
           <button class="brand-picker-clear" type="button" data-brand-clear aria-label="გასუფთავება" hidden>&times;</button>
-          <button class="btn btn-primary search-inline-submit" type="submit">${icons.search} ძებნა</button>
           <div class="brand-picker-panel" id="hero-brand-panel" data-brand-panel hidden>
             <!-- Typing surface on touch. The field itself goes readonly there so
                  tapping it opens this panel without raising the keyboard; the
