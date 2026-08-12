@@ -6,7 +6,8 @@
    ?next=<page> sends the user back where they came from. */
 const {
   Header, Footer, icons, sb, toast, escapeAttr, authReady,
-  signInWithProvider, normalizePhone, requestPhoneOtp, confirmPhoneOtp, AUTH_DEMO_CODE,
+  signInWithProvider, normalizePhone, requestPhoneOtp, confirmPhoneOtp, AUTH_DEMO_CODE,
+  autofillOtpFromSms,
 } = window.AutoSwap;
 
 const RESEND_COOLDOWN_S = 60;
@@ -200,7 +201,11 @@ function renderCodeStep(error) {
     renderPhoneStep();
   });
 
-  form.querySelector('[name="code"]').focus();
+  const codeInput = form.querySelector('[name="code"]');
+  codeInput.focus();
+  // Fills straight from the SMS on Chrome for Android and submits, so the
+  // code never has to be read across apps. No-ops elsewhere.
+  autofillOtpFromSms(codeInput, () => form.requestSubmit());
 }
 
 async function init() {

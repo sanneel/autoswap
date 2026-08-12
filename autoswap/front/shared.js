@@ -1567,6 +1567,55 @@
     return !user.phone && !(user.user_metadata && user.user_metadata.phone);
   }
 
+  // WebOTP. autocomplete="one-time-code" already gives iOS a suggestion the
+  // user has to tap; this fills the field outright on Chrome for Android and
+  // submits, so the code never has to be read or typed. Silently absent
+  // everywhere else, which is the intended degradation.
+  //
+  // Requires the SMS body to end with an origin-bound line the browser can
+  // match, otherwise the promise simply never resolves:
+  //     @autoswap.ge #123456
+  // Also requires a secure context, hence the isSecureContext guard — on
+  // plain http the call throws rather than no-oping.
+  //
+  // Returns an abort function: the request must be cancelled when the form
+  // goes away, or a pending get() outlives the modal and fills a field that
+  // is no longer on the page.
+  function autofillOtpFromSms(input, onFilled) {
+    const noop = () => {};
+    if (!input || !('OTPCredential' in window) || !window.isSecureContext) return noop;
+    let controller;
+    try {
+      controller = new AbortController();
+    } catch (_err) {
+      return noop;
+    }
+    navigator.credentials
+      .get({ otp: { transport: ['sms'] }, signal: controller.signal })
+      .then((credential) => {
+        const code = credential && credential.code;
+        if (!code || !input.isConnected) return;
+        input.value = code;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        if (typeof onFilled === 'function') onFilled(code);
+      })
+      .catch(() => { /* aborted, denied, or unsupported — the user types it */ });
+    // Abort as soon as the field leaves the page. The modal is torn down with
+    // overlay.remove() and dispatches no close event, so there is nothing to
+    // listen for — watching the DOM is what actually catches it. Without this
+    // a pending read keeps the browser's SMS prompt alive over a closed modal.
+    const stop = () => { try { controller.abort(); } catch (_err) { /* already gone */ } };
+    if (typeof MutationObserver === 'function') {
+      const observer = new MutationObserver(() => {
+        if (input.isConnected) return;
+        observer.disconnect();
+        stop();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+    return stop;
+  }
+
   async function requestPhoneAttach(phone) {
     const { error } = await sbClient.auth.updateUser({ phone });
     if (!error) return { demo: false };
@@ -1639,7 +1688,13 @@
         </form>
         <button type="button" class="auth-link-btn" data-close>მოგვიანებით</button>
       `;
-      step.querySelector('.otp-input').focus();
+      const otpInput = step.querySelector('.otp-input');
+      otpInput.focus();
+      // Cancelled on close so a pending read cannot outlive the modal.
+      autofillOtpFromSms(otpInput, () => {
+        const liveForm = step.querySelector('form');
+        if (liveForm) liveForm.requestSubmit();
+      });
       step.querySelector('#phone-req-otp').addEventListener('submit', async (otpEvent) => {
         otpEvent.preventDefault();
         const code = String(new FormData(otpEvent.currentTarget).get('code') || '').trim();
@@ -1803,7 +1858,13 @@
         showSuccess(authDisplayName(result.user || authUser));
       });
 
-      step.querySelector('.otp-input').focus();
+      const otpInput = step.querySelector('.otp-input');
+      otpInput.focus();
+      // Cancelled on close so a pending read cannot outlive the modal.
+      autofillOtpFromSms(otpInput, () => {
+        const liveForm = step.querySelector('form');
+        if (liveForm) liveForm.requestSubmit();
+      });
     }
 
     // Asked once, right after the number is verified, never before.
@@ -2332,6 +2393,7 @@
     labelFor,
     fuelLabel,
     getLogoUrl,
+    autofillOtpFromSms,
     formatCash,
     fallbackImageFor,
     georgianError,
