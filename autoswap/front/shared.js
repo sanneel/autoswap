@@ -1497,13 +1497,17 @@
     } catch (_err) {
       return { error: 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი და სცადე თავიდან.' };
     }
-    if (res.status === 404) {
-      // Not deployed — surface it rather than silently falling back to a path
+    let data = {};
+    try { data = await res.json(); } catch (_err) { /* status check still fires */ }
+    // A 404 carrying our own error body is the function replying, not the
+    // function missing — read the body before deciding. Treating every 404 as
+    // "not deployed" is what replaced a real provider message with a generic
+    // "try later", and hid why sends were failing.
+    if (res.status === 404 && !data.error) {
+      // Genuinely absent. Say so rather than silently falling back to a path
       // that skips rate limiting.
       return { error: 'სერვისი დროებით მიუწვდომელია. სცადე მოგვიანებით.' };
     }
-    let data = {};
-    try { data = await res.json(); } catch (_err) { /* status check still fires */ }
     return { res, data };
   }
 
@@ -1842,15 +1846,23 @@
         const liveForm = step.querySelector('form');
         if (liveForm) liveForm.requestSubmit();
       });
+      // Single-use requestId: see the note on the login modal's verify guard.
+      let attaching = false;
       step.querySelector('#phone-req-otp').addEventListener('submit', async (otpEvent) => {
         otpEvent.preventDefault();
+        if (attaching) return;
         const code = String(new FormData(otpEvent.currentTarget).get('code') || '').trim();
         if (!code) {
           showError('შეიყვანე SMS კოდი.');
           return;
         }
+        attaching = true;
+        const attachSubmit = otpEvent.currentTarget.querySelector('[type="submit"]');
+        if (attachSubmit) attachSubmit.disabled = true;
         const confirmed = await confirmPhoneAttach(phone, code, result.demo, attachRequestId);
         if (confirmed.error) {
+          attaching = false;
+          if (attachSubmit) attachSubmit.disabled = false;
           showError(confirmed.error);
           return;
         }
@@ -1995,15 +2007,26 @@
         bindPhoneStep();
       });
 
+      // A code is worth exactly one verify. Autofill calls requestSubmit() at
+      // the same moment the user taps the button, and the second call loses the
+      // race for a single-use requestId — which surfaced as an error flashing
+      // red for half a second before the first call logged the user in.
+      let verifying = false;
       step.querySelector('#otp-form').addEventListener('submit', async (event) => {
         event.preventDefault();
+        if (verifying) return;
         const code = String(new FormData(event.currentTarget).get('code') || '').trim();
         if (!code) {
           showError('შეიყვანე SMS კოდი.');
           return;
         }
+        verifying = true;
+        const submit = event.currentTarget.querySelector('[type="submit"]');
+        if (submit) submit.disabled = true;
         const result = await confirmOtp(phone, code, isDemo, requestId);
         if (result.error) {
+          verifying = false;
+          if (submit) submit.disabled = false;
           showError(result.error);
           return;
         }

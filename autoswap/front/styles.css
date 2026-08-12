@@ -289,14 +289,14 @@ svg {
 }
 
 
+/* Opaque, like the tab bar. A sticky header over a translucent ground let the
+   page slide visibly behind the logo and nav as you scrolled. */
 .site-header {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--material-thin);
+  background: #ffffff;
   border-bottom: 1px solid rgba(56, 64, 56, 0.1);
-  backdrop-filter: var(--blur-chrome);
-  -webkit-backdrop-filter: var(--blur-chrome);
 }
 
 .header-inner {
@@ -7717,7 +7717,8 @@ a.header-user:hover {
   color: var(--muted);
 }
 
-/* Sticky glass action bar. */
+/* Sticky action bar — opaque, matching the header and tab bar. It had the same
+   defect they do: form fields scrolled visibly through it. */
 .sell-shell--lite .sell-actions {
   position: sticky;
   bottom: 12px;
@@ -7725,11 +7726,9 @@ a.header-user:hover {
   justify-content: space-between;
   margin-top: 14px;
   padding: 12px 16px;
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  background: var(--material-regular);
-  backdrop-filter: var(--blur-chrome);
-  -webkit-backdrop-filter: var(--blur-chrome);
+  background: #ffffff;
   box-shadow: 0 12px 36px rgba(15, 20, 15, 0.14);
 }
 
@@ -7872,7 +7871,7 @@ body {
 .site-header {
   border-top: 0;
   border-bottom: 1px solid var(--market-line);
-  background: rgba(251, 251, 247, 0.96);
+  background: #ffffff;
   box-shadow: 0 1px 0 rgba(24, 34, 27, 0.03);
 }
 
@@ -8968,10 +8967,10 @@ body {
   background-attachment: fixed;
 }
 
+/* Opaque. This is the third and last .site-header background in the file, and
+   the one that actually won — the two earlier ones were already solid. */
 .site-header {
-  background: var(--material-thin);
-  backdrop-filter: var(--blur-chrome);
-  -webkit-backdrop-filter: var(--blur-chrome);
+  background: #ffffff;
 }
 
 .header-inner {
@@ -12780,10 +12779,15 @@ select[data-aselect]:focus-visible,
     --tabbar-h: calc(58px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Liquid glass: a genuinely translucent layer that refracts the content
-     scrolling under it, rather than a near-opaque bar with a token blur.
-     Heavy saturation + brightness is what gives the frosted-glass look
-     colour instead of grey, and the hairline highlight on top is the
+  /* Solid, not glass. The translucent version let car photos scroll visibly
+     through the bar — the labels sat on whatever was passing underneath, and
+     the bar stopped reading as a fixed surface. An opaque white ground keeps
+     the five destinations legible over any content.
+
+     Historical note on what was here before, kept because the reasoning still
+     applies if anyone reinstates it: the frosted look needed heavy saturation
+     and brightness to read as colour rather than grey, and the hairline on top
+     is the
      "edge of the pane" that sells it as a physical surface. */
   .tabbar {
     position: fixed;
@@ -12796,19 +12800,9 @@ select[data-aselect]:focus-visible,
     align-items: center;
     height: var(--tabbar-h);
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: rgba(255, 255, 255, 0.62);
-    backdrop-filter: blur(28px) saturate(190%) brightness(1.06);
-    -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.06);
-    border-top: 1px solid rgba(255, 255, 255, 0.7);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.85),
-      0 -8px 24px -18px rgba(15, 20, 15, 0.5);
-  }
-
-  /* Without backdrop-filter the 0.62 alpha would let text show through, so
-     fall back to a solid bar. */
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .tabbar { background: rgba(255, 255, 255, 0.97); }
+    background: #ffffff;
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -8px 24px -18px rgba(15, 20, 15, 0.5);
   }
 
   /* Fixed row heights so every icon sits on one baseline and every label on

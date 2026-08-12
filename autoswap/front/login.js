@@ -183,13 +183,19 @@ function renderCodeStep(error) {
   startResendCooldown();
 
   const form = document.querySelector('#code-form');
+  // Autofill's requestSubmit() and the user's own tap can both fire; the
+  // requestId is single-use, so the loser would flash an error over a sign-in
+  // that actually succeeded.
+  let verifying = false;
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (verifying) return;
     const code = String(new FormData(form).get('code') || '').trim();
     if (!/^\d{4,6}$/.test(code)) {
       renderCodeStep('შეიყვანე SMS კოდი.');
       return;
     }
+    verifying = true;
     form.querySelector('[type="submit"]').disabled = true;
     const result = await confirmPhoneOtp(currentPhone, code, currentIsDemo, currentRequestId);
     if (result.error) {

@@ -150,7 +150,13 @@ Deno.serve(async (req) => {
       if (e.code === "RATE_LIMIT_EXCEEDED") {
         return jsonResponse({ error: "Too many requests", retry_after: 60, blocked: true }, 429);
       }
-      return jsonResponse({ error: e.message, code: e.code }, e.status >= 400 && e.status < 600 ? e.status : 502);
+      // Always 502 for a provider failure, never the provider's own status.
+      // Forwarding it collided with transport-level meanings: verify.ge
+      // answering 404 made the browser think this Edge Function was missing and
+      // replace the real message with "service unavailable", hiding the one
+      // piece of information needed to diagnose the send. The provider's
+      // message and code travel in the body, where nothing reinterprets them.
+      return jsonResponse({ error: e.message, code: e.code, provider_status: e.status }, 502);
     }
   }
 
