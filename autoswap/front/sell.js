@@ -4,6 +4,7 @@ const {
   authReady, getAuthUser, onAuth, openAuthModal,
   bustListingCaches, searchMakes, searchModels, FUEL_LABELS,
   placeComboList, georgianError,
+  getCurrency, getUsdRate, onCurrencyChange,
 } = window.AutoSwap;
 
 const MAX_PHOTOS = 6;
@@ -45,6 +46,23 @@ function sellSection(index, bodyHTML, extraClass = '') {
   `;
 }
 
+
+
+// The stored figure is always GEL. The offer modal already converts what the
+// user types (shared.js offerAmountInGel) so a dollar figure is never written
+// as lari; the sell form did not, so with the header on $ it saved dollars
+// straight into a lari column. These two do the same job for this form.
+function cashAmountForDisplay(gel) {
+  const raw = Number(gel) || 0;
+  if (!raw) return '';
+  return getCurrency() === 'USD' ? Math.round(raw / getUsdRate()) : Math.round(raw);
+}
+
+function cashAmountToGel(entered) {
+  const raw = Number(entered) || 0;
+  if (raw <= 0) return 0;
+  return getCurrency() === 'USD' ? Math.round(raw * getUsdRate()) : Math.round(raw);
+}
 
 function iconField(icon, label, controlHTML, extraClass = '') {
   return `
@@ -99,7 +117,7 @@ function fieldRows(vehicle, prefs, wantsValue) {
     <div class="sell-grid">
       ${iconField(icons.swap, 'სასურველი მანქანა', `<input name="desired" placeholder="Audi A6, Mercedes E-Class" value="${escapeAttr(wantsValue || '')}">`)}
       ${iconField(icons.clock, 'თანხის სხვაობა', `<select name="cashMode">${cashOpts}</select>`)}
-      ${iconField(icons.tag, 'რამდენი (₾)', `<input name="amount" type="number" min="0" placeholder="0" value="${p.cash_amount || ''}" inputmode="numeric">`, 'field--cash-amount')}
+      ${iconField(icons.tag, `რამდენი (<span class="cash-cur-tag" data-cash-cur>${getCurrency() === 'USD' ? '$' : '₾'}</span>)`, `<input name="amount" type="number" min="0" placeholder="0" value="${cashAmountForDisplay(p.cash_amount)}" inputmode="numeric">`, 'field--cash-amount')}
     </div>
   `;
 
@@ -728,6 +746,28 @@ function bindCashAmount(form) {
   };
   mode.addEventListener('change', update);
   update();
+
+  // Flipping the header toggle has to move the label AND rescale whatever is
+  // already typed, otherwise the number silently changes meaning: 5000 under
+  // GEL becoming 5000 under USD is a ~2.7x difference in what gets saved.
+  // Subscribed once - bindCashAmount runs on every render and there is no
+  // unsubscribe, so guarding here avoids stacking duplicate callbacks.
+  if (!bindCashAmount.currencySubscribed && typeof onCurrencyChange === 'function') {
+    bindCashAmount.currencySubscribed = true;
+    let previous = getCurrency();
+    onCurrencyChange((cur) => {
+      document.querySelectorAll('[data-cash-cur]').forEach((el) => {
+        el.textContent = cur === 'USD' ? '$' : '₾';
+      });
+      const live = document.querySelector('[name="amount"]');
+      const raw = Number(live?.value) || 0;
+      if (live && raw > 0 && cur !== previous) {
+        const rate = getUsdRate() || 1;
+        live.value = cur === 'USD' ? Math.round(raw / rate) : Math.round(raw * rate);
+      }
+      previous = cur;
+    });
+  }
 }
 
 // An electric car has no engine displacement, so the field is set to 0.0 and
@@ -1217,7 +1257,7 @@ function readForm(form) {
     engine_size: num('engineSize'),
     description: str('description') || null,
     cash_mode: str('cashMode') || 'none',
-    cash_amount: num('amount') || 0,
+    cash_amount: cashAmountToGel(num('amount')),
     desired: str('desired'),
   };
 }

@@ -14488,3 +14488,17 @@ html {
     flex: 0 0 auto;
   }
 }
+
+/* ─── Catalog quickbar: collapse the grid when the arrows go ────────────
+   .catalog-quickbar is a three-column grid, arrow / rail / arrow. Hiding
+   the arrows with display:none removes them as grid items entirely, so
+   the rail dropped out of the middle 1323px track and into the first
+   34px one — measured clientWidth 34 against scrollWidth 918, with the
+   "ყველა" chip scrolled 42px out of view past the left edge.
+
+   The landing page's browse strip already collapses to one column for
+   exactly this reason; the catalog never needed it until syncRailArrows
+   started applying rail-no-overflow here too. */
+.catalog-quickbar.rail-no-overflow {
+  grid-template-columns: minmax(0, 1fr);
+}
