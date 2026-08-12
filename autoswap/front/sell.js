@@ -1555,7 +1555,11 @@ function renderDemo() {
       String(data.get('make') || '').trim(),
       String(data.get('model') || '').trim(),
     );
+    // On phones body is the scroll container (html is overflow:hidden so the
+    // document canvas stays put under Safari's toolbar), and window.scrollTo
+    // no-ops against a clipped document — reset both scrollers.
     window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
   });
 }
 

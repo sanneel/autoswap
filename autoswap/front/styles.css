@@ -12816,12 +12816,11 @@ select[data-aselect]:focus-visible,
     box-shadow: 0 -8px 24px -18px rgba(15, 20, 15, 0.5);
   }
 
-  /* Paint white from the bar's bottom edge downwards. On iOS the strip under
-     a bottom:0 fixed element — the home-indicator area, and the band Safari's
-     floating URL bar sits over — still shows page content scrolling past, so
-     the bar ended at a hard line with car photos moving beneath it. Height is
-     arbitrary but generous; it is clipped by the viewport and, being inside a
-     fixed element, adds no scrollable overflow. */
+  /* Paint white from the bar's bottom edge downwards. Kept as a backstop even
+     though iOS clips fixed-layer overhangs at the layout viewport (see the
+     scroll-container rules below, which are the fix that actually works on
+     iPhones) — on Android and in desktop emulation this still covers the
+     home-indicator band. */
   .tabbar::after {
     content: "";
     position: absolute;
@@ -12831,6 +12830,39 @@ select[data-aselect]:focus-visible,
     height: 160px;
     background: #ffffff;
     pointer-events: none;
+  }
+
+  /* ── Why the page, not the document, scrolls on phones ──────────────────
+     iOS Safari draws the page canvas all the way under its own bottom
+     toolbar, and in the collapsed-pill state the strip between our bar and
+     the physical bottom shows whatever page content comes next — car photos
+     sliding beneath the chrome. Nothing fixed can cover it: iOS clips
+     fixed-position layers at the layout viewport, which is exactly why the
+     ::after strip above (and a spread box-shadow before it) never showed on a
+     real iPhone while working in every emulator.
+
+     The only thing Safari will show down there apart from content is the
+     DOCUMENT CANVAS. So on touch devices the document stops scrolling
+     entirely: html is clipped and painted white, body becomes the scroll
+     container. Content now scrolls inside body and is clipped at the
+     viewport, and the under-toolbar zone shows the white canvas — which is
+     how myauto.ge gets its clean white band under the tab bar.
+
+     Safety notes, verified against this codebase: the two global scroll
+     listeners in shared.js use capture, so they still fire when body (not
+     window) scrolls; IntersectionObserver with root:null keys on the
+     viewport and is unaffected; sticky headers stick within the body
+     scroller; sell.js's scroll-to-top writes body.scrollTop as well. */
+  html {
+    overflow: hidden;
+    height: 100%;
+    background: #ffffff;
+  }
+
+  body {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Fixed row heights so every icon sits on one baseline and every label on
