@@ -12,19 +12,41 @@
 
 # Static multi-page site — no SPA rewrite. Each *.html is served directly.
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
 
 # Long-cache static assets; HTML stays revalidated so deploys are picked up.
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Security headers live in front/_headers, NOT here. They used to be
+# declared in both files and the two copies had drifted: this one blocked
+# geolocation but allowed payment, while _headers blocked payment but
+# allowed geolocation. Both apply, so one capability was left open
+# whichever won. One source of truth now.
+
+# Fingerprinted by the ?v=N query the HTML always requests them with, so
+# the URL changes on every deploy and a long immutable TTL is safe.
+# HTML is deliberately absent: it must stay revalidated or a deploy would
+# not be picked up until the cache expired.
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Exception, and it matters: supabase-config.js is generated at build
+# time from the Netlify env vars. If the anon key is rotated without the
+# ?v= being bumped, an immutable year-long cache would pin every visitor
+# to the dead key. Always revalidated.
+[[headers]]
+  for = "/supabase-config.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 # ─── Clean URLs ────────────────────────────────────────────────────────
 # Netlify already serves cars.html at /cars. These 301s make the old
