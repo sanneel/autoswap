@@ -82,6 +82,16 @@ function urlKnownMakes() {
   ]));
 }
 
+// The catalog returns some makes in caps (BENTLEY, MERCEDES-BENZ) and others
+// in title case, so the chip row read as a mix of shouting and normal words.
+// Title-case anything long enough to be a word; 3 letters or fewer is left
+// alone so genuine initialisms — BMW, KIA, GMC — are not mangled into Bmw.
+function tidyMakeCase(name) {
+  const raw = String(name || '');
+  if (raw.length <= 3 || raw !== raw.toUpperCase()) return raw;
+  return raw.toLowerCase().replace(/(^|[\s\-/])([a-z])/g, (m, sep, ch) => sep + ch.toUpperCase());
+}
+
 function displayURLMake(make) {
   if (make === 'Mercedes-Benz') return 'Mercedes';
   if (make === 'Volkswagen') return 'VW';
@@ -725,20 +735,24 @@ function CatalogQuickBar(count) {
   const countByMake = (make) => allCars.filter((car) => car.make === make).length;
   const countByCategory = (category) => allCars.filter((car) => car.category === category).length;
   const countByCash = (cash) => allCars.filter((car) => car.cashType === cash).length;
-  const brandChips = [
-    { make: 'BMW' },
-    { make: 'Mercedes-Benz', label: 'Mercedes' },
-    { make: 'Audi' },
-    { make: 'Toyota' },
-    { make: 'Porsche' },
-  ].filter((brand) => countByMake(brand.make) > 0);
+  // Was a hardcoded five (BMW, Mercedes, Audi, Toyota, Porsche), so any other
+  // make in the feed never got a chip no matter how many listings it had.
+  // Derived from what is actually listed now, most-listed first, capped so the
+  // rail stays a shortlist rather than a full index of every make.
+  const brandChips = Array.from(allCars.reduce((counts, car) => {
+    if (car.make) counts.set(car.make, (counts.get(car.make) || 0) + 1);
+    return counts;
+  }, new Map()))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 8)
+    .map(([make]) => ({ make, label: tidyMakeCase(displayURLMake(make)) }));
   const routeChips = [
     // No icon: sedan and crossover were both showing the same car glyph, which
     // distinguishes nothing and just pads the chip.
     { label: 'სედანი', href: '/cars?category=sedan', count: countByCategory('sedan'), active: currentFilters.category === 'sedan' },
     { label: 'ქროსოვერი', href: '/cars?category=crossover', count: countByCategory('crossover'), active: currentFilters.category === 'crossover' },
     { label: 'გარეშე', href: '/cars?cash=none', count: countByCash('none'), active: currentFilters.cash === 'none', icon: '<span class="quick-chip-symbol">₾</span>' },
-  ];
+  ].filter((chip) => chip.count > 0);
   const noQuickFilter = !currentFilters.make && !currentFilters.category && !currentFilters.cash;
 
   return `

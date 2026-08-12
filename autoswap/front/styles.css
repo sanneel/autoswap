@@ -14502,3 +14502,25 @@ html {
 .catalog-quickbar.rail-no-overflow {
   grid-template-columns: minmax(0, 1fr);
 }
+
+/* ─── Chip rails: let the flick run ─────────────────────────────────────
+   scroll-snap-type: x proximity with scroll-snap-align: start on every
+   chip made the rail grab and reposition mid-swipe, which is what read
+   as janky on a phone. Snap earns its place on a full-width carousel
+   where each slide is a destination; on a rail of small, variable-width
+   chips there is nothing meaningful to snap to and it just fights the
+   gesture. It also fights the desktop drag-to-scroll.
+
+   overscroll-behavior-x stops a horizontal flick that reaches the end
+   from chaining into the page and triggering a back-navigation. */
+.browse-pills,
+.catalog-quickbar-pills {
+  scroll-snap-type: none;
+  overscroll-behavior-x: contain;
+}
+
+.browse-pills > *,
+.catalog-quickbar-pills > *,
+.catalog-quickbar-pills a {
+  scroll-snap-align: none;
+}
