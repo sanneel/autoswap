@@ -70,12 +70,21 @@ requests will fail on a missing variable.
 
 ## 4. Domain cutover
 
+`autoswap.ge` already uses Cloudflare nameservers (`charles.ns.cloudflare.com`,
+`mia.ns.cloudflare.com`) — it was only its A records that pointed at Netlify. So
+there is **no registrar step**: adding the custom domain makes Cloudflare
+rewrite its own DNS.
+
 1. Deploy on the `*.pages.dev` URL first and check the site there.
-2. Pages → **Custom domains** → add `autoswap.ge` and `www.autoswap.ge`.
-3. Point the registrar's nameservers (or the `CNAME`/`A` records) at
-   Cloudflare, following the exact records the dashboard shows.
-4. Leave Netlify connected until DNS has propagated, then remove the domain
-   there so the two are not both claiming it.
+2. Pages → **Custom domains** → add `autoswap.ge`, then `www.autoswap.ge`.
+   Cloudflare replaces the Netlify A records itself; propagation is quick
+   because it controls the zone.
+3. Once it resolves, remove the domain from Netlify so the two are not both
+   claiming it, and delete `netlify.toml`.
+
+The domain does not change, so **Supabase Auth → URL Configuration needs no
+edit** — the Google OAuth redirect already allows this origin. That step only
+applies if the site ever moves to a different hostname.
 
 ## 5. Supabase is unaffected
 
