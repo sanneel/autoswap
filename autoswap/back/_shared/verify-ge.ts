@@ -7,7 +7,13 @@
 //
 // Docs:  https://verify.ge/ka/docs
 // Base:  https://api.verify.ge/api/v1     (override with VERIFY_GE_BASE_URL)
-// Auth:  X-API-Key: <VERIFY_GE_API_KEY>
+// Auth:  Authorization: Bearer <VERIFY_GE_API_KEY>
+//
+// Note the auth header: the published docs page says `X-API-Key`, and the API
+// rejects that with "authorization header is required". Their own SDK sends
+// `Authorization: Bearer`, which is what actually works — so the docs are
+// wrong, not the key. Both headers are sent, since the extra one costs nothing
+// and spares the next person this discovery.
 //
 // Responses come wrapped as { success, data } / { success, error }, but the
 // unwrapping below tolerates a bare object too — the published docs and the
@@ -56,7 +62,11 @@ async function call<T>(path: string, body: Record<string, unknown>): Promise<T> 
   try {
     res = await fetch(`${baseUrl()}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-API-Key": key },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+        "X-API-Key": key,
+      },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
