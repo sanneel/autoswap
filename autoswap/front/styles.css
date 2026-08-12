@@ -14777,3 +14777,40 @@ html {
     display: none;
   }
 }
+
+/* ── Combo unlock row (touch) ─────────────────────────────────────────────
+   First row of a locked filter dropdown. The field is readOnly on touch so
+   opening it shows options keyboard-down; this row is the explicit "I want
+   to type" affordance, mirroring the hero pickers' ძებნა box. */
+.combo-unlock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--copper);
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.combo-unlock-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  position: relative;
+}
+
+.combo-unlock-icon::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  right: -3px;
+  width: 6px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transform: rotate(45deg);
+}

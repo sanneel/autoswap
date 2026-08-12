@@ -24,6 +24,13 @@ const {
   placeComboList,
 } = window.AutoSwap;
 
+// On touch the filter combos open keyboard-down: the field is readOnly, the
+// dropdown shows its options plus a ძებნა row, and only tapping that row makes
+// the field editable and raises the keyboard. On a phone the keyboard covers
+// half the page, so it has to be opt-in rather than the price of a tap.
+const IS_TOUCH = typeof window.matchMedia === 'function'
+  && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
@@ -1170,6 +1177,9 @@ function setComboOpen(combo, open) {
   if (list) list.hidden = !open;
   if (input) input.setAttribute('aria-expanded', String(open));
   if (control) control.setAttribute('aria-expanded', String(open));
+  // Closing re-arms the keyboard suppression: the next tap should again give
+  // options first, whatever unlocking happened during this open.
+  if (!open && input && combo.dataset.touchLock === '1') input.readOnly = true;
   if (open) positionComboList(combo);
 }
 
@@ -1207,15 +1217,23 @@ function renderComboList(combo, items) {
   combo.__comboItems = items;
   const isMakeCombo = combo.dataset.combo === 'make';
   // Featured tiles only at rest; while filtering, the matches are the answer.
-  const typing = Boolean(combo.querySelector('.combo-input')?.value.trim());
+  const comboInput = combo.querySelector('.combo-input');
+  const typing = Boolean(comboInput?.value.trim());
   const featured = isMakeCombo && !typing ? featuredMakeRow() : '';
-  list.innerHTML = items.length
+  // The ძებნა row only exists while the field is still locked; once the user
+  // unlocks and types, the caret lives in the field and the row is done. It is
+  // re-rendered with the list, so it survives every innerHTML rewrite without
+  // any focus juggling — the input being typed into is outside this list.
+  const unlock = IS_TOUCH && comboInput?.readOnly
+    ? '<li class="combo-unlock" role="option" data-combo-unlock><span class="combo-unlock-icon"></span>ძებნა</li>'
+    : '';
+  list.innerHTML = unlock + (items.length
     ? featured + items.map((it, index) => {
       const type = it.type || 'model';
       const count = type === 'group' && Array.isArray(it.children) ? `<span class="combo-option-meta">${it.children.length} მოდელი</span>` : '';
       return `<li class="combo-option combo-option--${type}" role="option" data-index="${index}" data-name="${escapeHtml(it.name)}" data-id="${escapeHtml(it.id)}"><span class="combo-option-label">${escapeHtml(it.label || it.name)}</span>${count}</li>`;
     }).join('')
-    : featured + '<li class="combo-empty">ვერ მოიძებნა</li>';
+    : featured + '<li class="combo-empty">ვერ მოიძებნა</li>');
   setComboOpen(combo, true);
   setActiveComboOption(list, 0);
 }
@@ -1398,6 +1416,13 @@ function initCombos() {
     const clear = combo.querySelector('.combo-clear');
     let timer = null;
 
+    if (IS_TOUCH && input) {
+      // Locked until the dropdown's ძებნა row is tapped; the tap on the field
+      // still focuses it, so the option list opens keyboard-down.
+      input.readOnly = true;
+      combo.dataset.touchLock = '1';
+    }
+
     const run = async () => {
       if (input.disabled) return;
       const term = input.value.trim();
@@ -1431,6 +1456,23 @@ function initCombos() {
     });
     
     list.addEventListener('mousedown', (event) => {
+      // The ძებნა row hands the field back to the keyboard. blur() before
+      // focus() because the readonly field is already the active element —
+      // without the round trip iOS will not raise the keyboard for it. The
+      // __unlocking flag stops the blur handler's deferred close from
+      // slamming the dropdown shut mid-handoff.
+      const unlockRow = event.target.closest('[data-combo-unlock]');
+      if (unlockRow) {
+        event.preventDefault();
+        combo.__unlocking = true;
+        input.readOnly = false;
+        input.blur();
+        requestAnimationFrame(() => {
+          input.focus();
+          combo.__unlocking = false;
+        });
+        return;
+      }
       // A featured tile behaves as if the make had been typed, so the model
       // combo unlocks and the results update exactly as they would otherwise.
       const tile = event.target.closest('[data-featured-make]');
@@ -1438,7 +1480,7 @@ function initCombos() {
         event.preventDefault();
         input.value = tile.dataset.featuredMake;
         input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.focus();
+        if (!IS_TOUCH) input.focus();
         return;
       }
       const opt = event.target.closest('.combo-option');
@@ -1465,13 +1507,15 @@ function initCombos() {
       }
       if (event.key === 'Escape') setComboOpen(combo, false);
     });
-    input.addEventListener('blur', () => setTimeout(() => setComboOpen(combo, false), 140));
+    input.addEventListener('blur', () => setTimeout(() => {
+      if (!combo.__unlocking) setComboOpen(combo, false);
+    }, 140));
     clear.addEventListener('click', () => {
       input.value = '';
       clear.hidden = true;
       setComboOpen(combo, false);
       setComboValue(kind, '', '');
-      input.focus();
+      if (!IS_TOUCH) input.focus();
     });
   });
 

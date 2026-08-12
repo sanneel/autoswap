@@ -393,6 +393,13 @@ function SearchBar() {
           <input name="haveMake" data-have-make type="hidden">
           <input name="haveModel" data-have-model type="hidden">
           <div class="brand-picker-panel" data-have-panel hidden>
+            <!-- Same touch arrangement as the brand field below: the field is
+                 readOnly on coarse pointers, so tapping it opens this panel
+                 keyboard-down, and typing starts only in this box. -->
+            <div class="brand-picker-search" data-have-search-row hidden>
+              <span>${icons.search}</span>
+              <input type="search" data-have-search placeholder="ძებნა" autocomplete="off" aria-label="მანქანის ძებნა">
+            </div>
             <div class="brand-picker-list" id="have-brand-list" role="listbox" aria-label="მარკები და მოდელები"></div>
           </div>
         </div>
@@ -517,7 +524,19 @@ function bindHavePicker(form) {
   const selectedLogo = picker.querySelector('[data-have-selected-logo]');
   const panel = picker.querySelector('[data-have-panel]');
   const list = panel?.querySelector('.brand-picker-list');
+  const searchRow = picker.querySelector('[data-have-search-row]');
+  const search = picker.querySelector('[data-have-search]');
   if (!input || !makeInput || !modelInput || !panel || !list) return;
+
+  // Same touch arrangement as the brand picker: readOnly keeps the keyboard
+  // down when the field is tapped (the tap still focuses it, so the panel
+  // still opens), and the panel's ძებნა box is the opt-in typing surface.
+  const touch = typeof window.matchMedia === 'function'
+    && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  if (touch && search && searchRow) {
+    input.readOnly = true;
+    searchRow.hidden = false;
+  }
 
   let items = [];
   let activeIndex = -1;
@@ -576,10 +595,11 @@ function bindHavePicker(form) {
     window.clearTimeout(timer);
     const alreadyChosen = input.value.trim().toLowerCase() === item.label.toLowerCase();
     input.value = item.label;
+    if (search) search.value = item.label;
     setSelected({ make: item.make, model: stripResolvedMake(item.label, item.make) });
     // Same drill-in as the brand picker: make → show its models, stay open.
     if (item.group === 'make' && !alreadyChosen) {
-      input.focus();
+      if (!touch) input.focus();
       refresh();
       return;
     }
@@ -611,6 +631,24 @@ function bindHavePicker(form) {
     if (!input.value.trim()) setSelected(null);
   });
 
+  // Panel box writes through to the field so refresh() and every other
+  // input.value reader stays untouched.
+  search?.addEventListener('input', () => {
+    input.value = search.value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  search?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setOpen(false);
+    if (event.key === 'Enter') {
+      const first = list.querySelector('.brand-picker-option');
+      if (first) {
+        event.preventDefault();
+        choose(first.dataset.index);
+      }
+    }
+  });
+
   input.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
@@ -635,8 +673,10 @@ function bindHavePicker(form) {
     if (tile) {
       event.preventDefault();
       input.value = tile.dataset.featuredMake;
+      if (search) search.value = input.value;
       input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.focus();
+      // Refocusing on touch would raise the keyboard this panel avoids.
+      if (!touch) input.focus();
       return;
     }
     const option = event.target.closest('.brand-picker-option');
