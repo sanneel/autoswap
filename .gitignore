@@ -44,3 +44,7 @@ autoswap/tools/shots/
 .impeccable/
 .claude/
 skills-lock.json
+
+# Playwright artifacts
+test-results/
+playwright-report/
