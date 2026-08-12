@@ -1543,12 +1543,27 @@
   }
 
   // ---- Required phone for OAuth accounts ----------------------------------
-  // The number is the marketplace identity: Google users must attach
-  // one before the account is complete. Real path verifies via SMS
-  // (updateUser → phone_change OTP); without an SMS provider the number is
-  // stored on user_metadata after the labelled demo code.
+  // True when the session came from an OAuth provider rather than the phone
+  // OTP flow. Supabase reports this on app_metadata.provider, and mirrors it
+  // in identities[] once an account has more than one sign-in method linked.
+  function signedInWithOAuth(user) {
+    const provider = user && user.app_metadata && user.app_metadata.provider;
+    if (provider && provider !== 'phone') return true;
+    const identities = user && user.identities;
+    return Array.isArray(identities)
+      && identities.some((identity) => identity.provider && identity.provider !== 'phone');
+  }
+
+  // Phone is a SECOND factor now, not the marketplace identity. A Google
+  // account already arrives with a verified email, which is enough to own
+  // listings — nothing in the schema or the RLS policies gates writes on
+  // phone_verified, so the old required-phone modal was a self-imposed wall
+  // in front of the cheapest signup path, and every prompt it produced cost
+  // an SMS. Users can still add a number from the account page, and doing so
+  // still lights the owner_phone_verified trust badge on their listings.
   function needsPhone(user) {
     if (!user || user.demo) return false;
+    if (signedInWithOAuth(user)) return false;
     return !user.phone && !(user.user_metadata && user.user_metadata.phone);
   }
 
