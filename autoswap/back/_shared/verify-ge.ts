@@ -98,6 +98,34 @@ export interface SendResult {
   requestId: string;
   expiresAt?: string;
   status?: string;
+  /** What the provider actually used — not necessarily what we asked for. */
+  channel?: VerifyChannel;
+}
+
+/**
+ * GET /otp/{requestId} — used only to read back the delivered channel when the
+ * send response does not state it.
+ *
+ * This exists because asking for WHATSAPP does not guarantee WhatsApp: if the
+ * account has no WhatsApp entitlement verify.ge falls back to SMS silently, and
+ * a UI that then says "sent via WhatsApp" is simply lying to the user. Returns
+ * undefined on any failure — a cosmetic label is never worth failing a login.
+ */
+async function fetchChannel(requestId: string): Promise<VerifyChannel | undefined> {
+  const key = Deno.env.get("VERIFY_GE_API_KEY");
+  if (!key) return undefined;
+  try {
+    const res = await fetch(`${baseUrl()}/otp/${encodeURIComponent(requestId)}`, {
+      headers: { Authorization: `Bearer ${key}`, "X-API-Key": key },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return undefined;
+    const payload = await res.json();
+    const raw = String((payload?.data ?? payload)?.channel ?? "").toUpperCase();
+    return raw === "WHATSAPP" || raw === "SMS" ? (raw as VerifyChannel) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** POST /otp/send — returns the requestId the verify step is bound to. */
@@ -117,10 +145,17 @@ export async function sendOtp(
   if (!requestId) {
     throw new VerifyGeError("PROVIDER_ERROR", "verify.ge returned no requestId");
   }
+  // Prefer the channel the provider reports over the one we requested; fall
+  // back to a status lookup only when the send response is silent about it.
+  const echoed = String(data?.channel ?? "").toUpperCase();
+  const delivered: VerifyChannel | undefined = echoed === "WHATSAPP" || echoed === "SMS"
+    ? (echoed as VerifyChannel)
+    : await fetchChannel(requestId);
   return {
     requestId,
     expiresAt: data?.expiresAt ? String(data.expiresAt) : undefined,
     status: data?.status ? String(data.status) : undefined,
+    channel: delivered,
   };
 }
 

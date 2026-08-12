@@ -111,10 +111,13 @@ Deno.serve(async (req) => {
       // reads the phone back from this row and ignores whatever the browser
       // claims, which is what stops a caller from verifying their own code and
       // asking for somebody else's session.
+      // What actually went out, which is not always what was asked for: an
+      // account without a WhatsApp entitlement gets SMS instead, silently.
+      const delivered = sent.channel || channel;
       const { error: bindError } = await admin.rpc("otp_request_record", {
         p_request_id: sent.requestId,
         p_phone: phone,
-        p_channel: channel,
+        p_channel: delivered,
         p_purpose: purpose,
         p_user_id: attachUserId,
       });
@@ -129,7 +132,8 @@ Deno.serve(async (req) => {
         status: "sent",
         provider: "verify_ge",
         request_id: sent.requestId,
-        channel,
+        channel: delivered,
+        requested_channel: channel,
         purpose,
         expires_at: sent.expiresAt ?? null,
       });

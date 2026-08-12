@@ -1524,10 +1524,16 @@
     if (!res.ok) return { error: `კოდი ვერ გაიგზავნა: ${data.error || res.statusText}` };
     if (data.status === 'provider_disabled') return { demo: true };
     if (data.status === 'legacy_attach') return { demo: false, legacy: true };
+    const delivered = String(data.channel || 'SMS').toLowerCase();
+    const asked = String(data.requested_channel || delivered).toLowerCase();
     return {
       demo: false,
       requestId: data.request_id || null,
-      channel: String(data.channel || 'SMS').toLowerCase(),
+      channel: delivered,
+      // Asking for WhatsApp does not guarantee it — an account without the
+      // entitlement gets SMS instead. The code screen says so rather than
+      // leaving the user watching the wrong app.
+      fellBack: asked === 'whatsapp' && delivered !== 'whatsapp',
     };
   }
 
@@ -1808,10 +1814,11 @@
       const viaWhatsApp = (result.channel || channel) === 'whatsapp';
       step.innerHTML = `
         <p class="auth-sub">კოდი გაიგზავნა ${viaWhatsApp ? 'WhatsApp-ით' : 'SMS-ით'} ნომერზე <strong>${escapeAttr(phone)}</strong>.${result.demo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
-        <form class="offer-form" id="phone-req-otp" novalidate>
+        ${result.fellBack ? '<p class="auth-note">WhatsApp ამ ნომრისთვის მიუწვდომელია, კოდი SMS-ით გაიგზავნა.</p>' : ''}
+        <form class="offer-form" id="phone-req-otp" novalidate autocomplete="off">
           <label class="field">
             <span>ერთჯერადი კოდი</span>
-            <input class="otp-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••">
+            <input class="otp-input" type="text" name="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore maxlength="6" placeholder="••••">
           </label>
           <p class="auth-error" hidden></p>
           <button type="submit" class="btn btn-primary auth-submit">დადასტურება</button>
@@ -1954,18 +1961,19 @@
           showError(result.error);
           return;
         }
-        bindOtpStep(phone, result.demo, result.requestId, result.channel || channel);
+        bindOtpStep(phone, result.demo, result.requestId, result.channel || channel, result.fellBack);
       });
     }
 
-    function bindOtpStep(phone, isDemo, requestId, channel) {
+    function bindOtpStep(phone, isDemo, requestId, channel, fellBack) {
       const viaWhatsApp = channel === 'whatsapp';
       step.innerHTML = `
         <p class="auth-sub">კოდი გაიგზავნა ${viaWhatsApp ? 'WhatsApp-ით' : 'SMS-ით'} ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
-        <form class="offer-form" id="otp-form" novalidate>
+        ${fellBack ? '<p class="auth-note">WhatsApp ამ ნომრისთვის მიუწვდომელია, კოდი SMS-ით გაიგზავნა.</p>' : ''}
+        <form class="offer-form" id="otp-form" novalidate autocomplete="off">
           <label class="field">
             <span>ერთჯერადი კოდი</span>
-            <input class="otp-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••">
+            <input class="otp-input" type="text" name="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore maxlength="6" placeholder="••••">
           </label>
           <p class="auth-error" hidden></p>
           <button type="submit" class="btn btn-primary auth-submit">დადასტურება</button>

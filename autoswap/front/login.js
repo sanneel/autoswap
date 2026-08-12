@@ -65,11 +65,13 @@ function CodeStep(phone, isDemo, error) {
     <span class="auth-icon">${icons.check}</span>
     <h1>შეიყვანე კოდი</h1>
     <p class="auth-sub">კოდი გაიგზავნა ${currentChannel === 'whatsapp' ? 'WhatsApp-ით' : 'SMS-ით'} ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${AUTH_DEMO_CODE}</strong>.` : ' კოდი მოქმედებს 5 წუთის განმავლობაში.'}</p>
+    ${currentFellBack ? '<p class="auth-note">WhatsApp ამ ნომრისთვის მიუწვდომელია, კოდი SMS-ით გაიგზავნა.</p>' : ''}
     ${error ? `<p class="auth-error" role="alert">${escapeAttr(error)}</p>` : ''}
-    <form class="auth-form" id="code-form" novalidate>
+    <form class="auth-form" id="code-form" novalidate autocomplete="off">
       <label class="field">
         <span>ერთჯერადი კოდი</span>
-        <input type="text" name="code" required inputmode="numeric" autocomplete="one-time-code"
+        <input type="text" name="code" required inputmode="numeric" pattern="[0-9]*"
+               autocomplete="one-time-code" data-lpignore="true" data-1p-ignore
                maxlength="6" placeholder="0000" class="auth-code-input">
       </label>
       <button class="btn btn-primary auth-submit" type="submit">შესვლა</button>
@@ -88,6 +90,8 @@ let resendTimer = null;
 // session. Null means the legacy Supabase path, which verifies client-side.
 let currentRequestId = null;
 let currentChannel = 'sms';
+// True when WhatsApp was asked for but the provider delivered SMS instead.
+let currentFellBack = false;
 let readChannel = () => currentChannel;
 
 function friendlyError(message) {
@@ -168,6 +172,7 @@ function renderPhoneStep(error) {
     currentIsDemo = !!result.demo;
     currentRequestId = result.requestId || null;
     currentChannel = result.channel || channel;
+    currentFellBack = !!result.fellBack;
     renderCodeStep();
   });
   form.querySelector('[name="phone"]').focus();
@@ -208,6 +213,7 @@ function renderCodeStep(error) {
     // A resend mints a fresh code under a new requestId; the old one is dead.
     currentRequestId = result.requestId || null;
     currentChannel = result.channel || currentChannel;
+    currentFellBack = !!result.fellBack;
     toast('ახალი კოდი გაიგზავნა');
     renderCodeStep();
   });

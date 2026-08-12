@@ -4254,16 +4254,9 @@ p {
 }
 
 
-.listing-media img,
-.car-row-media img,
-.detail-main-media img {
-  transition: transform 320ms ease;
-}
-
-.listing-card:hover .listing-media img,
-.car-row:hover .car-row-media img {
-  transform: scale(1.045);
-}
+/* Card images used to scale up on hover. Removed: on a marketplace the photo
+   is the content, and nudging it under the cursor made the whole grid feel
+   restless while telling the user nothing about the car. */
 
 
 
@@ -6555,11 +6548,6 @@ a.header-user:hover {
 .car-card-media img {
   min-height: 212px;
   object-fit: cover;
-  transition: transform 320ms ease;
-}
-
-.car-card:hover .car-card-media img {
-  transform: scale(1.045);
 }
 
 
@@ -9764,9 +9752,6 @@ body {
   object-fit: cover;
 }
 
-.car-card:hover .car-card-media img {
-  transform: scale(1.025);
-}
 
 .fresh-tag {
   left: 12px;
@@ -10248,9 +10233,6 @@ body {
   object-fit: cover;
 }
 
-.listing-card:hover .listing-media img {
-  transform: scale(1.025);
-}
 
 .listing-wants {
   display: flex;
