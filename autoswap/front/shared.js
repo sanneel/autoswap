@@ -1560,9 +1560,13 @@
     if (requestId) {
       const { data, error } = await exchangeOtp(requestId, code);
       if (error) return { error: `კოდი ვერ დადასტურდა: ${error}` };
-      const { data: applied, error: sessionError } = await sbClient.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
+      // The server proves the number and hands back a single-use token hash;
+      // redeeming it here is what actually creates the session, so the tokens
+      // are minted by Supabase in this browser rather than shipped over the
+      // wire from the function.
+      const { data: applied, error: sessionError } = await sbClient.auth.verifyOtp({
+        token_hash: data.token_hash,
+        type: 'magiclink',
       });
       if (sessionError) return { error: `სესია ვერ შეიქმნა: ${georgianError(sessionError)}` };
       return { user: applied.user || (applied.session && applied.session.user) };

@@ -121,6 +121,11 @@ $$;
 --
 -- GoTrue stores E.164 without the leading '+', but both spellings are matched
 -- so a row written by any other path still resolves.
+--
+-- user_metadata.phone is also checked. Enabling Supabase's phone provider
+-- requires Twilio credentials this project does not have, so auth.users.phone
+-- is written on a best-effort basis and the metadata copy is the one guaranteed
+-- to be there. Matching both means a user resolves either way.
 create or replace function public.user_id_for_phone(p_phone text)
 returns uuid
 language sql
@@ -131,6 +136,8 @@ as $$
   select id
     from auth.users
    where phone in (replace(p_phone, '+', ''), p_phone)
+      or raw_user_meta_data->>'phone' = p_phone
+   order by created_at
    limit 1;
 $$;
 

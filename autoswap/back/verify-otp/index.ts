@@ -22,7 +22,8 @@
 //
 // Request:  POST { "request_id": "...", "code": "123456" }
 //           purpose 'attach' additionally requires Authorization: Bearer <jwt>
-// Response: 200 { "status": "signed_in", "access_token", "refresh_token" }
+// Response: 200 { "status": "signed_in", "token_hash": "..." }  — client redeems
+//                                                                  it via verifyOtp
 //           200 { "status": "attached" }                   — attach purpose
 //           400 { "error", "code": "INVALID_OTP_CODE" }    — wrong/expired code
 //           410 { "error" }                                — request spent
@@ -39,6 +40,17 @@ function clientIp(req: Request): string | undefined {
   const candidate = (fwd ? fwd.split(",")[0] : req.headers.get("x-real-ip") || "").trim();
   if (!candidate) return undefined;
   return IPV4_RE.test(candidate) || candidate.includes(":") ? candidate : undefined;
+}
+
+// A phone-only account still needs an address, because the session is minted
+// through the email provider (see "Mint the session" below). Nothing is ever
+// sent here: the subdomain exists only so GoTrue has a unique, stable handle
+// per number. Deliberately a subdomain of the real site so it can never
+// collide with a genuine address a user might own.
+const SHADOW_EMAIL_DOMAIN = Deno.env.get("SHADOW_EMAIL_DOMAIN") || "phone.autoswap.ge";
+
+function shadowEmail(phone: string): string {
+  return `p${phone.replace(/\D/g, "")}@${SHADOW_EMAIL_DOMAIN}`;
 }
 
 interface BoundRequest {
@@ -140,56 +152,81 @@ Deno.serve(async (req) => {
   }
 
   // --- Login: find or create the account for this number ---
-  let userId: string | null = null;
   const { data: existing, error: lookupError } = await admin.rpc("user_id_for_phone", { p_phone: phone });
   if (lookupError) {
     console.error("verify-otp: user_id_for_phone failed", lookupError.message);
     return jsonResponse({ error: "Verification unavailable" }, 500);
   }
-  userId = (existing as string | null) || null;
+  let userId = (existing as string | null) || null;
+  const email = shadowEmail(phone);
+  let linkEmail = email;
 
   if (!userId) {
+    // phone is best-effort (see shadowEmail), the metadata copy is not — the
+    // frontend already falls back to user_metadata.phone, and so does
+    // user_id_for_phone.
     const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: true,
       phone,
       phone_confirm: true,
+      user_metadata: { phone },
     });
     if (createError || !created?.user) {
-      console.error("verify-otp: createUser failed", createError?.message);
-      return jsonResponse({ error: createError?.message || "Could not create the account" }, 400);
+      // Retry without the phone field: enabling Supabase's phone provider needs
+      // Twilio credentials this project does not have, and GoTrue may refuse to
+      // store a phone while it is off. The number still lives in metadata.
+      const { data: retry, error: retryError } = await admin.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        user_metadata: { phone },
+      });
+      if (retryError || !retry?.user) {
+        console.error("verify-otp: createUser failed", createError?.message, retryError?.message);
+        return jsonResponse({ error: retryError?.message || "Could not create the account" }, 400);
+      }
+      userId = retry.user.id;
+    } else {
+      userId = created.user.id;
     }
-    userId = created.user.id;
+  } else {
+    // An existing account may already have a real address (Google sign-in) —
+    // keep it and mint against that. Only a user with no address at all gets
+    // the shadow one, which generateLink requires.
+    const { data: current } = await admin.auth.admin.getUserById(userId);
+    if (current?.user?.email) {
+      linkEmail = current.user.email;
+    } else {
+      const { error: emailError } = await admin.auth.admin.updateUserById(userId, {
+        email,
+        email_confirm: true,
+      });
+      if (emailError) {
+        console.error("verify-otp: shadow email attach failed", emailError.message);
+        return jsonResponse({ error: "Could not complete sign-in" }, 500);
+      }
+    }
   }
 
   // --- Mint the session ---
-  // Supabase has no admin "issue a session for this user" call, and
-  // generateLink() is email-only, so the supported route for a phone-first
-  // account is to set a fresh single-use credential and immediately spend it.
-  // The password is server-side only: it is written and used inside this
-  // function, never returned, and replaced on the next login. Nothing else in
-  // AutoSwap offers password sign-in, so there is no user-set value to clobber.
-  const password = `${crypto.randomUUID()}${crypto.randomUUID()}`;
-  const { error: pwError } = await admin.auth.admin.updateUserById(userId, {
-    password,
-    phone_confirm: true,
+  // Supabase has no admin "issue a session for this user" call. The phone
+  // routes are all gated behind the phone provider, which cannot be switched on
+  // without Twilio credentials — so the session is minted through the *email*
+  // provider instead, against the shadow address above.
+  //
+  // generateLink only generates: no mail is sent, nothing is delivered, and the
+  // hashed token it returns is handed straight to the browser, which redeems it
+  // for a real session (access + refresh) via verifyOtp. The address exists
+  // solely to give GoTrue something to hang that token on.
+  const { data: linked, error: linkError } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email: linkEmail,
   });
-  if (pwError) {
-    console.error("verify-otp: password rotation failed", pwError.message);
+  const tokenHash = linked?.properties?.hashed_token;
+  if (linkError || !tokenHash) {
+    console.error("verify-otp: generateLink failed", linkError?.message);
     return jsonResponse({ error: "Could not complete sign-in" }, 500);
   }
 
-  const anon = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!);
-  const { data: session, error: signInError } = await anon.auth.signInWithPassword({ phone, password });
-  if (signInError || !session?.session) {
-    // Nearly always means phone sign-in is switched off for the project. The
-    // provider settings can stay empty — no SMS is ever sent through Supabase
-    // on this path — but the phone provider itself has to be enabled.
-    console.error("verify-otp: signInWithPassword failed", signInError?.message);
-    return jsonResponse({ error: "Could not complete sign-in" }, 500);
-  }
-
-  return jsonResponse({
-    status: "signed_in",
-    access_token: session.session.access_token,
-    refresh_token: session.session.refresh_token,
-  });
+  return jsonResponse({ status: "signed_in", token_hash: tokenHash });
 });

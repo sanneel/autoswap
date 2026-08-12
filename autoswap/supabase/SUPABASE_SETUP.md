@@ -122,11 +122,22 @@ Set on the Edge Function secrets (Dashboard → Edge Functions → Secrets, or
 | --- | --- | --- |
 | `VERIFY_GE_API_KEY` | yes | enables this path; unset falls back to Supabase SMS |
 | `VERIFY_GE_BASE_URL` | no | defaults to `https://api.verify.ge/api/v1` |
+| `SHADOW_EMAIL_DOMAIN` | no | defaults to `phone.autoswap.ge` (see below) |
 
-Keep **Authentication → Providers → Phone** *enabled*. No SMS provider needs to
-be configured under it — nothing is ever sent through Supabase on this path —
-but `verify-otp` mints the session with `signInWithPassword({ phone })`, which
-the provider toggle gates.
+**Authentication → Providers → Email** must stay enabled. Phone does *not* need
+to be — and cannot be: Supabase refuses to enable its phone provider without
+Twilio Account SID, Auth Token, and Message Service SID, which is precisely what
+moving to verify.ge avoids.
+
+That is why the session is minted through the *email* provider. Each number gets
+a shadow address (`p995XXXXXXXXX@phone.autoswap.ge`) that exists only to give
+GoTrue a stable handle; **no mail is ever sent to it**, and `generateLink` only
+generates. An account that already has a real address (Google sign-in) keeps it
+and is minted against that instead.
+
+Because the phone provider is off, `auth.users.phone` is written best-effort and
+the number is always mirrored into `user_metadata.phone`. `user_id_for_phone`
+matches either, and the frontend already falls back to the metadata copy.
 
 ```bash
 supabase functions deploy request-otp && supabase functions deploy verify-otp
@@ -139,7 +150,8 @@ supabase functions deploy request-otp && supabase functions deploy verify-otp
 2. The browser gets only the `requestId` — never the code.
 3. `verify-otp` reads the phone **back from that row**, asks verify.ge to check
    the code, burns the row, then finds-or-creates the user and returns a
-   session the client applies with `setSession`.
+   single-use `token_hash`, which the browser redeems via
+   `verifyOtp({ token_hash, type: 'magiclink' })` to create the session.
 
 Step 3 is the security-critical one. The phone is deliberately never taken from
 the request body: a caller could otherwise verify a code sent to their own
