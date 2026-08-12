@@ -12860,14 +12860,17 @@ select[data-aselect]:focus-visible,
       inset 0 1px 0 rgba(255, 255, 255, 0.25);
   }
 
-  /* Ring of bar colour around the disc so it reads as sitting on top of the
-     glass rather than punched through it. */
+  /* Ring of bar colour around the disc, so it reads as sitting on top of the
+     bar rather than punched through it. Solid white, matching .tabbar: the
+     disc is raised 9–12px above the bar's top edge, so the upper part of this
+     ring overlaps page content — at 55% alpha that was the last place car
+     photos still showed through the bottom chrome. */
   .tabbar-item--primary .tabbar-icon::before {
     content: "";
     position: absolute;
     inset: -4px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.55);
+    background: #ffffff;
     z-index: -1;
   }
 
