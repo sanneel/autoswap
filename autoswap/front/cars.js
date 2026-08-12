@@ -732,12 +732,16 @@ function quickBrandLogo(make) {
     : '';
 }
 
-function quickChip({ href, label, count, icon = '', active = false, extraClass = '' }) {
+// No counts on the chips: the numbers made the rail read like analytics, and
+// worse, they contradicted the topbar whenever a filter was active (the chips
+// showed totals while the subtitle showed the filtered slice). The counts
+// still exist in the data — routeChips uses them to decide which chips to
+// show at all — they are just not printed.
+function quickChip({ href, label, icon = '', active = false, extraClass = '' }) {
   return `
     <a class="quick-chip${active ? ' is-active' : ''}${extraClass ? ` ${extraClass}` : ''}" href="${href}">
       ${icon}
       <span class="quick-chip-label">${label}</span>
-      <span class="quick-chip-count">${count}</span>
     </a>
   `;
 }
@@ -797,7 +801,7 @@ function CatalogPage() {
         <div class="container catalog-topbar-inner">
           <div class="catalog-topbar-copy">
             <h1>ავტომობილები გაცვლისთვის</h1>
-            <p><strong>${filtered.length}</strong> აქტიური განცხადება · მოძებნე მარკით, ქალაქით და თანხის სხვაობით</p>
+            <p><strong>${allCars.length}</strong> აქტიური განცხადება · მოძებნე მარკით, ქალაქით და თანხის სხვაობით</p>
           </div>
           <a class="btn btn-primary catalog-topbar-cta" href="/sell">${icons.plus} დაამატე მანქანა</a>
         </div>

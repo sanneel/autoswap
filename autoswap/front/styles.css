@@ -14832,3 +14832,115 @@ html {
     padding-bottom: 160px;
   }
 }
+
+/* ── Catalog filter panel, desktop ────────────────────────────────────────
+   The sidebar floated as loose fields over the page background — no edge, an
+   exposed scrollbar, faint labels — and read as filler rather than a control
+   panel. This gives it the same card language as the rest of the site: one
+   white surface with a real border, a delimited header, small-caps section
+   labels, and fields on the ivory ground used everywhere else. Desktop only;
+   the phone filter drawer has its own layout. */
+@media (min-width: 1024px) {
+  .catalog .filters {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--shadow-subtle);
+  }
+
+  .catalog .filters-form {
+    padding: 16px 16px 18px;
+  }
+
+  .catalog .filters-head {
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .catalog .filters-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--graphite);
+  }
+
+  .catalog .filters-title svg {
+    color: var(--copper);
+  }
+
+  .catalog .filters-reset {
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+
+  .catalog .filters-reset:hover {
+    color: var(--graphite);
+  }
+
+  .catalog .filters-scroll {
+    gap: 18px;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(90, 100, 89, 0.35) transparent;
+  }
+
+  .catalog .filters-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .catalog .filters-scroll::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background: rgba(90, 100, 89, 0.3);
+  }
+
+  .catalog .filter-group {
+    display: grid;
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .catalog .filter-group-head {
+    margin: 0;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .catalog .filter-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--secondary);
+  }
+
+  .catalog .filters-form select,
+  .catalog .filters-form input:not([type="checkbox"]):not([type="range"]) {
+    min-height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--warm-ivory);
+  }
+
+  .catalog .filters-form select:focus-visible,
+  .catalog .filters-form input:focus-visible {
+    border-color: var(--copper);
+    outline: 0;
+  }
+
+  .catalog .adv-chip {
+    min-height: 32px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+
+  .catalog .adv-chip.is-active {
+    border-color: var(--copper);
+    background: var(--copper);
+    color: #fff;
+  }
+}
