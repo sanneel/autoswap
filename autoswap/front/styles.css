@@ -3446,6 +3446,7 @@ body.modal-open {
   border-color: var(--panel-green);
 }
 
+
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -6093,43 +6094,61 @@ a.header-user:hover {
    a dropdown or a pair of buttons: the options are peers, both always visible,
    and the pick is a preference rather than an action — so it reads quiet and
    stays out of the way of the primary submit below it. */
+/* SMS / WhatsApp delivery choice. Two peer options, both always visible —
+   picking the wrong one leaves someone staring at an app the code will never
+   reach, so the selected state has to be unmistakable at a glance on a phone.
+   Sized to match .field input (46px) so the form reads as one column. */
 .otp-channel {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--soft-beige);
+  gap: 8px;
 }
 
 .otp-channel-opt {
-  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
   padding: 0 12px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--muted);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-white);
+  color: var(--secondary);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.otp-channel-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.otp-channel-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .otp-channel-opt:hover {
+  border-color: var(--panel-green);
   color: var(--graphite);
 }
 
+/* Selected: green border + tinted ground + weight. Three cues rather than one,
+   because a lone border change is easy to miss in daylight on a phone. */
 .otp-channel-opt.is-on {
-  background: var(--card-white);
-  color: var(--graphite);
-  box-shadow: var(--shadow-subtle);
+  border-color: var(--copper);
+  background: var(--accent-soft);
+  color: var(--copper);
+  font-weight: 800;
 }
 
 .otp-channel-opt:focus-visible {
   outline: 2px solid var(--copper);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -14594,4 +14613,33 @@ html {
    beside it stayed perfectly centred. */
 .hero--garage .hero-copy p {
   margin-inline: auto;
+}
+
+/* ── iOS focus zoom ───────────────────────────────────────────────────────
+   Safari on iOS zooms the whole page in when a focused control's text is
+   under 16px, and it does not zoom back out on blur. That is what read as
+   the site "zooming in" on a phone: tap the number field and the layout is
+   left magnified, clipped at the right edge, for the rest of the session.
+
+   Twelve rules across this file size controls between 12px and 14.5px, several
+   at specificity 0,2,1 (`.sell-section .field input`, `.garage-search
+   .search-field select`, `.adv-range select`, …), so a plain `input { }`
+   override loses. Each :not() below contributes its argument's specificity,
+   giving 0,2,2 — enough to win without !important — and sitting last in the
+   file also wins on source order. All three selectors need the pair: `body
+   select` alone is 0,0,2 and lost to `.adv-range select`.
+
+   The type checks read as "every form control except checkboxes and radios",
+   which is the actual intent; on select and textarea they are vacuously true
+   and there only to carry the weight.
+
+   Touch pointers only, so the denser desktop sizing is untouched. Do NOT
+   "fix" this with maximum-scale=1 on the viewport instead: that takes
+   pinch-zoom away from everyone, including people who need it to read. */
+@media (hover: none) and (pointer: coarse) {
+  body input:not([type="checkbox"]):not([type="radio"]),
+  body select:not([type="checkbox"]):not([type="radio"]),
+  body textarea:not([type="checkbox"]):not([type="radio"]) {
+    font-size: 16px;
+  }
 }

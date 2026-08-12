@@ -67,7 +67,7 @@ function CodeStep(phone, isDemo, error) {
     <p class="auth-sub">კოდი გაიგზავნა ${currentChannel === 'whatsapp' ? 'WhatsApp-ით' : 'SMS-ით'} ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${AUTH_DEMO_CODE}</strong>.` : ' კოდი მოქმედებს 5 წუთის განმავლობაში.'}</p>
     ${currentFellBack ? '<p class="auth-note">WhatsApp ამ ნომრისთვის მიუწვდომელია, კოდი SMS-ით გაიგზავნა.</p>' : ''}
     ${error ? `<p class="auth-error" role="alert">${escapeAttr(error)}</p>` : ''}
-    <form class="auth-form" id="code-form" novalidate autocomplete="off">
+    <form class="auth-form" id="code-form" novalidate>
       <label class="field">
         <span>ერთჯერადი კოდი</span>
         <input type="text" name="code" required inputmode="numeric" pattern="[0-9]*"
