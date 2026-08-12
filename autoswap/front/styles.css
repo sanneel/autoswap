@@ -290,11 +290,17 @@ svg {
 
 
 /* Opaque, like the tab bar. A sticky header over a translucent ground let the
-   page slide visibly behind the logo and nav as you scrolled. */
+   page slide visibly behind the logo and nav as you scrolled.
+
+   The padding-top is the other half of viewport-fit=cover: with cover on, the
+   page paints under the status bar / notch, so without this the brand row
+   would sit beneath the clock. It resolves to 0 everywhere that has no inset,
+   so nothing changes off-iOS. */
 .site-header {
   position: sticky;
   top: 0;
   z-index: 50;
+  padding-top: env(safe-area-inset-top, 0px);
   background: #ffffff;
   border-bottom: 1px solid rgba(56, 64, 56, 0.1);
 }

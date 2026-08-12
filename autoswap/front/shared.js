@@ -1534,7 +1534,21 @@
       // Reuse the existing "code could not be sent" wrapper; owner owns copy.
       return { error: `კოდი ვერ გაიგზავნა: ${data.error || 'too many requests'} (${wait}s)` };
     }
-    if (!res.ok) return { error: `კოდი ვერ გაიგზავნა: ${data.error || res.statusText}` };
+    if (!res.ok) {
+      // The provider's own code and HTTP status never reach the user-facing
+      // string, and they are what actually identify a send failure — an
+      // entitlement problem and an out-of-credit problem read identically
+      // otherwise. Logged so a failure can be diagnosed from the console
+      // without another round of guessing.
+      console.error('request-otp failed', {
+        status: res.status,
+        provider_status: data.provider_status,
+        code: data.code,
+        error: data.error,
+        channel: channel || preferredChannel(),
+      });
+      return { error: `კოდი ვერ გაიგზავნა: ${data.error || res.statusText}` };
+    }
     if (data.status === 'provider_disabled') return { demo: true };
     if (data.status === 'legacy_attach') return { demo: false, legacy: true };
     const delivered = String(data.channel || 'SMS').toLowerCase();
