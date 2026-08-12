@@ -12806,6 +12806,11 @@ select[data-aselect]:focus-visible,
     align-items: center;
     height: var(--tabbar-h);
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Landscape on a notched phone puts the notch at one side; with
+       viewport-fit=cover the bar spans under it, so the end tabs would sit
+       beneath the cutout without these. Zero in portrait and off-iOS. */
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
     background: #ffffff;
     border-top: 1px solid var(--border);
     box-shadow: 0 -8px 24px -18px rgba(15, 20, 15, 0.5);
@@ -12896,7 +12901,8 @@ select[data-aselect]:focus-visible,
   .tabbar-item--primary { position: relative; }
   .tabbar-item--primary .tabbar-icon { position: relative; }
   .tabbar-item--primary .tabbar-label { color: var(--copper); }
-  .tabbar-item--primary:active .tabbar-icon { transform: translateY(-9px) scale(0.94); }
+  /* No press-shrink. "Remove every zoom effect" included this one; the tab
+     still gives feedback through .tabbar-item:active's background tint. */
 
   .tabbar-item--primary .tabbar-icon svg { width: 20px; height: 20px; stroke-width: 2.4; }
   .tabbar-item--primary.is-active .tabbar-icon { background: var(--copper-hover); }
@@ -13619,8 +13625,10 @@ select[data-aselect]:focus-visible,
     transform: translateY(-12px);
   }
 
+  /* Press-shrink removed here too; the raised offset is kept so the disc does
+     not jump on tap. */
   .tabbar-item--primary:active .tabbar-icon {
-    transform: translateY(-12px) scale(0.94);
+    transform: translateY(-12px);
   }
 }
 
