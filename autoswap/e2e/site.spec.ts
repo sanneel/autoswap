@@ -47,7 +47,22 @@ for (const bp of BREAKPOINTS) {
       pageErrors = [];
 
       page.on('console', msg => {
-        if (msg.type() === 'error') consoleErrors.push(msg.text());
+        if (msg.type() !== 'error') return;
+        const text = msg.text();
+        // "Failed to load resource" lines carry no URL, so a Supabase 429
+        // under parallel load is indistinguishable from a broken local asset
+        // and was flipping random tests red. The response listener below
+        // replaces them: same-origin failures still fail, with the URL named;
+        // third-party flakes no longer decide the run. CSP violations and
+        // script errors don't match this prefix and still land here.
+        if (/^Failed to load resource/.test(text)) return;
+        consoleErrors.push(text);
+      });
+
+      page.on('response', res => {
+        if (res.status() >= 400 && res.url().startsWith(BASE_URL)) {
+          consoleErrors.push(`HTTP ${res.status()} ${res.url()}`);
+        }
       });
 
       page.on('pageerror', err => {
