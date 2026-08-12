@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL || 'https://autoswap-6gx.pages.dev';
+const BASE_URL = process.env.BASE_URL || 'https://autoswap.ge';
 const BREAKPOINTS = [
   { name: 'mobile', width: 375, height: 812 },
   { name: 'tablet', width: 768, height: 1024 },
@@ -58,11 +58,20 @@ for (const bp of BREAKPOINTS) {
     test('global navigation and footer links resolve', async ({ page }) => {
       await gotoAndWait(page, ROUTES.carsTbilisi);
 
-      await expect(page.getByRole('link', { name: /მთავარი/i })).toBeVisible();
+      // `მთავარი`, `პროფილი` and `დამატება` live only in the tab bar, which is
+      // phone-and-tablet only — the desktop header carries the nav instead. So
+      // those are asserted below 1024px and skipped above it, rather than
+      // pretending a hidden element should be visible.
+      // `მთავარი` also matches the brand link's aria-label ("AutoSwap მთავარი
+      // გვერდი"), and `ჩვენ შესახებ` appears in header and footer — exact/first
+      // keeps both out of strict-mode violations.
+      if (bp.width < 1024) {
+        await expect(page.getByRole('link', { name: 'მთავარი', exact: true })).toBeVisible();
+        await expect(page.getByRole('link', { name: /დამატება|განცხადების დამატება/i }).first()).toBeVisible();
+        await expect(page.getByRole('link', { name: /პროფილი/i })).toBeVisible();
+      }
       await expect(page.getByRole('link', { name: /გაცვლები/i }).first()).toBeVisible();
-      await expect(page.getByRole('link', { name: /დამატება|განცხადების დამატება/i }).first()).toBeVisible();
-      await expect(page.getByRole('link', { name: /პროფილი/i })).toBeVisible();
-      await expect(page.getByRole('link', { name: /ჩვენ შესახებ/i })).toBeVisible();
+      await expect(page.getByRole('link', { name: /ჩვენ შესახებ/i }).first()).toBeVisible();
       await expect(page.getByRole('link', { name: /წესები/i })).toBeVisible();
       await expect(page.getByRole('link', { name: /კონფიდენციალურობა/i })).toBeVisible();
       await expect(page.getByRole('link', { name: /კონტაქტი/i })).toBeVisible();
@@ -76,7 +85,8 @@ for (const bp of BREAKPOINTS) {
 
       await expect(page.getByRole('heading', { name: /ავტომობილები გაცვლისთვის/i })).toBeVisible();
       await expect(page.getByText(/აქტიური განცხადება/i).first()).toBeVisible();
-      await expect(page.getByRole('link', { name: /დაამატე მანქანა/i })).toBeVisible();
+      // Header CTA and catalog topbar CTA share this label.
+      await expect(page.getByRole('link', { name: /დაამატე მანქანა/i }).first()).toBeVisible();
       await expect(page.getByRole('combobox', { name: /დალაგება/i })).toBeVisible();
       await expect(page.getByRole('link', { name: /Toyota/i }).first()).toBeVisible();
       await expect(page.getByRole('link', { name: /BMW/i }).first()).toBeVisible();
@@ -153,7 +163,9 @@ for (const bp of BREAKPOINTS) {
     test('static content pages load', async ({ page }) => {
       for (const path of [ROUTES.about, ROUTES.terms, ROUTES.privacy]) {
         await gotoAndWait(page, path);
-        await expect(page.locator('main, body')).toContainText(/AutoSwap|ავტო|გაცვლ/i);
+        // 'main, body' is two elements on these pages, which strict mode
+        // rejects; body already covers the assertion.
+        await expect(page.locator('body')).toContainText(/AutoSwap|ავტო|გაცვლ/i);
       }
 
       await assertNoConsoleErrors(page, consoleErrors);
@@ -170,13 +182,16 @@ for (const bp of BREAKPOINTS) {
     });
 
     test('account and offers pages are reachable', async ({ page }) => {
+      // Both are gated: a signed-out browser is sent to /login?next=… . That
+      // redirect IS the correct behaviour, so assert either destination rather
+      // than pretending the account page renders without a session.
       await gotoAndWait(page, ROUTES.account);
-      await expect(page).toHaveURL(/\/account/);
-      await expect(page.locator('body')).toContainText(/პროფილი|account|შეთავაზებ/i);
+      await expect(page).toHaveURL(/\/account|\/login\?next=/);
+      await expect(page.locator('body')).toContainText(/პროფილი|account|შეთავაზებ|შესვლა/i);
 
       await gotoAndWait(page, ROUTES.offers);
-      await expect(page).toHaveURL(/tab=offers/);
-      await expect(page.locator('body')).toContainText(/შეთავაზებ|offers/i);
+      await expect(page).toHaveURL(/tab=offers|\/login\?next=/);
+      await expect(page.locator('body')).toContainText(/შეთავაზებ|offers|შესვლა/i);
 
       await assertNoConsoleErrors(page, consoleErrors);
       await assertNoPageErrors(page, pageErrors);
@@ -187,9 +202,9 @@ for (const bp of BREAKPOINTS) {
       await gotoAndWait(page, ROUTES.carsTbilisi);
 
       const navLinks = [
-        page.getByRole('link', { name: /მთავარი/i }),
+        page.getByRole('link', { name: 'მთავარი', exact: true }),
         page.getByRole('link', { name: /^გაცვლები$/i }).last(),
-        page.getByRole('link', { name: /დამატება/i }),
+        page.getByRole('link', { name: /დამატება/i }).first(),
         page.getByRole('link', { name: /შეთავაზებები/i }),
         page.getByRole('link', { name: /პროფილი/i }),
       ];
@@ -214,9 +229,11 @@ for (const bp of BREAKPOINTS) {
 
     test('regression: save CTAs render on cards', async ({ page }) => {
       await gotoAndWait(page, ROUTES.carsTbilisi);
-      const saveTexts = page.getByText(/შენახვა/i);
-      await expect(saveTexts.first()).toBeVisible();
-      await expect(saveTexts).toHaveCount(12);
+      // The save control is an icon-only button — the word lives in its
+      // aria-label ("<car> შენახვა"), so getByText finds nothing.
+      const saveButtons = page.getByRole('button', { name: /შენახვა/i });
+      await expect(saveButtons.first()).toBeVisible();
+      await expect(saveButtons).toHaveCount(12);
 
       await assertNoConsoleErrors(page, consoleErrors);
       await assertNoPageErrors(page, pageErrors);
