@@ -14524,3 +14524,43 @@ html {
 .catalog-quickbar-pills a {
   scroll-snap-align: none;
 }
+
+/* ─── Card titles were being sliced, not clamped ────────────────────────
+   .car-card .card-title-link sets -webkit-line-clamp: 2 with
+   display: -webkit-box — but it is also `flex: 1 1 auto`, i.e. a flex
+   item, and flex items get their display blockified. Chrome computes it
+   to flow-root, the clamp is discarded, and the bare `overflow: hidden`
+   cuts the third line off mid-stroke with no ellipsis. Measured on seven
+   cards: scrollHeight 72 against clientHeight 54.
+
+   Fixing the clamp itself would need the anchor to stop being a flex
+   item, which is what sizes the title against the year badge beside it.
+   Cheaper and more robust: stop constraining the height at all. Two
+   lines was never enough for real names — "Toyota Camry LE 4dr Sedan
+   Automatic" needs three — and letting the title wrap costs a few pixels
+   of card height instead of hiding what the listing is called. */
+.car-card .card-title-link,
+.card-title-link {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: none;
+  max-height: none;
+}
+
+.car-card .car-row-title {
+  align-items: flex-start;
+}
+
+/* ─── Hero subtitle centring ────────────────────────────────────────────
+   Regression I introduced restoring the headline: the original
+   `.hero-copy p` carried `margin: 14px auto 0`, and that `auto` was what
+   centred the paragraph box inside .hero-copy. Overriding it with
+   `margin: 0` left a 610px box flush against the left of an 820px block
+   — (820-610)/2 = 105px off centre, exactly what was measured.
+
+   text-align: center still centred the text inside its own box, so it
+   read as subtly wrong rather than obviously broken, and the heading
+   beside it stayed perfectly centred. */
+.hero--garage .hero-copy p {
+  margin-inline: auto;
+}
