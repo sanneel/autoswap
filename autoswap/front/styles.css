@@ -14944,3 +14944,51 @@ html {
     color: #fff;
   }
 }
+
+/* ── Footer separators, one mechanism at every width ──────────────────────
+   Bullets used to be a ::before on `a + a`, which only worked above 1100px:
+   below that the nav became a two-column grid with no separators at all,
+   because a leading bullet can dangle at the start of a wrapped line.
+
+   Attaching the bullet to the PRECEDING link with ::after removes that
+   failure mode entirely — the separator lives inside the link's own box, so
+   a wrapped line can never begin with one. That makes the grid unnecessary,
+   so the nav is a wrapped inline row at every size, and the accumulated
+   threshold rules above collapse into this block. :not(:last-child) keeps
+   the trailing bullet from appearing after the final link. */
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0;
+  row-gap: 0;
+}
+
+.footer-nav a {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding-block: 8px;
+  margin-block: 0;
+}
+
+.footer-nav a::before {
+  content: none;
+}
+
+.footer-nav a:not(:last-child)::after {
+  content: "•";
+  display: inline;
+  margin: 0 10px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
+  vertical-align: baseline;
+  line-height: 1;
+  pointer-events: none;
+}
+
+@media (max-width: 1099px) {
+  .footer-nav {
+    display: flex;
+    grid-template-columns: none;
+  }
+}

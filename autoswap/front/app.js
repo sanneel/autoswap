@@ -401,7 +401,6 @@ function SearchBar() {
       <div class="swap-search-top">
         <div class="search-field have-search-field" data-have-picker>
           <span>${icons.car}</span>
-          <span class="brand-picker-selected-logo have-picker-selected-logo" data-have-selected-logo aria-hidden="true" hidden></span>
           <input name="have" data-have-input type="text" aria-label="რა მანქანა გყავს" placeholder="რა მანქანა გყავს?" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="have-brand-list">
           <input name="haveMake" data-have-make type="hidden">
           <input name="haveModel" data-have-model type="hidden">
@@ -418,7 +417,6 @@ function SearchBar() {
         </div>
         <div class="search-field search-brand-field" data-brand-picker>
           <span>${icons.search}</span>
-          <span class="brand-picker-selected-logo" data-brand-selected-logo aria-hidden="true" hidden></span>
           <input name="want" data-brand-input type="search" aria-label="რა მანქანა გინდა, მარკა ან მოდელი" placeholder="მარკა ან მოდელი" autocomplete="off" aria-controls="hero-brand-list" aria-expanded="false">
           <input name="make" data-brand-hidden type="hidden">
           <button class="brand-picker-clear" type="button" data-brand-clear aria-label="გასუფთავება" hidden>&times;</button>
@@ -533,7 +531,6 @@ function bindHavePicker(form) {
   const input = picker.querySelector('[data-have-input]');
   const makeInput = picker.querySelector('[data-have-make]');
   const modelInput = picker.querySelector('[data-have-model]');
-  const selectedLogo = picker.querySelector('[data-have-selected-logo]');
   const panel = picker.querySelector('[data-have-panel]');
   const list = panel?.querySelector('.brand-picker-list');
   const searchRow = picker.querySelector('[data-have-search-row]');
@@ -566,13 +563,6 @@ function bindHavePicker(form) {
     makeInput.value = make;
     modelInput.value = vehicle?.model || '';
     picker.classList.toggle('has-selection', Boolean(make));
-    if (selectedLogo) {
-      // Only show the tile when we have a real logo, otherwise it duplicates
-      // the default car glyph already sitting in the field.
-      const showTile = Boolean(make) && hasBrandLogo(make);
-      selectedLogo.hidden = !showTile;
-      selectedLogo.innerHTML = showTile ? brandLogo(make) : '';
-    }
   };
 
   const renderPanel = () => {
@@ -707,7 +697,6 @@ function bindBrandPicker(form) {
   const input = picker.querySelector('[data-brand-input]');
   const hidden = picker.querySelector('[data-brand-hidden]');
   const clear = picker.querySelector('[data-brand-clear]');
-  const selectedLogo = picker.querySelector('[data-brand-selected-logo]');
   const panel = picker.querySelector('[data-brand-panel]');
   const list = panel?.querySelector('.brand-picker-list');
   const searchRow = picker.querySelector('[data-brand-search-row]');
@@ -741,13 +730,6 @@ function bindBrandPicker(form) {
   const setSelected = (make) => {
     hidden.value = make || '';
     picker.classList.toggle('has-selection', Boolean(make));
-    if (selectedLogo) {
-      // Only show the tile when we have a real logo, otherwise it duplicates
-      // the default car glyph already sitting in the field.
-      const showTile = Boolean(make) && hasBrandLogo(make);
-      selectedLogo.hidden = !showTile;
-      selectedLogo.innerHTML = showTile ? brandLogo(make) : '';
-    }
     if (clear) clear.hidden = !make && !input.value.trim();
   };
 
