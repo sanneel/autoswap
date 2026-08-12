@@ -20,12 +20,21 @@ Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** →
 | Build output directory | `front` |
 | Root directory | `autoswap` |
 
-`wrangler.toml` already declares `pages_build_output_dir = "front"`, and
-`.node-version` pins Node 22, so those two are picked up automatically.
+`.node-version` pins Node 22, so the runtime is picked up automatically.
+
+**Do not add a `wrangler.toml` to this project.** When Pages finds one it reads
+the build configuration from the file instead of the dashboard, and the build
+log then reports `Build environment variables: (none found)` — the dashboard
+variables below are ignored and the build fails on the missing Supabase config.
+Putting them in the file instead would mean committing the anon key, and this
+repo deliberately gitignores `front/supabase-config.js` to keep environment
+values out of version control. Dashboard-only is the arrangement that satisfies
+both.
 
 ## 2. Environment variables
 
-Settings → **Variables and secrets**, for **Production** *and* **Preview**:
+These are what the first build fails without. Set them in the project's
+**Settings → Variables and secrets**, for **Production** *and* **Preview**:
 
 | name | value |
 | --- | --- |
