@@ -1148,7 +1148,9 @@ async function loadCurrentMakeModels() {
 
 
 async function comboSearch(kind, term) {
-  if (kind === 'make') return searchMakes(term, 40);
+  // 200 not 40: the catalog holds 156 makes and the dropdown scrolls, so a
+  // page-sized cap silently hid the alphabet's second half.
+  if (kind === 'make') return searchMakes(term, 200);
 
   if (!currentFilters.make) return [];
   const models = await loadCurrentMakeModels();

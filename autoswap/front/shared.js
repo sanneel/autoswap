@@ -2645,11 +2645,15 @@
       if (stage === 'make') {
         const makes = await loadMakes();
         if (stamp !== seq) return;
-        const rows = (q ? makes.filter((m) => m.name.toLowerCase().includes(q)) : makes).slice(0, 60);
+        // No browsing cap: the list is scrollable and hiding the tail made
+        // whole brands (everything after ~"H" alphabetically) unreachable
+        // without typing. 300 is a sanity ceiling, not a page size.
+        const rows = (q ? makes.filter((m) => m.name.toLowerCase().includes(q)) : makes).slice(0, 300);
         html = (q ? '' : tiles())
           + rows.map((m) => row(m.name, `data-mm-make="${escapeAttr(m.name)}" data-mm-make-id="${escapeAttr(m.id ?? '')}"`)).join('');
       } else {
-        const models = curMake.id ? await searchModels(term(), curMake.id, 60).catch(() => []) : [];
+        // 300, because 60 truncated real ranges — BMW alone has 103 models.
+        const models = curMake.id ? await searchModels(term(), curMake.id, 300).catch(() => []) : [];
         if (stamp !== seq) return;
         html = row(`← ${curMake.name}`, 'data-mm-back="1"')
           + row(curMake.name, 'data-mm-any="1"')

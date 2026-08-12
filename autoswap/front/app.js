@@ -188,7 +188,20 @@ function brandMatchesTerm(make, term) {
 async function brandPanelItems(term) {
   const query = String(term || '').trim();
   if (!query) {
-    return heroBrandNames().map((make) => ({ group: 'make', make, label: displayBrand(make) }));
+    // At rest the panel is the browse surface, so it has to carry the whole
+    // catalog — the old hardcoded list stopped at ~17 brands and everything
+    // else was unreachable without typing. The curated names still lead (they
+    // carry the display casing and the popular order); catalog-only names
+    // follow alphabetically. Falls back to the curated list offline.
+    const fullCatalog = await heroMakes();
+    const restBy = new Map();
+    for (const name of [...heroBrandNames(), ...fullCatalog.map((m) => m.name)]) {
+      if (!name) continue;
+      const key = normalizeBrandText(name);
+      if (key && !restBy.has(key)) restBy.set(key, name);
+    }
+    const restNames = fullCatalog.length ? Array.from(restBy.values()) : heroBrandNames();
+    return restNames.map((make) => ({ group: 'make', make, label: displayBrand(make) }));
   }
   const catalog = await heroMakes();
   // Set dedupes by exact string, so the local list's "Audi" and the
@@ -209,7 +222,7 @@ async function brandPanelItems(term) {
     .slice(0, 6)
     .map((make) => ({ group: 'make', make, label: displayBrand(make) }));
   const modelItems = (await vehicleSuggestions(query).catch(() => []))
-    .slice(0, 8)
+    .slice(0, 60)
     .map((item) => ({ group: 'model', make: item.make, label: item.label }));
   return [...makeItems, ...modelItems];
 }
@@ -476,14 +489,14 @@ async function vehicleSuggestions(term) {
     || makes.find((m) => m.name.toLowerCase().includes(q));
 
   if (make) {
-    const models = await window.AutoSwap.searchModels(rest, make.id, 10).catch(() => []);
-    const rows = models.length ? models : await window.AutoSwap.searchModels('', make.id, 10).catch(() => []);
+    const models = await window.AutoSwap.searchModels(rest, make.id, 60).catch(() => []);
+    const rows = models.length ? models : await window.AutoSwap.searchModels('', make.id, 60).catch(() => []);
     return rows.map((m) => ({ make: make.name, label: `${make.name} ${m.name}` }));
   }
 
   // No make hit: the term itself may be a model ("530", "camry").
   const byId = new Map(makes.map((m) => [String(m.id), m.name]));
-  const models = await window.AutoSwap.searchModels(query, null, 10).catch(() => []);
+  const models = await window.AutoSwap.searchModels(query, null, 20).catch(() => []);
   return models
     .map((m) => {
       const makeName = byId.get(String(m.make_id)) || '';
