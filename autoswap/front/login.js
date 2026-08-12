@@ -233,11 +233,12 @@ function renderCodeStep(error) {
 
   const codeInput = form.querySelector('[name="code"]');
   codeInput.focus();
-  // Fills straight from the SMS on Chrome for Android and submits, so the
-  // code never has to be read across apps. No-ops elsewhere — and there is
-  // nothing to read at all when the code arrived over WhatsApp, since WebOTP
-  // watches the SMS inbox only.
-  if (currentChannel !== 'whatsapp') autofillOtpFromSms(codeInput, () => form.requestSubmit());
+  // Fills straight from the SMS on Chrome for Android and submits, so the code
+  // never has to be read across apps. No longer gated on the channel: verify.ge
+  // reports WHATSAPP for messages that actually arrive as SMS, so the guard was
+  // switching autofill off precisely when it could have worked. A genuine
+  // WhatsApp delivery just leaves the request unresolved, which is harmless.
+  autofillOtpFromSms(codeInput, () => form.requestSubmit());
 }
 
 async function init() {

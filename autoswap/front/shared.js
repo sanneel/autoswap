@@ -1857,9 +1857,12 @@
       `;
       const otpInput = step.querySelector('.otp-input');
       otpInput.focus();
-      // WebOTP only sees SMS; skip it when the code went out over WhatsApp.
-      // Cancelled on close either way so a pending read cannot outlive the modal.
-      if (!viaWhatsApp) autofillOtpFromSms(otpInput, () => {
+      // Always armed, whatever channel was reported. verify.ge's own status
+      // endpoint says WHATSAPP for messages that arrive as SMS, so gating this
+      // on the reported channel disabled autofill exactly when it would have
+      // worked. On a genuine WhatsApp delivery the read simply never resolves,
+      // which costs nothing. Cancelled on close so it cannot outlive the modal.
+      autofillOtpFromSms(otpInput, () => {
         const liveForm = step.querySelector('form');
         if (liveForm) liveForm.requestSubmit();
       });
@@ -2056,15 +2059,12 @@
 
       const otpInput = step.querySelector('.otp-input');
       otpInput.focus();
-      // WebOTP reads the SMS inbox, so there is nothing for it to match when
-      // the code went out over WhatsApp. Cancelled on close either way, so a
-      // pending read cannot outlive the modal.
-      if (!viaWhatsApp) {
-        autofillOtpFromSms(otpInput, () => {
-          const liveForm = step.querySelector('form');
-          if (liveForm) liveForm.requestSubmit();
-        });
-      }
+      // Armed regardless of the reported channel — see the note on the attach
+      // modal above: a "WhatsApp" send that arrives by SMS still autofills.
+      autofillOtpFromSms(otpInput, () => {
+        const liveForm = step.querySelector('form');
+        if (liveForm) liveForm.requestSubmit();
+      });
     }
 
     // Asked once, right after the number is verified, never before.

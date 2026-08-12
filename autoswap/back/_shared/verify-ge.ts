@@ -100,6 +100,14 @@ export interface SendResult {
   status?: string;
   /** What the provider actually used — not necessarily what we asked for. */
   channel?: VerifyChannel;
+  /**
+   * Where `channel` came from, so a wrong label can be told apart from a wrong
+   * delivery: "send" = echoed by /otp/send, "status" = read back from
+   * /otp/{id}, "none" = neither said, so the caller is assuming.
+   */
+  channelSource: "send" | "status" | "none";
+  /** Raw diagnostic from the status lookup when it fails. */
+  channelLookupError?: string;
 }
 
 /**
@@ -111,20 +119,30 @@ export interface SendResult {
  * a UI that then says "sent via WhatsApp" is simply lying to the user. Returns
  * undefined on any failure — a cosmetic label is never worth failing a login.
  */
-async function fetchChannel(requestId: string): Promise<VerifyChannel | undefined> {
+async function fetchChannel(
+  requestId: string,
+): Promise<{ channel?: VerifyChannel; error?: string }> {
   const key = Deno.env.get("VERIFY_GE_API_KEY");
-  if (!key) return undefined;
+  if (!key) return { error: "no api key" };
   try {
     const res = await fetch(`${baseUrl()}/otp/${encodeURIComponent(requestId)}`, {
       headers: { Authorization: `Bearer ${key}`, "X-API-Key": key },
       signal: AbortSignal.timeout(5000),
     });
-    if (!res.ok) return undefined;
-    const payload = await res.json();
-    const raw = String((payload?.data ?? payload)?.channel ?? "").toUpperCase();
-    return raw === "WHATSAPP" || raw === "SMS" ? (raw as VerifyChannel) : undefined;
-  } catch {
-    return undefined;
+    const body = await res.text();
+    if (!res.ok) return { error: `HTTP ${res.status} ${body.slice(0, 120)}` };
+    let payload: Record<string, unknown> = {};
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      return { error: `unparseable: ${body.slice(0, 120)}` };
+    }
+    const data = (payload?.data ?? payload) as Record<string, unknown>;
+    const raw = String(data?.channel ?? "").toUpperCase();
+    if (raw === "WHATSAPP" || raw === "SMS") return { channel: raw as VerifyChannel };
+    return { error: `no channel field; keys=${Object.keys(data || {}).join(",").slice(0, 120)}` };
+  } catch (err) {
+    return { error: String((err as Error)?.message || err).slice(0, 120) };
   }
 }
 
@@ -148,14 +166,28 @@ export async function sendOtp(
   // Prefer the channel the provider reports over the one we requested; fall
   // back to a status lookup only when the send response is silent about it.
   const echoed = String(data?.channel ?? "").toUpperCase();
-  const delivered: VerifyChannel | undefined = echoed === "WHATSAPP" || echoed === "SMS"
-    ? (echoed as VerifyChannel)
-    : await fetchChannel(requestId);
+  let delivered: VerifyChannel | undefined;
+  let channelSource: SendResult["channelSource"] = "none";
+  let channelLookupError: string | undefined;
+  if (echoed === "WHATSAPP" || echoed === "SMS") {
+    delivered = echoed as VerifyChannel;
+    channelSource = "send";
+  } else {
+    const looked = await fetchChannel(requestId);
+    if (looked.channel) {
+      delivered = looked.channel;
+      channelSource = "status";
+    } else {
+      channelLookupError = looked.error;
+    }
+  }
   return {
     requestId,
     expiresAt: data?.expiresAt ? String(data.expiresAt) : undefined,
     status: data?.status ? String(data.status) : undefined,
     channel: delivered,
+    channelSource,
+    channelLookupError,
   };
 }
 

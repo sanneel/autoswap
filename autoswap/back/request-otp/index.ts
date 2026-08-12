@@ -158,6 +158,11 @@ Deno.serve(async (req) => {
         request_id: sent.requestId,
         channel: delivered,
         requested_channel: channel,
+        // Lets a mislabelled channel be told apart from a mis-delivered one:
+        // "none" means neither the send response nor the status lookup stated
+        // a channel, so `channel` above is an assumption, not an observation.
+        channel_source: sent.channelSource,
+        channel_lookup_error: sent.channelLookupError ?? null,
         purpose,
         expires_at: sent.expiresAt ?? null,
       });
