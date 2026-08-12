@@ -5944,11 +5944,20 @@ a.header-user:hover {
   position: relative;
 }
 
+/* Filter the form's CHILDREN, not the form: a filter on an ancestor becomes
+   the containing block for position:fixed, which trapped the mobile action
+   bar mid-page in the locked state. Per-child filtering looks identical and
+   leaves fixed descendants anchored to the viewport. */
 .sell-locked .sell-head,
-.sell-locked .sell-form,
+.sell-locked .sell-form > *,
 .sell-locked .sell-stepper-grid {
   opacity: 0.5;
   filter: grayscale(0.5);
+}
+
+.sell-locked .sell-head,
+.sell-locked .sell-form,
+.sell-locked .sell-stepper-grid {
   pointer-events: none;
   user-select: none;
 }
@@ -14794,4 +14803,32 @@ html {
   padding: 12px;
   color: var(--muted);
   font-size: 13px;
+}
+
+/* ── Mobile: vehicle sticky bar removed, sell actions pinned ─────────────── */
+@media (max-width: 1023px) {
+  /* The floating "make an offer" bar duplicated what the phone screen
+     already shows — the title is right under it and the same CTA is one
+     scroll away — while eating a header's worth of space. Desktop keeps it:
+     there the gallery genuinely scrolls the CTA far away. */
+  .detail-stickybar {
+    display: none;
+  }
+
+  /* position:sticky stopped pinning this bar once body became the page's
+     scroll container (the iOS keyboard-zone fix), so it just scrolled with
+     the form. fixed is anchored to the viewport and immune to scroller
+     changes. The form gets matching clearance so its last fields can scroll
+     up from behind the bar. */
+  .sell-shell--lite .sell-actions {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--tabbar-h, 58px) + 8px);
+    margin: 0;
+  }
+
+  .sell-shell--lite .sell-form {
+    padding-bottom: 160px;
+  }
 }
