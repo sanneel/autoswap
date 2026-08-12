@@ -12805,6 +12805,23 @@ select[data-aselect]:focus-visible,
     box-shadow: 0 -8px 24px -18px rgba(15, 20, 15, 0.5);
   }
 
+  /* Paint white from the bar's bottom edge downwards. On iOS the strip under
+     a bottom:0 fixed element — the home-indicator area, and the band Safari's
+     floating URL bar sits over — still shows page content scrolling past, so
+     the bar ended at a hard line with car photos moving beneath it. Height is
+     arbitrary but generous; it is clipped by the viewport and, being inside a
+     fixed element, adds no scrollable overflow. */
+  .tabbar::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 160px;
+    background: #ffffff;
+    pointer-events: none;
+  }
+
   /* Fixed row heights so every icon sits on one baseline and every label on
      another. With auto rows the raised primary tab dragged its own label out
      of line with the other four. */
