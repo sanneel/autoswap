@@ -14699,3 +14699,81 @@ html {
     font-size: 16px;
   }
 }
+
+/* ── Hero brand picker: inline submit + touch search box ──────────────────
+   Two changes that only apply to phones and tablets.
+
+   1. The ძებნა button moves inside the brand field. On a narrow screen the
+      bottom row (city + cash slider + button) is already crowded, and the
+      button reads as belonging to the thing you just typed into.
+   2. The panel gets its own search box, shown only on touch. There the field
+      itself is readOnly (see bindBrandPicker) so tapping it opens the panel
+      of brand tiles without raising the keyboard — the keyboard is opt-in,
+      by tapping this box. */
+.search-inline-submit {
+  display: none;
+}
+
+.brand-picker-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--warm-ivory);
+}
+
+.brand-picker-search svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+}
+
+.brand-picker-search input {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--graphite);
+  font: inherit;
+  font-weight: 600;
+}
+
+.brand-picker-search input:focus {
+  outline: 0;
+}
+
+@media (max-width: 1023px) {
+  /* The field becomes the search control, so it needs room for the button
+     and the button needs to sit clear of the clear (×) affordance. */
+  .search-brand-field {
+    position: relative;
+  }
+
+  .search-brand-field .search-inline-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .search-brand-field .search-inline-submit svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* One submit per form: the bottom-row button would otherwise duplicate it
+     and push the slider off the row. */
+  .swap-search-bottom .search-submit {
+    display: none;
+  }
+}

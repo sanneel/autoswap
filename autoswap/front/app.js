@@ -402,7 +402,16 @@ function SearchBar() {
           <input name="want" data-brand-input type="search" aria-label="რა მანქანა გინდა, მარკა ან მოდელი" placeholder="მარკა ან მოდელი" autocomplete="off" aria-controls="hero-brand-list" aria-expanded="false">
           <input name="make" data-brand-hidden type="hidden">
           <button class="brand-picker-clear" type="button" data-brand-clear aria-label="გასუფთავება" hidden>&times;</button>
+          <button class="btn btn-primary search-inline-submit" type="submit">${icons.search} ძებნა</button>
           <div class="brand-picker-panel" id="hero-brand-panel" data-brand-panel hidden>
+            <!-- Typing surface on touch. The field itself goes readonly there so
+                 tapping it opens this panel without raising the keyboard; the
+                 keyboard appears only when this box is tapped. Sits outside
+                 .brand-picker-list because renderPanel() rewrites that list. -->
+            <div class="brand-picker-search" data-brand-search-row hidden>
+              <span>${icons.search}</span>
+              <input type="search" data-brand-search placeholder="ძებნა" autocomplete="off" aria-label="მარკის ძებნა">
+            </div>
             <div class="brand-picker-list" id="hero-brand-list" role="listbox" aria-label="მარკები და მოდელები"></div>
           </div>
         </div>
@@ -649,7 +658,21 @@ function bindBrandPicker(form) {
   const selectedLogo = picker.querySelector('[data-brand-selected-logo]');
   const panel = picker.querySelector('[data-brand-panel]');
   const list = panel?.querySelector('.brand-picker-list');
+  const searchRow = picker.querySelector('[data-brand-search-row]');
+  const search = picker.querySelector('[data-brand-search]');
   if (!input || !hidden || !panel || !list) return;
+
+  // Touch gets the tile-first behaviour: tapping the field opens the panel of
+  // brand logos with the keyboard down, and typing only starts if the user
+  // taps the search box inside. readOnly is what suppresses the keyboard —
+  // the field still focuses, so the panel still opens. Pointer devices keep
+  // typing directly in the field, where a keyboard costs nothing.
+  const touch = typeof window.matchMedia === 'function'
+    && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  if (touch && search && searchRow) {
+    input.readOnly = true;
+    searchRow.hidden = false;
+  }
 
   let items = [];
   let activeIndex = -1;
@@ -708,11 +731,12 @@ function bindBrandPicker(form) {
     window.clearTimeout(timer);
     const alreadyChosen = input.value.trim().toLowerCase() === item.label.toLowerCase();
     input.value = item.label;
+    if (search) search.value = item.label;
     setSelected(item.make);
     // myauto-style drill-in: picking a make keeps the panel open and lists
     // that make's models; picking it a second time confirms and closes.
     if (item.group === 'make' && !alreadyChosen) {
-      input.focus();
+      if (!touch) input.focus();
       refresh();
       return;
     }
@@ -732,16 +756,41 @@ function bindBrandPicker(form) {
     setSelected(resolved);
   };
 
+  const onQueryChanged = () => {
+    setOpen(true);
+    if (clear) clear.hidden = !input.value.trim() && !hidden.value;
+    window.clearTimeout(timer);
+    timer = window.setTimeout(refresh, 140);
+  };
+
   input.addEventListener('focus', () => {
     setOpen(true);
     refresh();
   });
 
-  input.addEventListener('input', () => {
-    setOpen(true);
-    if (clear) clear.hidden = !input.value.trim() && !hidden.value;
-    window.clearTimeout(timer);
-    timer = window.setTimeout(refresh, 140);
+  input.addEventListener('input', onQueryChanged);
+
+  // The panel's own box drives the same query as the field. It writes through
+  // to `input` rather than holding separate state, so every existing read of
+  // input.value — refresh(), the tiles-at-rest check in renderPanel() — keeps
+  // working untouched.
+  search?.addEventListener('input', () => {
+    input.value = search.value;
+    onQueryChanged();
+  });
+
+  search?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      setOpen(false);
+      return;
+    }
+    if (event.key === 'Enter') {
+      const first = list.querySelector('.brand-picker-option');
+      if (first) {
+        event.preventDefault();
+        choose(first.dataset.index);
+      }
+    }
   });
 
   input.addEventListener('keydown', (event) => {
@@ -769,8 +818,11 @@ function bindBrandPicker(form) {
     if (tile) {
       event.preventDefault();
       input.value = tile.dataset.featuredMake;
+      if (search) search.value = input.value;
       input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.focus();
+      // Refocusing would summon the keyboard on touch, which is the whole
+      // thing this panel exists to avoid. Pointer devices keep the caret.
+      if (!touch) input.focus();
       return;
     }
     const option = event.target.closest('.brand-picker-option');
@@ -781,10 +833,11 @@ function bindBrandPicker(form) {
 
   clear?.addEventListener('click', () => {
     input.value = '';
+    if (search) search.value = '';
     setSelected('');
     setOpen(true);
     refresh();
-    input.focus();
+    if (!touch) input.focus();
   });
 
   document.addEventListener('pointerdown', (event) => {
