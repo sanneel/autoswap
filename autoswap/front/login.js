@@ -1,12 +1,21 @@
 /* AutoSwap, login / registration page.
-   Sign-in methods: Google OAuth, or Georgian phone number with
-   a one-time SMS code (account auto-created on first login). Email auth is
-   intentionally removed, the number is the marketplace identity, and OAuth
-   users are asked to attach one right after (shared.js maybeRequirePhone).
+
+   Sign-in is password-first: a Georgian number plus a password, or Google.
+   A one-time code is no longer part of signing in — it appears only where a
+   number genuinely has to be proven, which is registration and password reset.
+   That was a deliberate change: a code on every login is a round trip through
+   another app for something the user does constantly, and it put an SMS cost
+   on each visit rather than one per account.
+
+   Accounts are phone-first, so verify-otp gives each one a shadow address
+   derived from the number; shared.js signs in against that, which is why the
+   password path needs no endpoint of its own.
+
    ?next=<page> sends the user back where they came from. */
 const {
   Header, Footer, icons, sb, toast, escapeAttr, authReady,
-  signInWithProvider, normalizePhone, requestPhoneOtp, confirmPhoneOtp, AUTH_DEMO_CODE,
+  signInWithProvider, signInWithPassword, setPassword, passwordProblem,
+  normalizePhone, requestPhoneOtp, confirmPhoneOtp, AUTH_DEMO_CODE,
   autofillOtpFromSms, channelPickerHTML, bindChannelPicker,
 } = window.AutoSwap;
 
@@ -33,40 +42,112 @@ function Shell(inner) {
   `;
 }
 
-function PhoneStep(phone, error) {
-  return Shell(`
-    <span class="auth-icon">${icons.swap}</span>
-    <h1>შესვლა ან რეგისტრაცია</h1>
-    <p class="auth-sub">გააგრძელე Google-ით, ან შეიყვანე ნომერი, გამოგიგზავნით ერთჯერად კოდს SMS-ით ან WhatsApp-ით.</p>
+function googleBlock() {
+  return `
     <div class="auth-providers">
       <button type="button" class="btn-provider btn-google" data-provider="google">${icons.google}<span>Google-ით გაგრძელება</span></button>
     </div>
     <div class="auth-divider"><span>ან ნომრით</span></div>
-    ${error ? `<p class="auth-error" role="alert">${escapeAttr(error)}</p>` : ''}
-    <form class="auth-form" id="phone-form" novalidate>
-      <label class="field">
-        <span>ტელეფონის ნომერი (+995)</span>
-        <input type="tel" name="phone" required autocomplete="tel-national" inputmode="tel"
-               placeholder="5XX XX XX XX" value="${escapeAttr(phone || '')}">
-      </label>
+  `;
+}
+
+function phoneField(phone) {
+  return `
+    <label class="field">
+      <span>ტელეფონის ნომერი (+995)</span>
+      <input type="tel" name="phone" required autocomplete="tel-national" inputmode="tel"
+             placeholder="5XX XX XX XX" value="${escapeAttr(phone || '')}">
+    </label>
+  `;
+}
+
+// autocomplete tokens matter here: "current-password" lets a manager offer the
+// saved one, "new-password" stops it overwriting a fresh choice with the old.
+function passwordField(label, name, complete) {
+  return `
+    <label class="field">
+      <span>${label}</span>
+      <input type="password" name="${name}" required autocomplete="${complete}" minlength="8" placeholder="••••••••">
+    </label>
+  `;
+}
+
+function err(message) {
+  return message ? `<p class="auth-error" role="alert">${escapeAttr(message)}</p>` : '';
+}
+
+/* ---- 1. Sign in (default) ---------------------------------------------- */
+function SignInStep(phone, error) {
+  return Shell(`
+    <span class="auth-icon">${icons.swap}</span>
+    <h1>შესვლა</h1>
+    <p class="auth-sub">შედი ნომრითა და პაროლით, ან გააგრძელე Google-ით.</p>
+    ${googleBlock()}
+    ${err(error)}
+    <form class="auth-form" id="signin-form" novalidate>
+      ${phoneField(phone)}
+      ${passwordField('პაროლი', 'password', 'current-password')}
+      <button class="btn btn-primary auth-submit" type="submit">შესვლა</button>
+    </form>
+    <div class="auth-secondary">
+      <button type="button" class="auth-link" id="go-register">ანგარიში არ გაქვს? დარეგისტრირდი</button>
+      <button type="button" class="auth-link" id="go-forgot">დაგავიწყდა პაროლი?</button>
+    </div>
+    <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით</button>
+  `);
+}
+
+/* ---- 2. Register: number → code → password ----------------------------- */
+function RegisterStep(phone, error) {
+  return Shell(`
+    <span class="auth-icon">${icons.swap}</span>
+    <h1>რეგისტრაცია</h1>
+    <p class="auth-sub">დაადასტურე ნომერი ერთჯერადი კოდით, შემდეგ შექმენი პაროლი. კოდი მხოლოდ ერთხელ დაგჭირდება.</p>
+    ${googleBlock()}
+    ${err(error)}
+    <form class="auth-form" id="register-form" novalidate>
+      ${phoneField(phone)}
       <div class="field">
         <span>კოდი მივიღო</span>
         ${channelPickerHTML()}
       </div>
       <button class="btn btn-primary auth-submit" type="submit">გამომიგზავნე კოდი</button>
     </form>
-    <p class="auth-note">პირველი შესვლისას ანგარიში ავტომატურად შეიქმნება.</p>
-    <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით, SMS-ის გარეშე</button>
+    <div class="auth-secondary">
+      <button type="button" class="auth-link" id="go-signin">უკვე გაქვს ანგარიში? შედი</button>
+    </div>
   `);
 }
 
+/* ---- 3. Forgot: number → code → new password -------------------------- */
+function ForgotStep(phone, error) {
+  return Shell(`
+    <span class="auth-icon">${icons.check}</span>
+    <h1>პაროლის აღდგენა</h1>
+    <p class="auth-sub">გამოგიგზავნით ერთჯერად კოდს, შემდეგ დააყენებ ახალ პაროლს.</p>
+    ${err(error)}
+    <form class="auth-form" id="forgot-form" novalidate>
+      ${phoneField(phone)}
+      <div class="field">
+        <span>კოდი მივიღო</span>
+        ${channelPickerHTML()}
+      </div>
+      <button class="btn btn-primary auth-submit" type="submit">გამომიგზავნე კოდი</button>
+    </form>
+    <div class="auth-secondary">
+      <button type="button" class="auth-link" id="go-signin">დაბრუნება შესვლაზე</button>
+    </div>
+  `);
+}
+
+/* ---- 4. Code ---------------------------------------------------------- */
 function CodeStep(phone, isDemo, error) {
   return Shell(`
     <span class="auth-icon">${icons.check}</span>
     <h1>შეიყვანე კოდი</h1>
     <p class="auth-sub">კოდი გაიგზავნა ${currentChannel === 'whatsapp' ? 'WhatsApp-ით' : 'SMS-ით'} ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${AUTH_DEMO_CODE}</strong>.` : ' კოდი მოქმედებს 5 წუთის განმავლობაში.'}</p>
     ${currentFellBack ? '<p class="auth-note">WhatsApp ამ ნომრისთვის მიუწვდომელია, კოდი SMS-ით გაიგზავნა.</p>' : ''}
-    ${error ? `<p class="auth-error" role="alert">${escapeAttr(error)}</p>` : ''}
+    ${err(error)}
     <form class="auth-form" id="code-form" novalidate>
       <label class="field">
         <span>ერთჯერადი კოდი</span>
@@ -74,12 +155,28 @@ function CodeStep(phone, isDemo, error) {
                autocomplete="one-time-code" data-lpignore="true" data-1p-ignore
                maxlength="6" placeholder="0000" class="auth-code-input">
       </label>
-      <button class="btn btn-primary auth-submit" type="submit">შესვლა</button>
+      <button class="btn btn-primary auth-submit" type="submit">დადასტურება</button>
     </form>
     <div class="auth-secondary">
       <button type="button" class="auth-link" id="resend-btn" disabled>კოდის თავიდან გაგზავნა (<span id="resend-count">${RESEND_COOLDOWN_S}</span>)</button>
       <button type="button" class="auth-link" id="change-phone">სხვა ნომერი</button>
     </div>
+  `);
+}
+
+/* ---- 5. Set password (after a verified code) -------------------------- */
+function PasswordStep(error) {
+  return Shell(`
+    <span class="auth-icon">${icons.check}</span>
+    <h1>${mode === 'forgot' ? 'ახალი პაროლი' : 'შექმენი პაროლი'}</h1>
+    <p class="auth-sub">ნომერი დადასტურდა. შემდეგში ამ პაროლით შეხვალ, კოდი აღარ დაგჭირდება.</p>
+    ${err(error)}
+    <form class="auth-form" id="password-form" novalidate>
+      ${passwordField('პაროლი', 'password', 'new-password')}
+      ${passwordField('გაიმეორე პაროლი', 'confirm', 'new-password')}
+      <button class="btn btn-primary auth-submit" type="submit">შენახვა</button>
+    </form>
+    <p class="auth-note">მინიმუმ 8 სიმბოლო, ასო და ციფრი.</p>
   `);
 }
 
@@ -89,12 +186,13 @@ let resendTimer = null;
 // verify.ge binds the code to a requestId; the server exchanges that for the
 // session. Null means the legacy Supabase path, which verifies client-side.
 let currentRequestId = null;
-// Mirrors shared.js's default; the real value arrives with the send response,
-// which reports the channel actually used rather than the one requested.
 let currentChannel = 'whatsapp';
 // True when WhatsApp was asked for but the provider delivered SMS instead.
 let currentFellBack = false;
 let readChannel = () => currentChannel;
+// 'register' | 'forgot' — which flow the code step is serving. Both end at the
+// same password screen; only the wording differs.
+let mode = 'register';
 
 function friendlyError(message) {
   const msg = String(message || '');
@@ -126,48 +224,87 @@ function startResendCooldown() {
   }, 1000);
 }
 
-function bindProviders() {
+function bindProviders(rerender) {
   document.querySelectorAll('.btn-provider').forEach((btn) => {
     btn.addEventListener('click', async () => {
       btn.disabled = true;
       const { error } = await signInWithProvider(btn.dataset.provider);
       if (error) {
         btn.disabled = false;
-        renderPhoneStep(friendlyError(error));
+        rerender(friendlyError(error));
       }
       // On success the browser navigates away to the provider.
     });
   });
 }
 
-function renderPhoneStep(error) {
-  document.querySelector('#app').innerHTML = PhoneStep(currentPhone, error);
-  bindProviders();
-  readChannel = bindChannelPicker(document.querySelector('#phone-form'));
-  // Try-it-out account: local demo session, no SMS round-trip.
+function readPhone(form) {
+  const raw = String(new FormData(form).get('phone') || '').trim();
+  return { raw, phone: normalizePhone(raw) };
+}
+
+const BAD_PHONE = 'შეიყვანე ქართული მობილურის ნომერი ფორმატით 5XX XX XX XX.';
+
+/* ---- Sign in ---------------------------------------------------------- */
+function renderSignIn(error) {
+  document.querySelector('#app').innerHTML = SignInStep(currentPhone, error);
+  bindProviders(renderSignIn);
+
   document.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
     await confirmPhoneOtp('+995555000000', AUTH_DEMO_CODE, true);
     toast('დემო ანგარიშით შეხვედი, ტესტირებისთვის');
     window.location.href = '/';
   });
-  const form = document.querySelector('#phone-form');
+
+  document.querySelector('#go-register').addEventListener('click', () => {
+    mode = 'register';
+    renderRegister();
+  });
+  document.querySelector('#go-forgot').addEventListener('click', () => {
+    mode = 'forgot';
+    renderForgot();
+  });
+
+  const form = document.querySelector('#signin-form');
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const raw = String(new FormData(form).get('phone') || '').trim();
-    const phone = normalizePhone(raw);
+    const { raw, phone } = readPhone(form);
+    currentPhone = raw;
     if (!phone) {
-      currentPhone = raw;
-      renderPhoneStep('შეიყვანე ქართული მობილურის ნომერი ფორმატით 5XX XX XX XX.');
+      renderSignIn(BAD_PHONE);
+      return;
+    }
+    const password = String(new FormData(form).get('password') || '');
+    const submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    const result = await signInWithPassword(phone, password);
+    if (result.error) {
+      renderSignIn(result.error);
+      return;
+    }
+    toast('შესვლა წარმატებულია');
+    window.location.replace(nextTarget());
+  });
+  form.querySelector('[name="phone"]').focus();
+}
+
+/* ---- Register / forgot: both send a code ------------------------------ */
+function bindCodeRequestForm(formId, rerender) {
+  const form = document.querySelector(`#${formId}`);
+  readChannel = bindChannelPicker(form);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const { raw, phone } = readPhone(form);
+    currentPhone = raw;
+    if (!phone) {
+      rerender(BAD_PHONE);
       return;
     }
     form.querySelector('[type="submit"]').disabled = true;
-    // Account is auto-created on first login; the name popup follows the
-    // first verified sign-in (shared.js maybeRequireProfile).
     const channel = readChannel();
     const result = await requestPhoneOtp(phone, channel);
     if (result.error) {
-      currentPhone = raw;
-      renderPhoneStep(friendlyError(result.error));
+      rerender(friendlyError(result.error));
       return;
     }
     currentPhone = phone;
@@ -180,21 +317,40 @@ function renderPhoneStep(error) {
   form.querySelector('[name="phone"]').focus();
 }
 
+function renderRegister(error) {
+  document.querySelector('#app').innerHTML = RegisterStep(currentPhone, error);
+  bindProviders(renderRegister);
+  document.querySelector('#go-signin').addEventListener('click', renderSignInFresh);
+  bindCodeRequestForm('register-form', renderRegister);
+}
+
+function renderForgot(error) {
+  document.querySelector('#app').innerHTML = ForgotStep(currentPhone, error);
+  document.querySelector('#go-signin').addEventListener('click', renderSignInFresh);
+  bindCodeRequestForm('forgot-form', renderForgot);
+}
+
+function renderSignInFresh() {
+  clearInterval(resendTimer);
+  renderSignIn();
+}
+
+/* ---- Code ------------------------------------------------------------- */
 function renderCodeStep(error) {
   document.querySelector('#app').innerHTML = CodeStep(currentPhone, currentIsDemo, error);
   startResendCooldown();
 
   const form = document.querySelector('#code-form');
   // Autofill's requestSubmit() and the user's own tap can both fire; the
-  // requestId is single-use, so the loser would flash an error over a sign-in
-  // that actually succeeded.
+  // requestId is single-use, so the loser would flash an error over a
+  // verification that actually succeeded.
   let verifying = false;
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (verifying) return;
     const code = String(new FormData(form).get('code') || '').trim();
     if (!/^\d{4,6}$/.test(code)) {
-      renderCodeStep('შეიყვანე SMS კოდი.');
+      renderCodeStep('შეიყვანე კოდი.');
       return;
     }
     verifying = true;
@@ -204,10 +360,15 @@ function renderCodeStep(error) {
       renderCodeStep(friendlyError(result.error));
       return;
     }
-    toast('შესვლა წარმატებულია');
-    // Demo sessions can browse but not write, gated pages would bounce
-    // them straight back here, so land on the catalog instead.
-    window.location.replace(currentIsDemo ? '/cars' : nextTarget());
+    // The code proved the number and produced a session. The demo account has
+    // no server-side user to carry a password, so it stops here.
+    if (currentIsDemo) {
+      toast('დემო ანგარიშით შეხვედი, ტესტირებისთვის');
+      window.location.replace('/cars');
+      return;
+    }
+    clearInterval(resendTimer);
+    renderPasswordStep();
   });
 
   document.querySelector('#resend-btn').addEventListener('click', async (event) => {
@@ -228,17 +389,43 @@ function renderCodeStep(error) {
 
   document.querySelector('#change-phone').addEventListener('click', () => {
     clearInterval(resendTimer);
-    renderPhoneStep();
+    if (mode === 'forgot') renderForgot(); else renderRegister();
   });
 
   const codeInput = form.querySelector('[name="code"]');
   codeInput.focus();
   // Fills straight from the SMS on Chrome for Android and submits, so the code
-  // never has to be read across apps. No longer gated on the channel: verify.ge
+  // never has to be read across apps. Not gated on the channel: verify.ge
   // reports WHATSAPP for messages that actually arrive as SMS, so the guard was
   // switching autofill off precisely when it could have worked. A genuine
   // WhatsApp delivery just leaves the request unresolved, which is harmless.
   autofillOtpFromSms(codeInput, () => form.requestSubmit());
+}
+
+/* ---- Set password ----------------------------------------------------- */
+function renderPasswordStep(error) {
+  document.querySelector('#app').innerHTML = PasswordStep(error);
+  const form = document.querySelector('#password-form');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const password = String(data.get('password') || '');
+    const problem = passwordProblem(password, String(data.get('confirm') || ''));
+    if (problem) {
+      renderPasswordStep(problem);
+      return;
+    }
+    const submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    const result = await setPassword(password);
+    if (result.error) {
+      renderPasswordStep(result.error);
+      return;
+    }
+    toast(mode === 'forgot' ? 'პაროლი განახლდა' : 'ანგარიში შეიქმნა');
+    window.location.replace(nextTarget());
+  });
+  form.querySelector('[name="password"]').focus();
 }
 
 async function init() {
@@ -247,9 +434,14 @@ async function init() {
     window.location.replace(nextTarget());
     return;
   }
-  // Without Supabase the phone flow still works in the labelled demo mode,
-  // so the page renders either way.
-  renderPhoneStep();
+  // ?register sends first-time users straight to the code step's entry form,
+  // so a "create an account" link elsewhere does not land on sign-in.
+  if (new URLSearchParams(window.location.search).has('register')) {
+    mode = 'register';
+    renderRegister();
+    return;
+  }
+  renderSignIn();
 }
 
 init();

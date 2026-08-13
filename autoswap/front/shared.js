@@ -735,6 +735,66 @@
     if (sbClient) await sbClient.auth.signOut();
   }
 
+  // ---- Password sign-in ----------------------------------------------------
+  // A phone-first account has no real address, so verify-otp gives it a shadow
+  // one derived from the number (see SHADOW_EMAIL_DOMAIN there). The derivation
+  // is deterministic, which is what lets the browser sign in with a password
+  // directly — no server round-trip, no endpoint to rate-limit ourselves.
+  //
+  // Keep this in step with back/verify-otp/index.ts: shadowEmail().
+  const SHADOW_EMAIL_DOMAIN = 'phone.autoswap.ge';
+
+  function shadowEmailForPhone(phone) {
+    return `p${String(phone || '').replace(/\D/g, '')}@${SHADOW_EMAIL_DOMAIN}`;
+  }
+
+  // → { user } | { error }. The error text is deliberately the same whether the
+  // number is unknown or the password is wrong: distinguishing them turns the
+  // login form into a "does this number have an account" oracle.
+  async function signInWithPassword(phone, password) {
+    if (!sbClient) return { error: 'დემო რეჟიმი, პაროლით შესვლა მოითხოვს Supabase-ის კონფიგურაციას.' };
+    const { data, error } = await sbClient.auth.signInWithPassword({
+      email: shadowEmailForPhone(phone),
+      password,
+    });
+    if (error) {
+      if (/rate|too many/i.test(error.message || '')) {
+        return { error: 'ძალიან ბევრი მცდელობა, დაიცადე ცოტა ხანი და სცადე თავიდან.' };
+      }
+      return { error: 'ნომერი ან პაროლი არასწორია.' };
+    }
+    return { user: data.user };
+  }
+
+  // Sets the password on the CURRENT session, so it is only reachable straight
+  // after a verified code — registration or a reset. The metadata flag is how
+  // the UI knows an account can be signed into with a password at all;
+  // Supabase exposes no "has password" field.
+  async function setPassword(password) {
+    if (!sbClient) return { error: 'დემო რეჟიმი.' };
+    const { data, error } = await sbClient.auth.updateUser({
+      password,
+      data: { has_password: true },
+    });
+    if (error) return { error: `პაროლი ვერ შეინახა: ${georgianError(error)}` };
+    authUser = data.user;
+    notifyAuth();
+    return {};
+  }
+
+  function hasPassword(user) {
+    return Boolean(user && user.user_metadata && user.user_metadata.has_password);
+  }
+
+  // Shared rule so registration and reset cannot drift apart.
+  function passwordProblem(password, confirm) {
+    const value = String(password || '');
+    if (value.length < 8) return 'პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო.';
+    if (!/[a-zA-Z]/.test(value) || !/\d/.test(value)) return 'პაროლი უნდა შეიცავდეს ასოსა და ციფრს.';
+    if (confirm !== undefined && value !== String(confirm || '')) return 'პაროლები არ ემთხვევა.';
+    return '';
+  }
+
   function isUuid(value) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ''));
   }
@@ -1923,8 +1983,11 @@
     `;
   }
 
-  // One flow for both new and returning users: phone → SMS code. The name
-  // is asked only after the number is verified (and only when missing).
+  // Password-first, matching /login. The modal deliberately carries only the
+  // returning-user path: registering and resetting both need a code step, and
+  // running a multi-screen flow inside a popover that any stray click closes
+  // is a good way to lose someone halfway through proving their number. Those
+  // two link out to the full page instead.
   function authFormHTML() {
     return `
       ${authProvidersHTML()}
@@ -1933,15 +1996,18 @@
           <span>ტელეფონის ნომერი</span>
           <input type="tel" name="phone" inputmode="tel" autocomplete="tel-national" placeholder="5XX XX XX XX" required>
         </label>
-        <div class="field">
-          <span>კოდი მივიღო</span>
-          ${channelPickerHTML()}
-        </div>
+        <label class="field">
+          <span>პაროლი</span>
+          <input type="password" name="password" autocomplete="current-password" minlength="8" placeholder="••••••••" required>
+        </label>
         <p class="auth-error" id="auth-error" hidden></p>
-        <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">კოდის გაგზავნა</button>
+        <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">შესვლა</button>
       </form>
-      <p class="auth-note">პირველი შესვლისას ანგარიში ავტომატურად შეიქმნება.</p>
-      <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით, SMS-ის გარეშე</button>
+      <div class="auth-secondary">
+        <a class="auth-link" href="/login?register">ანგარიში არ გაქვს? დარეგისტრირდი</a>
+        <a class="auth-link" href="/login">დაგავიწყდა პაროლი?</a>
+      </div>
+      <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით</button>
     `;
   }
 
@@ -1982,71 +2048,21 @@
         });
       });
 
-      const readChannel = bindChannelPicker(step);
-
       step.querySelector('#auth-form').addEventListener('submit', async (event) => {
         event.preventDefault();
-        const phone = normalizePhone(new FormData(event.currentTarget).get('phone'));
+        const data = new FormData(event.currentTarget);
+        const phone = normalizePhone(data.get('phone'));
         if (!phone) {
           showError('შეიყვანე ქართული მობილურის ნომერი ფორმატით 5XX XX XX XX.');
           return;
         }
         const submit = step.querySelector('#auth-submit');
         submit.disabled = true;
-        submit.textContent = 'იგზავნება…';
-        const channel = readChannel();
-        const result = await requestOtp(phone, channel);
+        submit.textContent = 'შესვლა…';
+        const result = await signInWithPassword(phone, String(data.get('password') || ''));
         if (result.error) {
           submit.disabled = false;
-          submit.textContent = 'კოდის გაგზავნა';
-          showError(result.error);
-          return;
-        }
-        bindOtpStep(phone, result.demo, result.requestId, result.channel || channel, result.fellBack);
-      });
-    }
-
-    function bindOtpStep(phone, isDemo, requestId, channel, fellBack) {
-      const viaWhatsApp = channel === 'whatsapp';
-      step.innerHTML = `
-        <p class="auth-sub">კოდი გაიგზავნა ${viaWhatsApp ? 'WhatsApp-ით' : 'SMS-ით'} ნომერზე <strong>${escapeAttr(phone)}</strong>.${isDemo ? ` დემო რეჟიმი, შეიყვანე კოდი <strong>${DEMO_OTP_CODE}</strong>.` : ''}</p>
-        ${fellBack ? '<p class="auth-note">WhatsApp ამ ნომრისთვის მიუწვდომელია, კოდი SMS-ით გაიგზავნა.</p>' : ''}
-        <form class="offer-form" id="otp-form" novalidate>
-          <label class="field">
-            <span>ერთჯერადი კოდი</span>
-            <input class="otp-input" type="text" name="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore maxlength="6" placeholder="••••">
-          </label>
-          <p class="auth-error" hidden></p>
-          <button type="submit" class="btn btn-primary auth-submit">დადასტურება</button>
-        </form>
-        <button type="button" class="auth-link-btn" id="auth-back">სხვა ნომერი</button>
-      `;
-
-      step.querySelector('#auth-back').addEventListener('click', () => {
-        step.innerHTML = authFormHTML();
-        bindPhoneStep();
-      });
-
-      // A code is worth exactly one verify. Autofill calls requestSubmit() at
-      // the same moment the user taps the button, and the second call loses the
-      // race for a single-use requestId — which surfaced as an error flashing
-      // red for half a second before the first call logged the user in.
-      let verifying = false;
-      step.querySelector('#otp-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        if (verifying) return;
-        const code = String(new FormData(event.currentTarget).get('code') || '').trim();
-        if (!code) {
-          showError('შეიყვანე SMS კოდი.');
-          return;
-        }
-        verifying = true;
-        const submit = event.currentTarget.querySelector('[type="submit"]');
-        if (submit) submit.disabled = true;
-        const result = await confirmOtp(phone, code, isDemo, requestId);
-        if (result.error) {
-          verifying = false;
-          if (submit) submit.disabled = false;
+          submit.textContent = 'შესვლა';
           showError(result.error);
           return;
         }
@@ -2055,15 +2071,6 @@
           return;
         }
         showSuccess(authDisplayName(result.user || authUser));
-      });
-
-      const otpInput = step.querySelector('.otp-input');
-      otpInput.focus();
-      // Armed regardless of the reported channel — see the note on the attach
-      // modal above: a "WhatsApp" send that arrives by SMS still autofills.
-      autofillOtpFromSms(otpInput, () => {
-        const liveForm = step.querySelector('form');
-        if (liveForm) liveForm.requestSubmit();
       });
     }
 
@@ -2774,6 +2781,11 @@
     getAuthUser,
     onAuth,
     signInWithProvider,
+    signInWithPassword,
+    setPassword,
+    hasPassword,
+    passwordProblem,
+    shadowEmailForPhone,
     normalizePhone,
     requestPhoneOtp: requestOtp,
     confirmPhoneOtp: confirmOtp,
