@@ -5495,6 +5495,17 @@ p {
 
 .pw-input { position: relative; display: block; }
 
+/* Off-screen, not display:none — a hidden or undisplayed username field is one
+   several password managers refuse to read. */
+.pw-username {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Room for the toggle, on the side the script does not read from. */
 .pw-input input { padding-inline-end: 48px; }
 

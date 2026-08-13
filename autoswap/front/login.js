@@ -15,7 +15,7 @@
 const {
   Header, Footer, icons, sb, toast, escapeAttr, authReady,
   signInWithProvider, signInWithPassword, setPassword, passwordProblem,
-  passwordFieldHTML, bindPasswordFields,
+  passwordFieldHTML, usernameFieldHTML, bindPasswordFields,
   normalizePhone, requestPhoneOtp, confirmPhoneOtp, AUTH_DEMO_CODE,
   autofillOtpFromSms, channelPickerHTML, bindChannelPicker,
 } = window.AutoSwap;
@@ -175,6 +175,7 @@ function PasswordStep(error) {
     <p class="auth-sub">ნომერი დადასტურდა. შემდეგში ამ პაროლით შეხვალ, კოდი აღარ დაგჭირდება.</p>
     ${err(error)}
     <form class="auth-form" id="password-form" novalidate>
+      ${usernameFieldHTML(currentPhone)}
       ${passwordFieldHTML({ label: 'ახალი პაროლი', autocomplete: 'new-password' })}
       <button class="btn btn-primary auth-submit" type="submit">შენახვა</button>
     </form>

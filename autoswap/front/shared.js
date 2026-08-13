@@ -863,6 +863,18 @@
     `;
   }
 
+  // A password form with no username field is one a password manager will not
+  // offer to save, and a change form with no username is one it will not offer
+  // to UPDATE — leaving the phone still autofilling the old password after a
+  // change. Browsers want the account identifier present even when there is
+  // nothing for the user to fill in, so it ships off-screen rather than
+  // display:none, which several managers skip over.
+  function usernameFieldHTML(value) {
+    if (!value) return '';
+    return `<input class="pw-username" type="text" name="username" autocomplete="username"
+                   value="${escapeAttr(value)}" readonly tabindex="-1" aria-hidden="true">`;
+  }
+
   // Call once after the markup lands. Safe to re-run; binding is idempotent.
   function bindPasswordFields(root) {
     const scope = root || document;
@@ -2892,6 +2904,7 @@
     hasPassword,
     passwordProblem,
     passwordFieldHTML,
+    usernameFieldHTML,
     bindPasswordFields,
     verifyCurrentPassword,
     isShadowEmail,

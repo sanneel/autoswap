@@ -3,7 +3,7 @@ const {
   Header, Footer, icons, sb, toast, escapeAttr, isUuid,
   authReady, getAuthUser, signOut, freshnessLabel, bustListingCaches,
   fuelLabel, labelFor, TRANSMISSION_LABELS, buildModal,
-  passwordFieldHTML, bindPasswordFields, passwordProblem,
+  passwordFieldHTML, usernameFieldHTML, bindPasswordFields, passwordProblem,
   verifyCurrentPassword, setPassword, hasPassword, isShadowEmail,
 } = window.AutoSwap;
 
@@ -537,7 +537,7 @@ function bindTelegramConnect(body, profile) {
 // existed) sets one straight from the open session. That second path is the
 // whole reason this card exists — the alternative was signing out and going
 // through the reset flow to get a password for the first time.
-function passwordCardHTML(existing) {
+function passwordCardHTML(existing, username) {
   // Password sign-in resolves an account through the shadow address derived
   // from its number, so it only works for phone-first accounts. A Google
   // account has its own address and would never be found by that lookup —
@@ -558,6 +558,7 @@ function passwordCardHTML(existing) {
         : 'ჯერ არ გაქვს პაროლი. დააყენე და შემდეგში ნომრითა და პაროლით შეხვალ.'}</p>
       <p class="auth-error" role="alert" hidden></p>
       <form class="auth-form" id="password-card-form" novalidate>
+        ${usernameFieldHTML(username)}
         ${existing ? passwordFieldHTML({
           name: 'current', label: 'ამჟამინდელი პაროლი', autocomplete: 'current-password', rules: false,
         }) : ''}
@@ -628,6 +629,12 @@ async function renderProfile(body) {
     return;
   }
 
+  // The number this account signs in with, in the E.164 form the sign-in form
+  // normalizes to — a password manager keys its saved entry on this, so it has
+  // to be the same string in both places or the change lands on a new entry
+  // and the old password keeps autofilling.
+  const authPhone = me.phone || (me.user_metadata && me.user_metadata.phone) || profile.phone || '';
+
   body.innerHTML = `
     <h1>პროფილი</h1>
     <div class="profile-grid">
@@ -650,7 +657,7 @@ async function renderProfile(body) {
           // needs; showing p995…@phone.autoswap.ge to its owner would read as a
           // mistake. Those accounts are identified by their number instead.
           isShadowEmail(me.email)
-            ? `<p><strong>ნომერი:</strong> ${escapeAttr(me.phone || (me.user_metadata && me.user_metadata.phone) || profile.phone || '-')}</p>`
+            ? `<p><strong>ნომერი:</strong> ${escapeAttr(authPhone || '-')}</p>`
             : `<p><strong>ელფოსტა:</strong> ${escapeAttr(me.email || '-')}</p>`
         }
         <p><strong>დასრულებული გაცვლები:</strong> ${profile.completed_swaps_count || 0}</p>
@@ -659,7 +666,7 @@ async function renderProfile(body) {
         <button class="btn btn-danger" id="logout-btn" type="button">გასვლა</button>
       </aside>
     </div>
-    ${passwordCardHTML(hasPassword(me))}
+    ${passwordCardHTML(hasPassword(me), authPhone)}
   `;
 
   bindTelegramConnect(body, profile);
