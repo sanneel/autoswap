@@ -2774,7 +2774,16 @@
       </div>`;
   }
 
-  function bindMakeModelPicker(picker, { onSelect } = {}) {
+  // Years offered on the desired-vehicle picker, newest first. Tapped from the
+  // same list the make and model come from — no typing anywhere in the flow.
+  function pickerYears() {
+    const now = new Date().getFullYear();
+    const years = [];
+    for (let y = now; y >= 1990; y -= 1) years.push(y);
+    return years;
+  }
+
+  function bindMakeModelPicker(picker, { onSelect, years: withYears } = {}) {
     const input = picker.querySelector('[data-mm-input]');
     const panel = picker.querySelector('[data-mm-panel]');
     const list = panel && panel.querySelector('.brand-picker-list');
@@ -2791,6 +2800,7 @@
 
     let stage = 'make';
     let curMake = null; // { id, name }
+    let curModel = '';  // held while the year stage is open
     let seq = 0;
     let timer = null;
     let makesCache = null;
@@ -2834,6 +2844,15 @@
       const stamp = ++seq;
       const q = term().toLowerCase();
       let html = '';
+      if (stage === 'year') {
+        // Ahead of the others: this stage needs no query at all, and falling
+        // through to the model branch would fire a pointless model lookup.
+        const chosen = `${curMake.name}${curModel ? ` ${curModel}` : ''}`;
+        list.innerHTML = row(`← ${chosen}`, 'data-mm-back="1"')
+          + row('ნებისმიერი წელი', 'data-mm-year=""')
+          + pickerYears().map((y) => row(`${chosen} ${y}`, `data-mm-year="${y}"`)).join('');
+        return;
+      }
       if (stage === 'make') {
         const makes = await loadMakes();
         if (stamp !== seq) return;
@@ -2880,16 +2899,30 @@
     const reset = () => {
       stage = 'make';
       curMake = null;
+      curModel = '';
       if (search) search.value = '';
     };
 
-    const finish = (make, model) => {
+    // A year stage sits between choosing a model and committing, but only where
+    // the caller asked for one. Your own car already has a dedicated year field
+    // in the sell form, and the catalog filter has its own year range — the
+    // wanted car was the one place with nowhere to say it.
+    const enterYearStage = (model) => {
+      stage = 'year';
+      curModel = model || '';
+      if (search) search.value = '';
+      render();
+    };
+
+    const finish = (make, model, year) => {
       const previous = input.value;
-      const label = model ? `${make} ${model}` : make;
+      const label = [make, model || '', year || ''].filter(Boolean).join(' ');
       input.value = label;
       setOpen(false);
       reset();
-      if (onSelect) onSelect({ make, model: model || '', label }, { input, previous });
+      if (onSelect) {
+        onSelect({ make, model: model || '', year: year || '', label }, { input, previous });
+      }
     };
 
     const enterModelStage = async (name, id) => {
@@ -2939,7 +2972,15 @@
       const back = event.target.closest('[data-mm-back]');
       if (back) {
         event.preventDefault();
-        reset();
+        // One step back, not all the way out: from the years to the model list
+        // you just came from, and only from there to the makes.
+        if (stage === 'year') {
+          stage = 'model';
+          curModel = '';
+          if (search) search.value = '';
+        } else {
+          reset();
+        }
         render();
         return;
       }
@@ -2955,10 +2996,17 @@
         enterModelStage(makeEl.dataset.mmMake, makeEl.dataset.mmMakeId || '');
         return;
       }
+      const yearEl = event.target.closest('[data-mm-year]');
+      if (yearEl) {
+        event.preventDefault();
+        finish(curMake.name, curModel, yearEl.dataset.mmYear);
+        return;
+      }
       const modelEl = event.target.closest('[data-mm-model]');
       if (modelEl) {
         event.preventDefault();
-        finish(curMake.name, modelEl.dataset.mmModel);
+        if (withYears) enterYearStage(modelEl.dataset.mmModel);
+        else finish(curMake.name, modelEl.dataset.mmModel);
       }
     });
 

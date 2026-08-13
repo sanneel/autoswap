@@ -455,6 +455,7 @@ function bindCatalogSuggestions() {
   if (desiredPicker && !desiredPicker.__mmBound) {
     desiredPicker.__mmBound = true;
     window.AutoSwap.bindMakeModelPicker(desiredPicker, {
+      years: true,
       onSelect: (sel, { input, previous }) => {
         // Desired is a comma list — picks append rather than replace, so
         // "Audi A6, Mercedes E-Class" stays reachable from the picker alone.
