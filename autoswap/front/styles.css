@@ -2227,7 +2227,13 @@ svg {
   width: 100%;
   min-height: 0;
   max-height: 100%;
-  padding: 16px 16px 0;
+  /* The footer bar bleeds to the panel edge by cancelling this padding, and
+     the padding changes three times across breakpoints (16 / 14 / 12). It was
+     cancelled with one hardcoded number, so the bar could only line up at one
+     width and hung over the edge at the other two. Carried as a variable so
+     the bleed tracks whatever the padding currently is. */
+  --filters-pad: 16px;
+  padding: var(--filters-pad) var(--filters-pad) 0;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--card-white);
@@ -2475,11 +2481,18 @@ svg {
   flex: 0 0 auto;
   display: grid;
   gap: 8px;
-  margin: 0 -16px;
-  padding: 12px 16px;
+  /* Full-bleed to the panel edge, so this has to cancel exactly the form's
+     padding. It was -16px against a 14px padding, which pushed the bar 2px
+     past the panel on each side — the footer sat visibly wider than the thing
+     it belongs to. */
+  margin: 0 calc(var(--filters-pad, 14px) * -1);
+  padding: 12px var(--filters-pad, 14px);
   background: var(--card-white);
   border-top: 1px solid var(--border);
-  border-radius: 0 0 11px 11px;
+  /* No radius of its own: .filters clips with overflow:hidden, so the bar
+     picks up whatever the panel's bottom corners are instead of asserting an
+     11px curve that matched nothing else in the panel. */
+  border-radius: 0;
 }
 
 .filters-search-count {
@@ -4602,6 +4615,9 @@ p {
   display: none;
   width: 36px;
   height: 36px;
+  /* Flex item in a tight header row: without this it shrank to 30px on a
+     375px screen, so the disc went oval right where taps are least accurate. */
+  flex: 0 0 36px;
   border-radius: 50%;
   background: var(--warm-ivory);
   color: var(--graphite);
@@ -5223,14 +5239,18 @@ p {
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    border-radius: 10px 18px 0 0;
+    /* Was 10px 18px — the drawer's two top corners were rounded by different
+       amounts, which is the kind of asymmetry you feel before you spot it. */
+    border-radius: 18px 18px 0 0;
     background: var(--card-white);
     box-shadow: 0 -2px 10px rgba(15, 20, 15, 0.12);
   }
 
   body.filters-open .filters-form {
     border: 0;
-    border-radius: 10px 18px 0 0;
+    /* Was 10px 18px — the drawer's two top corners were rounded by different
+       amounts, which is the kind of asymmetry you feel before you spot it. */
+    border-radius: 18px 18px 0 0;
     box-shadow: none;
     padding-bottom: 22px;
   }
@@ -8467,7 +8487,8 @@ body {
 
 .filters-form {
   gap: 13px;
-  padding: 14px;
+  --filters-pad: 14px;
+  padding: var(--filters-pad);
   background: var(--market-surface);
 }
 
@@ -9709,7 +9730,8 @@ body {
   }
 
   .filters-form {
-    padding: 12px;
+    --filters-pad: 12px;
+    padding: var(--filters-pad);
   }
 
   .car-card-media {
@@ -10540,17 +10562,27 @@ body {
   white-space: nowrap;
 }
 
+/* Icon-only by design — font-size:0 hides the label while leaving it in the
+   DOM for screen readers. What it did NOT do was give the button a body: at
+   34x16 it was a sliver sitting beside a 36px round close button, so the pair
+   read as two unrelated controls rather than a set. Same disc, same size. */
 .filters-reset {
-  width: 34px;
-  min-width: 34px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
   padding: 0;
   gap: 0;
   font-size: 0;
+  border-radius: 50%;
+  background: var(--warm-ivory);
 }
 
 .filters-reset svg {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
 }
 
 .stat-cell,
