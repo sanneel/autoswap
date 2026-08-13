@@ -48,3 +48,6 @@ skills-lock.json
 # Playwright artifacts
 test-results/
 playwright-report/
+
+# Build output (content-hashed copy of front/, produced by npm run build)
+autoswap/dist/

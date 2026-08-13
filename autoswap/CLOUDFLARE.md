@@ -4,8 +4,20 @@ The site is static files plus Supabase — there is no server to move. The only
 things Pages needs are a build command, an output folder, and the two public
 Supabase values the build inlines into `front/supabase-config.js`.
 
-Netlify config is left in place (`netlify.toml`) so both hosts can run in
-parallel during the cutover. Delete it once DNS has moved and settled.
+`npm run build` writes `dist/` — a copy of `front/` in which every JS and CSS
+file is renamed after a hash of its own contents and the HTML is repointed at
+those names. **The output directory is `dist`, not `front`.** Pointing it at
+`front` still deploys a working site, just the unhashed one, so a mismatch
+degrades quietly rather than breaking.
+
+Why the hash: assets are served immutable for a year, and HTML and assets
+deploy as separate objects that can become visible at different moments. With
+hand-written `?v=N` there was a window where a browser read new HTML, requested
+the new name, and was handed the old file body — then cached it under that name
+for a year. It happened on 2026-08-13 and could only be escaped by shipping a
+version nobody had requested yet. A content-hashed name cannot exist before the
+bytes that produced it, so there is nothing stale to serve under it, and there
+is no version left to forget to bump.
 
 ## 1. Create the project
 
@@ -17,7 +29,7 @@ Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** →
 | Production branch | `main` |
 | Framework preset | None |
 | Build command | `npm run build` |
-| Build output directory | `front` |
+| Build output directory | `dist` |
 | Root directory | `autoswap` |
 
 `.node-version` pins Node 22, so the runtime is picked up automatically.
