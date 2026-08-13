@@ -21,9 +21,32 @@ import { fileURLToPath } from 'node:url';
 
    Idempotent: upserts, so re-running refreshes without duplicating.
    Requires Node 18+ (built-in fetch).
+
+   !! NOT THE LIVE CATALOG SOURCE ANYMORE !!
+   The production catalog was replaced with the myauto.ge make/model list,
+   which is what Georgian sellers actually recognise. This script still pulls
+   NHTSA vPIC — a US registry with different makes, different model naming and
+   none of the series structure the picker groups on. Running it upserts over
+   car_makes / car_models and would quietly replace the live catalog with US
+   data. Kept because the fetch/dedupe pipeline is still useful, but it now
+   refuses to run without INGEST_CONFIRM_OVERWRITE=1 so it cannot be triggered
+   by muscle memory or by `npm run ingest:catalog` in a hurry.
 =================================================================== */
 
 import { slugify, normalizeMakeName, dedupeMakes, dedupeModels } from './lib/catalog-utils.mjs';
+
+// See the header: this source is no longer what production runs on.
+if (process.env.INGEST_CONFIRM_OVERWRITE !== '1' && !process.argv.includes('--dry-run')) {
+  console.error([
+    'ingest-car-catalog: refusing to run.',
+    '  The live catalog comes from the myauto.ge list; this script loads NHTSA vPIC (US) data',
+    '  and would upsert over car_makes / car_models, replacing it.',
+    '  To overwrite deliberately:  INGEST_CONFIRM_OVERWRITE=1 node scripts/ingest-car-catalog.mjs',
+    '  To inspect without writing: node scripts/ingest-car-catalog.mjs --dry-run',
+  ].join('\n'),
+  );
+  process.exit(1);
+}
 
 const VPIC = 'https://vpic.nhtsa.dot.gov/api/vehicles';
 const MAKES_URL = `${VPIC}/GetMakesForVehicleType/car?format=json`;

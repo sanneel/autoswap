@@ -12110,25 +12110,7 @@ h1, h2, h3 {
 }
 
 /* Demo account entry in the auth modal — quiet text button, not a CTA */
-.auth-demo-btn {
-  display: block;
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--market-muted);
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
 
-.auth-demo-btn:hover {
-  color: var(--copper);
-  background: #f2f6f1;
-}
 
 @media (max-width: 480px) {
   /* With currency + bell in the row the wordmark no longer fits — keep the
