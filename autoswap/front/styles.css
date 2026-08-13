@@ -15105,3 +15105,76 @@ html {
   height: 44px;
   margin-inline-end: -8px;
 }
+
+/* ─── Filter panel corrections ──────────────────────────────────────────
+   The combo fields were painting two backgrounds: .combo-control in one
+   near-white and the <input> inside it in --warm-ivory, a shade darker. The
+   darker rectangle read as "the field", so the clear × — which sits in the
+   control, beside the input — looked stranded outside it. One fill only: the
+   control is the field, the input is transparent inside it. */
+.filters-form .combo-control input:not([type="checkbox"]),
+.filters-form .filter-search input:not([type="checkbox"]) {
+  background: transparent;
+}
+
+/* The control is the visible box, so it carries the shape and the focus ring. */
+.filters-form .combo-control {
+  border-radius: 12px;
+  background: var(--warm-ivory);
+}
+
+.filters-form .combo-control:focus-within {
+  border-color: var(--copper);
+}
+
+/* Checkbox rows overflowed the scroller by 4px, which was enough to give the
+   whole panel a horizontal scrollbar. */
+.filter-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.filter-check span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Nothing in the panel scrolls sideways. overflow-x: auto turned a 4px
+   rounding overflow into a visible scrollbar under every filter. */
+.filters-scroll { overflow-x: hidden; }
+
+/* Desktop sidebar: no scrollbar of its own. It was capped at the viewport
+   height with the field list scrolling inside, which put a second scrollbar
+   next to the page's own and meant the filters and the results scrolled
+   independently. Now the column is as tall as its contents and moves with the
+   page; `sticky` still holds it in view while there is room for it.
+
+   The drawer keeps its inner scroll — a bottom sheet at 80dvh has nowhere
+   else to put thirteen groups — so this is scoped to the sidebar layout. */
+@media (min-width: 981px) {
+  .filters {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .filters-form {
+    max-height: none;
+  }
+
+  /* Both axes together: a `hidden` on one axis forces a `visible` on the
+     other to compute as `auto`, which quietly reinstated the scrollbar this
+     block exists to remove. */
+  .filters-scroll {
+    overflow: visible;
+    min-height: 0;
+  }
+
+  /* With nothing clipping it, the action bar has no floor to stick to; it
+     simply ends the column. */
+  .filters-actions {
+    position: static;
+  }
+}
