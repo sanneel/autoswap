@@ -711,86 +711,6 @@ function StickyCTA() {
   `;
 }
 
-// Slugs that actually have a file in assets/logos/. The quickbar used to gate
-// logos on FEATURED_MAKES — a hardcoded five — so Hyundai, Ford, Jeep and
-// Chevrolet sat as bare text next to a badged BMW and Toyota even though their
-// logos were sitting in the repo unused. Gate on what exists instead.
-// (The previous QUICK_BRAND_SLUGS map here was dead code, referenced nowhere.)
-const LOGO_SLUGS = new Set([
-  'audi', 'bmw', 'chevrolet', 'ford', 'honda', 'hyundai', 'jeep', 'kia',
-  'lexus', 'mazda', 'mercedes-benz', 'mitsubishi', 'nissan', 'opel',
-  'peugeot', 'porsche', 'renault', 'skoda', 'subaru', 'toyota',
-  'volkswagen', 'volvo',
-]);
-
-// A logo whenever one exists. Brands with no file (Alfa Romeo, Bentley) stay
-// text — still no filler glyph, since a generic car icon says nothing the
-// word does not already say.
-function quickBrandLogo(make) {
-  return LOGO_SLUGS.has(makeSlug(make))
-    ? `<img src="${escapeHtml(getLogoUrl(make))}" alt="${escapeHtml(make)}" class="quick-chip-brand-logo" loading="lazy">`
-    : '';
-}
-
-// No counts on the chips: the numbers made the rail read like analytics, and
-// worse, they contradicted the topbar whenever a filter was active (the chips
-// showed totals while the subtitle showed the filtered slice). The counts
-// still exist in the data — routeChips uses them to decide which chips to
-// show at all — they are just not printed.
-function quickChip({ href, label, icon = '', active = false, extraClass = '' }) {
-  return `
-    <a class="quick-chip${active ? ' is-active' : ''}${extraClass ? ` ${extraClass}` : ''}" href="${href}">
-      ${icon}
-      <span class="quick-chip-label">${label}</span>
-    </a>
-  `;
-}
-
-function CatalogQuickBar(count) {
-  const countByMake = (make) => allCars.filter((car) => car.make === make).length;
-  const countByCategory = (category) => allCars.filter((car) => car.category === category).length;
-  const countByCash = (cash) => allCars.filter((car) => car.cashType === cash).length;
-  // Was a hardcoded five (BMW, Mercedes, Audi, Toyota, Porsche), so any other
-  // make in the feed never got a chip no matter how many listings it had.
-  // Derived from what is actually listed now, most-listed first, capped so the
-  // rail stays a shortlist rather than a full index of every make.
-  const brandChips = Array.from(allCars.reduce((counts, car) => {
-    if (car.make) counts.set(car.make, (counts.get(car.make) || 0) + 1);
-    return counts;
-  }, new Map()))
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 8)
-    .map(([make]) => ({ make, label: tidyMakeCase(displayURLMake(make)) }));
-  const routeChips = [
-    // No icon: sedan and crossover were both showing the same car glyph, which
-    // distinguishes nothing and just pads the chip.
-    { label: 'სედანი', href: '/cars?category=sedan', count: countByCategory('sedan'), active: currentFilters.category === 'sedan' },
-    { label: 'ქროსოვერი', href: '/cars?category=crossover', count: countByCategory('crossover'), active: currentFilters.category === 'crossover' },
-    { label: 'გარეშე', href: '/cars?cash=none', count: countByCash('none'), active: currentFilters.cash === 'none', icon: '<span class="quick-chip-symbol">₾</span>' },
-  ].filter((chip) => chip.count > 0);
-  const noQuickFilter = !currentFilters.make && !currentFilters.category && !currentFilters.cash;
-
-  return `
-    <div class="catalog-quickbar" aria-label="სწრაფი ფილტრები">
-      <button class="rail-arrow rail-arrow--prev" type="button" data-rail-prev aria-label="წინა">${icons.arrowRight}</button>
-      <nav class="catalog-quickbar-pills quick-chip-strip" data-drag-scroll>
-        ${quickChip({ href: '/cars', label: 'ყველა', count: allCars.length, active: noQuickFilter, extraClass: 'quick-chip--all' })}
-        <span class="quick-chip-divider" aria-hidden="true"></span>
-        ${brandChips.map((brand) => quickChip({
-          href: `/cars?make=${encodeURIComponent(brand.make)}`,
-          label: brand.label || brand.make,
-          count: countByMake(brand.make),
-          active: currentFilters.make.toLowerCase() === brand.make.toLowerCase(),
-          icon: quickBrandLogo(brand.make),
-        })).join('')}
-        <span class="quick-chip-divider" aria-hidden="true"></span>
-        ${routeChips.map((chip) => quickChip(chip)).join('')}
-      </nav>
-      <button class="rail-arrow" type="button" data-rail-next aria-label="შემდეგი">${icons.arrowRight}</button>
-    </div>
-  `;
-}
-
 function CatalogPage() {
   const filtered = getFiltered();
   const slice = pageSlice(filtered);
@@ -806,7 +726,6 @@ function CatalogPage() {
           <a class="btn btn-primary catalog-topbar-cta" href="/sell">${icons.plus} დაამატე მანქანა</a>
         </div>
       </header>
-      ${CatalogQuickBar()}
       <section class="catalog container">
         ${FilterSidebar()}
         <div class="results">
@@ -1594,10 +1513,9 @@ function bindDragRails(root = document) {
     });
   });
 
-  // The landing page hides its rail arrows once the strip fits (app.js
-  // syncRailArrows), but the catalog never did — so the quickbar's prev/next
-  // sat there as dead controls, and on a wide screen the left one clipped
-  // against the edge of the bar. Same rule here.
+  // Generic rail plumbing, kept because it is bound by selector and simply
+  // finds nothing now that the quick-filter strip is gone. Any rail added to
+  // this page later gets drag-scroll and arrow sync for free.
   const syncRailArrows = () => {
     root.querySelectorAll('[data-drag-scroll]').forEach((rail) => {
       rail.parentElement?.classList.toggle('rail-no-overflow', rail.scrollWidth <= rail.clientWidth + 1);
@@ -1856,19 +1774,6 @@ document.addEventListener('autoswap:mycar', () => {
   renderAll();
 });
 
-// Picking a brand chip navigates, and the reloaded page rendered the strip at
-// scrollLeft 0. A chip further along (Toyota, Porsche) was then off-screen, so
-// the filter you just applied looked like it had scrolled away on its own.
-// Centre it instead, without scrolling the page.
-function revealActiveQuickChip() {
-  const strip = document.querySelector('.catalog-quickbar-pills');
-  const active = strip?.querySelector('a.is-active');
-  if (!strip || !active) return;
-  if (strip.scrollWidth <= strip.clientWidth) return;
-  const centred = active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2;
-  strip.scrollLeft = Math.max(0, Math.min(centred, strip.scrollWidth - strip.clientWidth));
-}
-
 function renderAll() {
   // Before the markup: CarRow reads the baselines to decide the good-price badge.
   recomputePriceBaselines();
@@ -1876,7 +1781,6 @@ function renderAll() {
   bindEvents();
   initCombos();
   bindQuerySuggest();
-  revealActiveQuickChip();
 }
 
 async function hydrateFromSupabase() {
