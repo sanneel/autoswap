@@ -2665,6 +2665,104 @@
   // typing surface — a tap shows options, never a keyboard.
   const MM_FEATURED = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Porsche'];
 
+  // Some makes store the brand inside the model name — the catalog has
+  // "Mazda 3" under Mazda and "Hummer" under Hummer — so composing
+  // `${make} ${model}` produced "Mazda Mazda 3". Strip a leading make prefix
+  // before the two are joined. Compared on letters and digits only, so
+  // "Mercedes-Benz" still matches a model written "Mercedes Benz ...".
+  function stripMakePrefix(make, model) {
+    const m = String(model || '').trim();
+    const mk = String(make || '').trim();
+    if (!m || !mk) return m;
+    const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const nmk = norm(mk);
+    const nm = norm(m);
+    if (!nmk || !nm.startsWith(nmk)) return m;
+    // The model IS the make (Hummer): there is no model part to keep.
+    if (nm === nmk) return '';
+    let consumed = 0;
+    let i = 0;
+    while (i < m.length && consumed < nmk.length) {
+      if (/[a-z0-9]/i.test(m[i])) consumed += 1;
+      i += 1;
+    }
+    return m.slice(i).replace(/^[\s\-–]+/, '').trim();
+  }
+
+  // Which family a model belongs to, or '' when it belongs to none.
+  //
+  // The catalog lists models flat, so BMW opened as 103 bare numbers and
+  // Mercedes as 300+ — a wall you cannot scan. Nearly every European range is
+  // already encoded in the name: the leading letters or the first digit of a
+  // three-digit number ARE the series. BMW groups 103/103 this way and
+  // Mercedes 306/323.
+  function modelFamily(make, model) {
+    const m = String(model || '').trim();
+    const mk = String(make || '').toLowerCase();
+    if (!m) return '';
+    if (mk === 'bmw') {
+      if (/^i/i.test(m)) return 'i Series';               // i3, i8, iX, iX3
+      if (/^xm$/i.test(m) || /^m\s*\d/i.test(m)) return 'M Series';
+      if (/^x\s*\d/i.test(m)) return 'X Series';
+      if (/^z\s*\d/i.test(m)) return 'Z Series';
+      const digit = m.match(/^(\d)\d{2}/);                // 320 → 3 Series
+      return digit ? `${digit[1]} Series` : '';
+    }
+    if (mk.startsWith('mercedes')) {
+      if (/^amg/i.test(m)) return 'AMG';
+      const eq = m.match(/^(EQ[A-Z])/i);                  // EQA, EQB, EQS
+      if (eq) return eq[1].toUpperCase();
+    }
+    // Generic: the letters before the number are the family. Covers Mercedes
+    // (C 200 → C-Class, GLE 350 → GLE), Audi (A4 → A, RS6 → RS), Volvo, Lexus.
+    const letters = m.match(/^([A-Za-z]{1,3})[\s-]*\d/);
+    if (letters) {
+      const tag = letters[1].toUpperCase();
+      return (mk.startsWith('mercedes') && tag.length === 1) ? `${tag}-Class` : tag;
+    }
+    // Mercedes' pre-letter era (190, 300 SE) is a family of its own.
+    if (/^\d/.test(m) && mk.startsWith('mercedes')) return 'კლასიკური';
+    return '';
+  }
+
+  // Numeric series first in numeric order, then letters, then the catch-all.
+  function compareFamilies(a, b) {
+    if (a === b) return 0;
+    if (a === 'კლასიკური') return 1;
+    if (b === 'კლასიკური') return -1;
+    const na = a.match(/^(\d+)/);
+    const nb = b.match(/^(\d+)/);
+    if (na && nb) return Number(na[1]) - Number(nb[1]);
+    if (na) return -1;
+    if (nb) return 1;
+    return a.localeCompare(b);
+  }
+
+  // Grouping only pays off on a long list that mostly groups. Toyota's models
+  // are names (Corolla, Prius), so 141 of 148 land nowhere — that list is
+  // better left flat than split into five near-empty headings plus a huge
+  // "other".
+  const MM_GROUP_MIN_MODELS = 12;
+  const MM_GROUP_MIN_COVERAGE = 0.6;
+
+  function groupModels(make, models) {
+    if (models.length < MM_GROUP_MIN_MODELS) return null;
+    const map = new Map();
+    const rest = [];
+    models.forEach((m) => {
+      const family = modelFamily(make, m.cleanName);
+      if (!family) { rest.push(m); return; }
+      if (!map.has(family)) map.set(family, []);
+      map.get(family).push(m);
+    });
+    const grouped = models.length - rest.length;
+    if (map.size < 2 || grouped / models.length < MM_GROUP_MIN_COVERAGE) return null;
+    return {
+      groups: Array.from(map.entries()).sort((a, b) => compareFamilies(a[0], b[0])),
+      rest,
+    };
+  }
+
   function mmPanelHTML() {
     return `
       <div class="brand-picker-panel" data-mm-panel hidden>
@@ -2747,11 +2845,29 @@
           + rows.map((m) => row(m.name, `data-mm-make="${escapeAttr(m.name)}" data-mm-make-id="${escapeAttr(m.id ?? '')}"`)).join('');
       } else {
         // 300, because 60 truncated real ranges — BMW alone has 103 models.
-        const models = curMake.id ? await searchModels(term(), curMake.id, 300).catch(() => []) : [];
+        const raw = curMake.id ? await searchModels(term(), curMake.id, 300).catch(() => []) : [];
         if (stamp !== seq) return;
+        // cleanName is what the user sees and what gets stored; the brand is
+        // dropped here so "Mazda 3" never renders as "Mazda Mazda 3".
+        const models = raw
+          .map((m) => ({ ...m, cleanName: stripMakePrefix(curMake.name, m.name) }))
+          .filter((m) => m.cleanName);
+        const modelRow = (m) => row(
+          `${curMake.name} ${m.cleanName}`,
+          `data-mm-model="${escapeAttr(m.cleanName)}"`,
+        );
+        const grouped = groupModels(curMake.name, models);
+        const body = grouped
+          ? grouped.groups.map(([family, items]) => `
+              <div class="brand-picker-group" role="presentation">${escapeAttr(family)}</div>
+              ${items.map(modelRow).join('')}`).join('')
+            + (grouped.rest.length
+              ? `<div class="brand-picker-group" role="presentation">სხვა</div>${grouped.rest.map(modelRow).join('')}`
+              : '')
+          : models.map(modelRow).join('');
         html = row(`← ${curMake.name}`, 'data-mm-back="1"')
           + row(curMake.name, 'data-mm-any="1"')
-          + models.map((m) => row(`${curMake.name} ${m.name}`, `data-mm-model="${escapeAttr(m.name)}"`)).join('');
+          + body;
       }
       list.innerHTML = html || '<div class="brand-picker-empty">ვერ მოიძებნა</div>';
     };

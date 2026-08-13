@@ -11592,6 +11592,13 @@ body {
   font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
+  /* Sticky inside .brand-picker-list, which scrolls at 260px tall. Mercedes
+     groups into 35 families over 300 models, so a static heading is gone from
+     view long before the models under it are. Opaque, or rows show through. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card-white);
 }
 
 .brand-picker-name {
