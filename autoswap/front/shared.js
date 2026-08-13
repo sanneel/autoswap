@@ -285,7 +285,7 @@
   }
   bindImageFallbacks();
 
-  // Maps a public_vehicle_feed row (also the shape of DEMO_FEED) to a uniform
+  // Maps a public_vehicle_feed row to a uniform
   // card object carrying BOTH display strings and raw values for filtering.
   // Bare "any car" labels carry zero swap intent, strip them so such
   // listings fall into the open-to-offers category instead of faking a want.
@@ -992,34 +992,6 @@
   function bustListingCaches() {
     cacheBust('feed:');
   }
-
-  // ---- Demo dataset (shaped exactly like public_vehicle_feed rows) --------
-  // Local cover images so the catalog always renders (no remote calls).
-  // Inventory mirrors the real Georgian swap market (Prius/Camry/Sonata
-  // territory, not a German showroom). owner_* fields = the trust aggregates
-  // the feed view will expose from profiles.
-  const C = assets.cards;
-  const DEMO_FEED = [
-    { id: 'demo-toyota-camry', estimated_value: 52000, make: 'Toyota', model: 'Camry', year: 2020, mileage: 78000, fuel_type: 'hybrid', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: C[2], desired_vehicle_labels: ['Lexus ES', 'BMW 530i'], cash_mode: 'add_money', cash_amount: 3000, is_boosted: true, created_at: '2026-06-10T08:00:00Z', owner_name: 'გიორგი', owner_phone_verified: true, owner_completed_swaps: 2, owner_response_hours: 1, owner_active_today: true },
-    { id: 'demo-bmw-530i', estimated_value: 58000, make: 'BMW', model: '530i', year: 2019, mileage: 90000, fuel_type: 'petrol', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: assets.bmw, desired_vehicle_labels: ['Audi A6', 'Mercedes E-Class'], cash_mode: 'add_money', cash_amount: 2000, is_boosted: false, created_at: '2026-06-10T07:30:00Z', owner_name: 'ლევანი', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 2, owner_active_today: true },
-    { id: 'demo-toyota-prius', estimated_value: 24000, make: 'Toyota', model: 'Prius', year: 2017, mileage: 148000, fuel_type: 'hybrid', transmission: 'automatic', city: 'რუსთავი', category: 'hatchback', cover_photo_url: C[0], desired_vehicle_labels: ['Toyota Camry', 'Hyundai Sonata'], cash_mode: 'ask_money', cash_amount: 4000, is_boosted: false, created_at: '2026-06-09T18:00:00Z', owner_name: 'ნიკა', owner_phone_verified: true, owner_completed_swaps: 0, owner_response_hours: 1, owner_active_today: true },
-    { id: 'demo-hyundai-sonata', estimated_value: 32000, make: 'Hyundai', model: 'Sonata', year: 2019, mileage: 96000, fuel_type: 'lpg', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: C[1], desired_vehicle_labels: ['Toyota Camry'], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-09T14:00:00Z', owner_name: 'თამარი', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 3, owner_active_today: false },
-    { id: 'demo-audi-a6-2021', estimated_value: 78000, make: 'Audi', model: 'A6', year: 2021, mileage: 66000, fuel_type: 'diesel', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: assets.audi, desired_vehicle_labels: ['BMW X5'], cash_mode: 'ask_money', cash_amount: 2000, is_boosted: false, created_at: '2026-06-09T10:00:00Z', owner_name: 'დავითი', owner_phone_verified: true, owner_completed_swaps: 3, owner_response_hours: 1, owner_active_today: true },
-    { id: 'demo-hyundai-tucson', estimated_value: 56000, make: 'Hyundai', model: 'Tucson', year: 2021, mileage: 54000, fuel_type: 'petrol', transmission: 'automatic', city: 'ბათუმი', category: 'crossover', cover_photo_url: C[3], desired_vehicle_labels: ['Toyota RAV4'], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-08T16:00:00Z', owner_name: 'ზურა', owner_phone_verified: true, owner_completed_swaps: 0, owner_response_hours: 4, owner_active_today: true },
-    { id: 'demo-toyota-rav4', estimated_value: 67000, make: 'Toyota', model: 'RAV4', year: 2021, mileage: 61000, fuel_type: 'hybrid', transmission: 'automatic', city: 'ქუთაისი', category: 'crossover', cover_photo_url: C[2], desired_vehicle_labels: ['Hyundai Tucson', 'Kia Sportage'], cash_mode: 'ask_money', cash_amount: 1500, is_boosted: false, created_at: '2026-06-08T11:00:00Z', owner_name: 'მარიამი', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 2, owner_active_today: false },
-    { id: 'demo-kia-optima', estimated_value: 27000, make: 'Kia', model: 'Optima', year: 2018, mileage: 112000, fuel_type: 'lpg', transmission: 'automatic', city: 'ქუთაისი', category: 'sedan', cover_photo_url: C[0], desired_vehicle_labels: [], cash_mode: 'flexible', cash_amount: 0, is_boosted: false, created_at: '2026-06-07T15:00:00Z', owner_name: 'გია', owner_phone_verified: false, owner_completed_swaps: 0, owner_response_hours: null, owner_active_today: false },
-    { id: 'demo-mercedes-eclass', estimated_value: 72000, make: 'Mercedes-Benz', model: 'E 220d', year: 2020, mileage: 74000, fuel_type: 'diesel', transmission: 'automatic', city: 'თბილისი', category: 'sedan', cover_photo_url: C[0], desired_vehicle_labels: ['BMW 5 Series', 'Audi A6'], cash_mode: 'flexible', cash_amount: 0, is_boosted: false, created_at: '2026-06-07T12:00:00Z', owner_name: 'ირაკლი', owner_phone_verified: true, owner_completed_swaps: 2, owner_response_hours: 1, owner_active_today: true },
-    { id: 'demo-lexus-rx', estimated_value: 83000, make: 'Lexus', model: 'RX 450h', year: 2019, mileage: 91000, fuel_type: 'hybrid', transmission: 'automatic', city: 'გორი', category: 'suv', cover_photo_url: C[1], desired_vehicle_labels: ['Mercedes GLE'], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-06T13:00:00Z', owner_name: 'სანდრო', owner_phone_verified: false, owner_completed_swaps: 0, owner_response_hours: 8, owner_active_today: false },
-    { id: 'demo-vw-tiguan', estimated_value: 48000, make: 'Volkswagen', model: 'Tiguan', year: 2019, mileage: 88000, fuel_type: 'petrol', transmission: 'automatic', city: 'ბათუმი', category: 'crossover', cover_photo_url: C[3], desired_vehicle_labels: ['Toyota Camry', 'Honda Accord'], cash_mode: 'ask_money', cash_amount: 2500, is_boosted: false, created_at: '2026-06-05T17:00:00Z', owner_name: 'ბექა', owner_phone_verified: true, owner_completed_swaps: 0, owner_response_hours: 5, owner_active_today: false },
-    { id: 'demo-bmw-x5', estimated_value: 115000, make: 'BMW', model: 'X5 xDrive40i', year: 2021, mileage: 58000, fuel_type: 'petrol', transmission: 'automatic', city: 'თბილისი', category: 'suv', cover_photo_url: assets.bmw, desired_vehicle_labels: [], cash_mode: 'none', cash_amount: 0, is_boosted: false, created_at: '2026-06-04T10:00:00Z', owner_name: 'ანა', owner_phone_verified: true, owner_completed_swaps: 1, owner_response_hours: 2, owner_active_today: true },
-    { id: 'demo-porsche-macan', estimated_value: 132000, make: 'Porsche', model: 'Macan S', year: 2020, mileage: 62000, fuel_type: 'petrol', transmission: 'automatic', city: 'თბილისი', category: 'suv', cover_photo_url: C[3], desired_vehicle_labels: ['BMW X5', 'Mercedes GLE'], cash_mode: 'ask_money', cash_amount: 6000, is_boosted: false, created_at: '2026-06-03T09:00:00Z', owner_name: 'რატი', owner_phone_verified: true, owner_completed_swaps: 2, owner_response_hours: 2, owner_active_today: true },
-  ];
-
-  // Pre-mapped demo cards (uniform shape, boosted first then newest).
-  const DEMO_CARS = DEMO_FEED
-    .slice()
-    .sort((a, b) => (Number(b.is_boosted) - Number(a.is_boosted)) || (b.created_at > a.created_at ? 1 : -1))
-    .map(mapFeedRow);
 
   // ---- Vehicle by id (detail page); demo data is found in the page itself ----
   async function fetchVehicleById(id) {
@@ -2120,10 +2092,9 @@
         <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">შესვლა</button>
       </form>
       <div class="auth-secondary">
-        <a class="auth-link" href="/login?register">ანგარიში არ გაქვს? დარეგისტრირდი</a>
+        <a class="auth-link" href="/login?register">დარეგისტრირდი</a>
         <a class="auth-link" href="/login">დაგავიწყდა პაროლი?</a>
       </div>
-      <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით</button>
     `;
   }
 
@@ -2146,13 +2117,6 @@
 
     function bindPhoneStep() {
       bindPasswordFields(step);
-
-      // Try-it-out account: same local demo path the OTP fallback uses, no SMS.
-      step.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
-        await confirmOtp('+995555000000', DEMO_OTP_CODE, true);
-        toast('დემო ანგარიშით შეხვედი, ტესტირებისთვის');
-        close();
-      });
 
       step.querySelectorAll('.btn-provider').forEach((btn) => {
         btn.addEventListener('click', async () => {
@@ -2443,9 +2407,11 @@
     if (!authUser || !myCar) {
       notifyMatches = [];
     } else {
+      // No feed, no matches. There is no stand-in dataset to fall back on any
+      // more, and inventing matches out of demo rows would put fake cars behind
+      // a notification badge.
       const feed = await fetchFeed().catch(() => null);
-      const cars = feed && feed.length ? feed : DEMO_CARS;
-      notifyMatches = cars.filter((car) => matchLevel(car, myCar)).slice(0, 8);
+      notifyMatches = (feed || []).filter((car) => matchLevel(car, myCar)).slice(0, 8);
     }
     const seen = notifySeenIds();
     const unseen = notifyMatches.filter((car) => !seen.has(String(car.id))).length;
@@ -2951,8 +2917,6 @@
     matchLevel,
     freshnessLabel,
     daysSince,
-    DEMO_FEED,
-    DEMO_CARS,
     getCurrency: () => currency,
     getUsdRate: () => gelPerUsd,
     setCurrency,

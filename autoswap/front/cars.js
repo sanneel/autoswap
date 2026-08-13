@@ -3,7 +3,6 @@ const {
   Header,
   Footer,
   icons,
-  DEMO_CARS,
   CATEGORY_LABELS,
   TRANSMISSION_LABELS,
   FUEL_LABELS,
@@ -85,7 +84,7 @@ function urlKnownMakes() {
   return Array.from(new Set([
     'Alfa Romeo', 'Audi', 'BMW', 'Cadillac', 'Chevrolet', 'Chrysler', 'Mercedes-Benz',
     'Toyota', 'Volkswagen', 'Hyundai', 'Kia', 'Lexus', 'Honda', 'Ford', 'Nissan', 'Mazda', 'Porsche',
-    ...DEMO_CARS.map((car) => car.make).filter(Boolean),
+    ...allCars.map((car) => car.make).filter(Boolean),
   ]));
 }
 
@@ -158,7 +157,13 @@ function seedMyCarFromURL() {
     source: 'hero-search-url',
   });
 }
-let allCars = DEMO_CARS.slice();
+// Starts empty, not seeded with a stand-in dataset. Rendering placeholder
+// cars and then swapping them for the real feed meant every visit began with
+// a full re-render of different cars — the flash of wrong content that made
+// the page feel slow. Now the first paint is a skeleton and the real rows
+// land in it once.
+let allCars = [];
+let feedLoaded = false;
 seedMyCarFromURL();
 let currentFilters = readFiltersFromURL();
 let pagesShown = 1;
@@ -651,6 +656,16 @@ function CarRow(car) {
   `;
 }
 
+// What goes in the list body. Three states, not two: still loading is not the
+// same as "nothing matched", and showing the empty state before the feed has
+// answered told people the site was broken when it was merely busy.
+function listBodyHTML(slice) {
+  if (!feedLoaded) {
+    return Array.from({ length: 6 }, () => '<div class="skeleton-row"></div>').join('');
+  }
+  return slice.length ? slice.map(CarRow).join('') : emptyStateHTML();
+}
+
 function emptyStateHTML() {
   const myCar = getMyCar();
   return `
@@ -731,7 +746,7 @@ function CatalogPage() {
         <div class="results">
           ${ResultsHead(filtered.length)}
           <div class="car-list view-${currentView}" id="car-list">
-            ${slice.length ? slice.map(CarRow).join('') : emptyStateHTML()}
+            ${listBodyHTML(slice)}
           </div>
           <div class="load-more-wrap" id="load-more-wrap">${loadMoreHTML(filtered.length)}</div>
         </div>
@@ -900,7 +915,7 @@ function update() {
 
   const list = document.querySelector('#car-list');
   if (list) {
-    list.innerHTML = slice.length ? slice.map(CarRow).join('') : emptyStateHTML();
+    list.innerHTML = listBodyHTML(slice);
   }
 
   const more = document.querySelector('#load-more-wrap');
@@ -1785,12 +1800,13 @@ function renderAll() {
 
 async function hydrateFromSupabase() {
   const mapped = await fetchFeed();
-  if (mapped !== null && mapped.length) {
-    allCars = mapped;
-    recomputePriceBaselines();
-    pagesShown = 1;
-    renderAll();
-  }
+  // An empty feed is an answer, not a failure: it has to clear the skeleton
+  // and show the real empty state rather than leave placeholders spinning.
+  allCars = mapped || [];
+  feedLoaded = true;
+  recomputePriceBaselines();
+  pagesShown = 1;
+  renderAll();
 }
 
 renderAll();

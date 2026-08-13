@@ -5601,7 +5601,19 @@ p {
   font-size: 14px;
   font-weight: 600;
   text-decoration: underline;
-  padding: 4px;
+  /* No side padding: with both labels on one line at 375px the pair needed
+     303px against 293px available, and the 8px per link was the whole
+     difference. Vertical padding stays for the tap target. */
+  padding: 4px 0;
+}
+
+/* „დაგავიწყდა პაროლი?" broke across two lines next to the register link,
+   leaving one side of the row a line taller than the other. Named rather than
+   positional: the code step's row is also two links, but „კოდის თავიდან
+   გაგზავნა (60)" is long enough that it must still be allowed to wrap. */
+#go-register,
+#go-forgot {
+  white-space: nowrap;
 }
 
 .auth-link:disabled { color: var(--muted); text-decoration: none; cursor: default; }
@@ -8057,7 +8069,6 @@ body {
 .filterbar-more,
 .account-tab,
 .browse-pill,
-.catalog-quickbar-pills a,
 .sell-mode-chip {
   border-radius: var(--market-radius);
 }
@@ -8394,85 +8405,6 @@ body {
 
 .catalog-hero-trust {
   display: none;
-}
-
-.catalog-quickbar {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  padding: 8px;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 10px;
-  background: rgba(255,255,255,0.08);
-}
-
-.catalog-quickbar-count {
-  display: grid;
-  min-width: 96px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.12);
-  color: #fff;
-}
-
-.catalog-quickbar-count strong {
-  font-family: var(--font); font-variant-numeric: tabular-nums;
-  font-size: 18px;
-  line-height: 1;
-}
-
-.catalog-quickbar-count span {
-  color: rgba(255,255,255,0.7);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.catalog-quickbar-pills {
-  display: flex;
-  gap: 7px;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.catalog-quickbar-pills::-webkit-scrollbar {
-  display: none;
-}
-
-/* These chips were styled for a dark quickbar (white text on a white 12%
-   overlay). The bar is light, so every chip rendered white-on-white at 1.07:1,
-   i.e. invisible. Light-bar styling, with the active chip as a solid fill. */
-.catalog-quickbar-pills a {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 8px 12px;
-  border: 1px solid var(--market-line);
-  background: #fff;
-  color: var(--market-ink);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.catalog-quickbar-pills a:hover {
-  border-color: var(--copper);
-  background: #fff;
-}
-
-.catalog-quickbar-pills a.is-active {
-  border-color: var(--copper);
-  background: var(--copper);
-  color: #fff;
-}
-
-.catalog-quickbar-pills a .quick-chip-count {
-  color: inherit;
-  opacity: 0.62;
-  font-variant-numeric: tabular-nums;
 }
 
 .catalog {
@@ -8974,10 +8906,6 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .catalog-quickbar {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .results-head {
     align-items: flex-start;
     flex-direction: column;
@@ -9041,15 +8969,6 @@ body {
 }
 
 @media (max-width: 680px) {
-  .catalog-quickbar {
-    max-width: 100%;
-    overflow: hidden;
-  }
-
-  .catalog-quickbar-pills {
-    max-width: 100%;
-    overflow-x: auto;
-  }
 
   .results-head {
     display: grid;
@@ -9281,8 +9200,7 @@ body {
   padding: 22px 0 4px;
 }
 
-.browse-strip-inner,
-.catalog-quickbar {
+.browse-strip-inner {
   border-radius: 12px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255,0.96), rgba(250,250,244,0.96));
@@ -9296,15 +9214,13 @@ body {
   background: var(--v4-green-soft);
 }
 
-.browse-pill,
-.catalog-quickbar-pills a {
+.browse-pill {
   position: relative;
   overflow: hidden;
   border-radius: 10px;
 }
 
-.browse-pill::after,
-.catalog-quickbar-pills a::after {
+.browse-pill::after {
   content: "";
   position: absolute;
   left: 12px;
@@ -9318,8 +9234,7 @@ body {
   transition: transform 180ms ease;
 }
 
-.browse-pill:hover::after,
-.catalog-quickbar-pills a:hover::after {
+.browse-pill:hover::after {
   transform: scaleX(1);
 }
 
@@ -9368,15 +9283,6 @@ body {
 
 .catalog-hero-inner {
   grid-template-columns: minmax(220px, 0.66fr) minmax(0, 1.3fr) auto;
-}
-
-.catalog-quickbar {
-  background: rgba(255, 255, 255,0.1);
-  box-shadow: none;
-}
-
-.catalog-quickbar-pills a {
-  border: 1px solid var(--market-line);
 }
 
 .catalog {
@@ -9709,16 +9615,6 @@ body {
 
   .catalog-hero-copy > p {
     font-size: 12.5px;
-  }
-
-  .catalog-quickbar {
-    width: 100%;
-    border-radius: 12px;
-    overflow: hidden;
-  }
-
-  .catalog-quickbar-count {
-    min-width: 0;
   }
 
   .catalog-hero-cta {
@@ -10343,8 +10239,7 @@ body {
   transform: rotate(180deg);
 }
 
-.browse-pills,
-.catalog-quickbar-pills {
+.browse-pills {
   display: flex;
   min-width: 0;
   overflow-x: auto;
@@ -10356,13 +10251,11 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-.browse-pills::-webkit-scrollbar,
-.catalog-quickbar-pills::-webkit-scrollbar {
+.browse-pills::-webkit-scrollbar {
   display: none;
 }
 
-.browse-pills.is-dragging,
-.catalog-quickbar-pills.is-dragging {
+.browse-pills.is-dragging {
   cursor: grabbing;
   user-select: none;
 }
@@ -10425,72 +10318,6 @@ body {
 .trade-wants {
   display: grid;
   gap: 8px;
-}
-
-.catalog-quickbar {
-  display: grid;
-  /* Three children (prev arrow, pill strip, next arrow), so three tracks. The
-     leading `auto` was left from a version that had a heading here; with four
-     tracks the pill strip landed in the 34px arrow column and collapsed to two
-     Georgian letters, while the 1fr track sat empty. */
-  grid-template-columns: 34px minmax(0, 1fr) 34px;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  overflow: hidden;
-  padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.catalog-quickbar-count {
-  min-height: 52px;
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-.catalog-quickbar-count strong,
-.catalog-quickbar-count span {
-  color: #fff;
-}
-
-.catalog-quickbar .rail-arrow {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-.catalog-quickbar .rail-arrow:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-
-/* Light-bar styling. The white text + white-overlay values here were left over
-   from a dark quickbar and rendered every chip at 1.07:1 against the light bar,
-   i.e. invisible. This rule is last in the cascade, so it owns the colors. */
-.catalog-quickbar-pills a {
-  flex: 0 0 auto;
-  min-height: 52px;
-  padding: 0 18px;
-  scroll-snap-align: start;
-  border-color: var(--market-line);
-  background: #fff;
-  color: var(--market-ink);
-  white-space: nowrap;
-}
-
-.catalog-quickbar-pills a:hover {
-  border-color: var(--copper);
-  background: #fff;
-}
-
-.catalog-quickbar-pills a.is-active {
-  border-color: var(--copper);
-  background: var(--copper);
-  color: #fff;
 }
 
 .filters,
@@ -10633,13 +10460,11 @@ body {
     justify-self: center;
   }
 
-  .browse-strip--garage .browse-strip-inner,
-  .catalog-quickbar {
+  .browse-strip--garage .browse-strip-inner {
     grid-template-columns: auto minmax(0, 1fr) 34px;
   }
 
-  .browse-strip--garage .rail-arrow--prev,
-  .catalog-quickbar .rail-arrow--prev {
+  .browse-strip--garage .rail-arrow--prev {
     display: none;
   }
 }
@@ -10767,14 +10592,6 @@ body {
 
   .listing-media {
     height: 210px;
-  }
-
-  .catalog-quickbar {
-    grid-template-columns: minmax(0, 1fr) 34px;
-  }
-
-  .catalog-quickbar-count {
-    display: none;
   }
 }
 
@@ -11019,14 +10836,6 @@ body {
   width: 32px;
   height: 32px;
   object-fit: contain;
-}
-
-/* Quick-filter brand logos (cars sidebar) */
-.quick-chip-brand-logo {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  margin-right: 6px;
 }
 
 /* Fallback icon for makes without a bundled logo. */
@@ -13243,9 +13052,7 @@ select[data-aselect]:focus-visible,
   .btn,
   .filters-toggle,
   .view-btn,
-  .results-sort select,
-  .quick-chip,
-  .catalog-quickbar-pills a { min-height: 44px; }
+  .results-sort select { min-height: 44px; }
 
   .site-header .currency-switch button { min-height: 36px; min-width: 40px; }
 
@@ -13273,9 +13080,6 @@ select[data-aselect]:focus-visible,
     border-radius: 2px;
     background: rgba(20, 26, 20, 0.18);
   }
-
-  /* Full-bleed sections read as app screens rather than cards on a page. */
-  .catalog-quickbar { border-radius: 0; border-left: 0; border-right: 0; }
 
   /* ---- Hero ----
      Cars were set to 122% of their column for a deliberate bleed. On a 375px
@@ -13409,7 +13213,6 @@ select[data-aselect]:focus-visible,
    element keep its hover look until the next tap elsewhere. */
 @media (hover: none) {
   .car-card:hover,
-  .quick-chip:hover,
   .brand-chip:hover,
   .browse-pill:hover { transform: none; }
 }
@@ -13434,19 +13237,6 @@ select[data-aselect]:focus-visible,
    family. */
 .adv-modal-head strong {
   color: var(--copper);
-}
-
-/* ─── Brand logo on the selected (green) quick chip ─────────────────────
-   The marks are dark or silver on transparency. Dropped straight onto the
-   solid green active chip, the Mercedes star lost its fill and read as a
-   bare outline. A white disc keeps every mark on the background it was
-   drawn for, selected or not. */
-.catalog-quickbar-pills a .quick-chip-brand-logo,
-.quick-chip .quick-chip-brand-logo {
-  box-sizing: content-box;
-  padding: 3px;
-  border-radius: 50%;
-  background: #fff;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -14739,20 +14529,6 @@ html {
   }
 }
 
-/* ─── Catalog quickbar: collapse the grid when the arrows go ────────────
-   .catalog-quickbar is a three-column grid, arrow / rail / arrow. Hiding
-   the arrows with display:none removes them as grid items entirely, so
-   the rail dropped out of the middle 1323px track and into the first
-   34px one — measured clientWidth 34 against scrollWidth 918, with the
-   "ყველა" chip scrolled 42px out of view past the left edge.
-
-   The landing page's browse strip already collapses to one column for
-   exactly this reason; the catalog never needed it until syncRailArrows
-   started applying rail-no-overflow here too. */
-.catalog-quickbar.rail-no-overflow {
-  grid-template-columns: minmax(0, 1fr);
-}
-
 /* ─── Chip rails: let the flick run ─────────────────────────────────────
    scroll-snap-type: x proximity with scroll-snap-align: start on every
    chip made the rail grab and reposition mid-swipe, which is what read
@@ -14763,15 +14539,12 @@ html {
 
    overscroll-behavior-x stops a horizontal flick that reaches the end
    from chaining into the page and triggering a back-navigation. */
-.browse-pills,
-.catalog-quickbar-pills {
+.browse-pills {
   scroll-snap-type: none;
   overscroll-behavior-x: contain;
 }
 
-.browse-pills > *,
-.catalog-quickbar-pills > *,
-.catalog-quickbar-pills a {
+.browse-pills > * {
   scroll-snap-align: none;
 }
 

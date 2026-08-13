@@ -1,5 +1,5 @@
 
-const { assets, icons, Header, Footer, DEMO_CARS, escapeAttr, getCurrency, getUsdRate, onCurrencyChange, getLogoUrl } = window.AutoSwap;
+const { assets, icons, Header, Footer, escapeAttr, getCurrency, getUsdRate, onCurrencyChange, getLogoUrl } = window.AutoSwap;
 
 // Hero cash slider range depends on the display currency.
 function heroSliderCfg() {
@@ -118,7 +118,7 @@ function heroBrandNames() {
   if (!heroBrandNamesCache) {
     heroBrandNamesCache = Array.from(new Set([
       ...HERO_SEARCH_BRANDS,
-      ...DEMO_CARS.map((car) => car.make).filter(Boolean),
+      ...activeListings.map((car) => car.make).filter(Boolean),
     ]));
   }
   return heroBrandNamesCache;
@@ -332,11 +332,11 @@ const legacyListings = [
   },
 ];
 
-const listings = DEMO_CARS.slice(0, 4);
-
-
-
-let activeListings = listings.slice();
+// Empty until the feed answers. This used to hold four placeholder cars, so
+// the home page painted invented listings and then swapped them for real ones
+// a moment later — the visible stutter on load.
+let activeListings = [];
+let feedLoaded = false;
 
 function Hero() {
   return `
@@ -376,7 +376,7 @@ function Hero() {
         </div>
 
         ${SearchBar()}
-        <p class="hero-proof" id="hero-proof">${heroProofText(DEMO_CARS)}</p>
+        <p class="hero-proof" id="hero-proof">${heroProofText(activeListings)}</p>
       </div>
     </section>
   `;
@@ -946,7 +946,14 @@ function FeaturedSwap(car) {
 }
 
 function LandingListings(cars) {
-  if (!cars.length) return '<p class="empty-state">ამ ფილტრებით შეთავაზება ვერ მოიძებნა.</p>';
+  // Loading and empty are different answers. Before the feed replies this has
+  // to hold space, not claim there is nothing here.
+  if (!feedLoaded) {
+    return `<div class="listing-grid listing-grid--trio">${
+      Array.from({ length: 3 }, () => '<div class="skeleton-row"></div>').join('')
+    }</div>`;
+  }
+  if (!cars.length) return '<p class="empty-state">ჯერ არცერთი განცხადება არ არის.</p>';
   const [first, ...rest] = cars;
   return `
     ${FeaturedSwap(first)}
@@ -1024,7 +1031,7 @@ function ClosingStrip() {
 }
 
 function BrowseStrip() {
-  const countByMake = (make) => DEMO_CARS.filter((car) => car.make === make).length;
+  const countByMake = (make) => activeListings.filter((car) => car.make === make).length;
   // Brands shown as logos; only render a make that actually has listings.
   const brands = [
     { make: 'BMW' },
@@ -1255,12 +1262,12 @@ function App() {
 
 async function hydrateFromSupabase() {
   const mapped = await window.AutoSwap.fetchFeed();
-  if (mapped !== null) {
-    activeListings = mapped;
-    renderListingGrid(activeListings);
-    const proof = document.querySelector('#hero-proof');
-    if (proof) proof.textContent = heroProofText(activeListings);
-  }
+  activeListings = mapped || [];
+  feedLoaded = true;
+  renderListingGrid(activeListings);
+  const proof = document.querySelector('#hero-proof');
+  if (proof) proof.textContent = heroProofText(activeListings);
+  heroBrandNamesCache = null;
 }
 
 document.querySelector('#app').innerHTML = App();

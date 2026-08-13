@@ -1,6 +1,6 @@
 
 const {
-  Header, Footer, icons, DEMO_CARS, fetchVehicleById, fetchVehiclePhotos, escapeAttr,
+  Header, Footer, icons, fetchVehicleById, fetchVehiclePhotos, escapeAttr,
   fetchFeed, priceCurrencyToggle, toast,
 } = window.AutoSwap;
 // Escapes & < > ", every user-controlled listing string goes through this
@@ -285,15 +285,14 @@ function openLightbox(src) {
 
 async function render() {
   const id = getId();
-  let car = DEMO_CARS.find((c) => c.id === id) || null;
-  const isDemo = !!car;
-  if (!car && id) car = await fetchVehicleById(id);
+  // Every listing is a real one now, so there is no demo set to check first
+  // and no isDemo branch downstream of it.
+  const car = id ? await fetchVehicleById(id) : null;
 
-  const photos = car && !isDemo ? await fetchVehiclePhotos(car.id) : [];
-  // Comparison set for the price-position bar. Demo listings compare against
-  // the demo set; live listings against the real feed.
-  let comparables = DEMO_CARS;
-  if (car && !isDemo) {
+  const photos = car ? await fetchVehiclePhotos(car.id) : [];
+  // Comparison set for the price-position bar.
+  let comparables = [];
+  if (car) {
     const feed = await fetchFeed().catch(() => null);
     if (feed && feed.length) comparables = feed;
   }

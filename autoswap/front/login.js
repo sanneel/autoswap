@@ -90,10 +90,9 @@ function SignInStep(phone, error) {
       <button class="btn btn-primary auth-submit" type="submit">შესვლა</button>
     </form>
     <div class="auth-secondary">
-      <button type="button" class="auth-link" id="go-register">ანგარიში არ გაქვს? დარეგისტრირდი</button>
+      <button type="button" class="auth-link" id="go-register">დარეგისტრირდი</button>
       <button type="button" class="auth-link" id="go-forgot">დაგავიწყდა პაროლი?</button>
     </div>
-    <button type="button" class="auth-link-btn auth-demo-btn" data-auth-demo>სცადე დემო ანგარიშით</button>
   `);
 }
 
@@ -264,12 +263,6 @@ const BAD_PHONE = 'შეიყვანე ქართული მობი�
 function renderSignIn(error) {
   document.querySelector('#app').innerHTML = SignInStep(currentPhone, error);
   bindProviders(renderSignIn);
-
-  document.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
-    await confirmPhoneOtp('+995555000000', AUTH_DEMO_CODE, true);
-    toast('დემო ანგარიშით შეხვედი, ტესტირებისთვის');
-    window.location.href = '/';
-  });
 
   document.querySelector('#go-register').addEventListener('click', () => {
     mode = 'register';
