@@ -15,6 +15,7 @@
 const {
   Header, Footer, icons, sb, toast, escapeAttr, authReady,
   signInWithProvider, signInWithPassword, setPassword, passwordProblem,
+  passwordFieldHTML, bindPasswordFields,
   normalizePhone, requestPhoneOtp, confirmPhoneOtp, AUTH_DEMO_CODE,
   autofillOtpFromSms, channelPickerHTML, bindChannelPicker,
 } = window.AutoSwap;
@@ -61,19 +62,18 @@ function phoneField(phone) {
   `;
 }
 
-// autocomplete tokens matter here: "current-password" lets a manager offer the
-// saved one, "new-password" stops it overwriting a fresh choice with the old.
-function passwordField(label, name, complete) {
-  return `
-    <label class="field">
-      <span>${label}</span>
-      <input type="password" name="${name}" required autocomplete="${complete}" minlength="8" placeholder="••••••••">
-    </label>
-  `;
+// Always rendered, shown only when there is something to say. Filling it in
+// place is what lets an error arrive without re-rendering the step — which on a
+// phone would close the keyboard and discard everything already typed.
+function err(message) {
+  return `<p class="auth-error" role="alert"${message ? '' : ' hidden'}>${escapeAttr(message || '')}</p>`;
 }
 
-function err(message) {
-  return message ? `<p class="auth-error" role="alert">${escapeAttr(message)}</p>` : '';
+function showError(message) {
+  const node = document.querySelector('.auth-error');
+  if (!node) return;
+  node.textContent = message || '';
+  node.hidden = !message;
 }
 
 /* ---- 1. Sign in (default) ---------------------------------------------- */
@@ -86,7 +86,7 @@ function SignInStep(phone, error) {
     ${err(error)}
     <form class="auth-form" id="signin-form" novalidate>
       ${phoneField(phone)}
-      ${passwordField('პაროლი', 'password', 'current-password')}
+      ${passwordFieldHTML({ label: 'პაროლი', autocomplete: 'current-password', rules: false })}
       <button class="btn btn-primary auth-submit" type="submit">შესვლა</button>
     </form>
     <div class="auth-secondary">
@@ -158,13 +158,16 @@ function CodeStep(phone, isDemo, error) {
       <button class="btn btn-primary auth-submit" type="submit">დადასტურება</button>
     </form>
     <div class="auth-secondary">
-      <button type="button" class="auth-link" id="resend-btn" disabled>კოდის თავიდან გაგზავნა (<span id="resend-count">${RESEND_COOLDOWN_S}</span>)</button>
+      <button type="button" class="auth-link" id="resend-btn" disabled>კოდის თავიდან გაგზავნა (${RESEND_COOLDOWN_S})</button>
       <button type="button" class="auth-link" id="change-phone">სხვა ნომერი</button>
     </div>
   `);
 }
 
 /* ---- 5. Set password (after a verified code) -------------------------- */
+// One field, no confirm box — see passwordFieldHTML() in shared.js for why.
+// The requirements are a live checklist inside the field rather than a note
+// underneath, so the user finds out while typing instead of on submit.
 function PasswordStep(error) {
   return Shell(`
     <span class="auth-icon">${icons.check}</span>
@@ -172,11 +175,9 @@ function PasswordStep(error) {
     <p class="auth-sub">ნომერი დადასტურდა. შემდეგში ამ პაროლით შეხვალ, კოდი აღარ დაგჭირდება.</p>
     ${err(error)}
     <form class="auth-form" id="password-form" novalidate>
-      ${passwordField('პაროლი', 'password', 'new-password')}
-      ${passwordField('გაიმეორე პაროლი', 'confirm', 'new-password')}
+      ${passwordFieldHTML({ label: 'ახალი პაროლი', autocomplete: 'new-password' })}
       <button class="btn btn-primary auth-submit" type="submit">შენახვა</button>
     </form>
-    <p class="auth-note">მინიმუმ 8 სიმბოლო, ასო და ციფრი.</p>
   `);
 }
 
@@ -205,12 +206,16 @@ function friendlyError(message) {
   return msg || 'რაღაც შეცდომა მოხდა, სცადე თავიდან.';
 }
 
+// Writes the whole label each tick instead of reaching for a #resend-count span
+// inside it. Once the countdown ended the span was gone, so a second call —
+// which is exactly what a failed resend now does — found nothing and bailed
+// out, leaving the button disabled for good.
 function startResendCooldown() {
   const btn = document.querySelector('#resend-btn');
-  const count = document.querySelector('#resend-count');
-  if (!btn || !count) return;
+  if (!btn) return;
   let left = RESEND_COOLDOWN_S;
   btn.disabled = true;
+  btn.textContent = `კოდის თავიდან გაგზავნა (${left})`;
   clearInterval(resendTimer);
   resendTimer = setInterval(() => {
     left -= 1;
@@ -220,7 +225,7 @@ function startResendCooldown() {
       btn.textContent = 'კოდის თავიდან გაგზავნა';
       return;
     }
-    count.textContent = String(left);
+    btn.textContent = `კოდის თავიდან გაგზავნა (${left})`;
   }, 1000);
 }
 
@@ -236,6 +241,15 @@ function bindProviders(rerender) {
       // On success the browser navigates away to the provider.
     });
   });
+}
+
+// Focusing the first field on load is free on a desktop and costly on a phone:
+// the keyboard comes up over the Google button and the register/reset links, so
+// the first thing a new user sees is the one path they may not want. Mid-flow
+// steps (code, password) still focus unconditionally — there the screen holds a
+// single field and the keyboard is the next thing needed anyway.
+function focusOnRoomyScreens(el) {
+  if (el && window.matchMedia('(min-width: 768px)').matches) el.focus();
 }
 
 function readPhone(form) {
@@ -266,26 +280,33 @@ function renderSignIn(error) {
   });
 
   const form = document.querySelector('#signin-form');
+  bindPasswordFields(form);
+  const submit = form.querySelector('[type="submit"]');
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const { raw, phone } = readPhone(form);
     currentPhone = raw;
     if (!phone) {
-      renderSignIn(BAD_PHONE);
+      showError(BAD_PHONE);
+      form.querySelector('[name="phone"]').focus();
       return;
     }
     const password = String(new FormData(form).get('password') || '');
-    const submit = form.querySelector('[type="submit"]');
+    showError('');
     submit.disabled = true;
     const result = await signInWithPassword(phone, password);
     if (result.error) {
-      renderSignIn(result.error);
+      // A wrong password is the common case here, and re-rendering would send
+      // the keyboard back to the phone field the user had already got right.
+      submit.disabled = false;
+      showError(result.error);
+      form.querySelector('[name="password"]').select();
       return;
     }
     toast('შესვლა წარმატებულია');
     window.location.replace(nextTarget());
   });
-  form.querySelector('[name="phone"]').focus();
+  focusOnRoomyScreens(form.querySelector('[name="phone"]'));
 }
 
 /* ---- Register / forgot: both send a code ------------------------------ */
@@ -314,7 +335,7 @@ function bindCodeRequestForm(formId, rerender) {
     currentFellBack = !!result.fellBack;
     renderCodeStep();
   });
-  form.querySelector('[name="phone"]').focus();
+  focusOnRoomyScreens(form.querySelector('[name="phone"]'));
 }
 
 function renderRegister(error) {
@@ -348,16 +369,26 @@ function renderCodeStep(error) {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (verifying) return;
+    const input = form.querySelector('[name="code"]');
+    const submit = form.querySelector('[type="submit"]');
+    // Inline, not a re-render: re-rendering restarts the resend cooldown, so a
+    // mistyped digit used to cost the user a fresh minute before they could ask
+    // for another code.
     const code = String(new FormData(form).get('code') || '').trim();
     if (!/^\d{4,6}$/.test(code)) {
-      renderCodeStep('შეიყვანე კოდი.');
+      showError('შეიყვანე კოდი.');
+      input.select();
       return;
     }
+    showError('');
     verifying = true;
-    form.querySelector('[type="submit"]').disabled = true;
+    submit.disabled = true;
     const result = await confirmPhoneOtp(currentPhone, code, currentIsDemo, currentRequestId);
     if (result.error) {
-      renderCodeStep(friendlyError(result.error));
+      verifying = false;
+      submit.disabled = false;
+      showError(friendlyError(result.error));
+      input.select();
       return;
     }
     // The code proved the number and produced a session. The demo account has
@@ -375,7 +406,10 @@ function renderCodeStep(error) {
     event.currentTarget.disabled = true;
     const result = await requestPhoneOtp(currentPhone, currentChannel);
     if (result.error) {
-      renderCodeStep(friendlyError(result.error));
+      // No new code went out, so the button must not stay dead — put the
+      // cooldown back rather than re-rendering the step around the message.
+      showError(friendlyError(result.error));
+      startResendCooldown();
       return;
     }
     currentIsDemo = !!result.demo;
@@ -406,26 +440,34 @@ function renderCodeStep(error) {
 function renderPasswordStep(error) {
   document.querySelector('#app').innerHTML = PasswordStep(error);
   const form = document.querySelector('#password-form');
+  bindPasswordFields(form);
+  const input = form.querySelector('[name="password"]');
+  const submit = form.querySelector('[type="submit"]');
+
+  // Errors are written into the step, never rendered over it: this screen is
+  // reached with a single-use code already spent, so losing the typed password
+  // to a re-render would cost the user another code.
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const data = new FormData(form);
-    const password = String(data.get('password') || '');
-    const problem = passwordProblem(password, String(data.get('confirm') || ''));
+    const password = String(new FormData(form).get('password') || '');
+    const problem = passwordProblem(password);
     if (problem) {
-      renderPasswordStep(problem);
+      showError(problem);
+      input.focus();
       return;
     }
-    const submit = form.querySelector('[type="submit"]');
+    showError('');
     submit.disabled = true;
     const result = await setPassword(password);
     if (result.error) {
-      renderPasswordStep(result.error);
+      submit.disabled = false;
+      showError(result.error);
       return;
     }
     toast(mode === 'forgot' ? 'პაროლი განახლდა' : 'ანგარიში შეიქმნა');
     window.location.replace(nextTarget());
   });
-  form.querySelector('[name="password"]').focus();
+  input.focus();
 }
 
 async function init() {

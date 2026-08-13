@@ -3,6 +3,8 @@ const {
   Header, Footer, icons, sb, toast, escapeAttr, isUuid,
   authReady, getAuthUser, signOut, freshnessLabel, bustListingCaches,
   fuelLabel, labelFor, TRANSMISSION_LABELS, buildModal,
+  passwordFieldHTML, bindPasswordFields, passwordProblem,
+  verifyCurrentPassword, setPassword, hasPassword, isShadowEmail,
 } = window.AutoSwap;
 
 const TABS = [
@@ -528,6 +530,92 @@ function bindTelegramConnect(body, profile) {
   });
 }
 
+// ---- Password card -------------------------------------------------------
+// Two shapes, because "change my password" and "I have never had one" are
+// different jobs. An account that already has a password must prove it first;
+// an account that does not (a Google sign-in, or anyone from before passwords
+// existed) sets one straight from the open session. That second path is the
+// whole reason this card exists — the alternative was signing out and going
+// through the reset flow to get a password for the first time.
+function passwordCardHTML(existing) {
+  // Password sign-in resolves an account through the shadow address derived
+  // from its number, so it only works for phone-first accounts. A Google
+  // account has its own address and would never be found by that lookup —
+  // offering it a password field would hand out a password that cannot be used.
+  if (!isShadowEmail(me.email)) {
+    return `
+      <section class="pw-card" id="password-card-note">
+        <h2>შესვლა</h2>
+        <p class="pw-card-sub">ამ ანგარიშში Google-ით შედიხარ, პაროლი არ სჭირდება.</p>
+      </section>
+    `;
+  }
+  return `
+    <section class="pw-card" id="password-card">
+      <h2>${existing ? 'პაროლის შეცვლა' : 'პაროლის დაყენება'}</h2>
+      <p class="pw-card-sub">${existing
+        ? 'შეიყვანე ამჟამინდელი პაროლი და შემდეგ ახალი.'
+        : 'ჯერ არ გაქვს პაროლი. დააყენე და შემდეგში ნომრითა და პაროლით შეხვალ.'}</p>
+      <p class="auth-error" role="alert" hidden></p>
+      <form class="auth-form" id="password-card-form" novalidate>
+        ${existing ? passwordFieldHTML({
+          name: 'current', label: 'ამჟამინდელი პაროლი', autocomplete: 'current-password', rules: false,
+        }) : ''}
+        ${passwordFieldHTML({ name: 'next', label: 'ახალი პაროლი', autocomplete: 'new-password' })}
+        <button class="btn btn-primary auth-submit" type="submit">${existing ? 'პაროლის შეცვლა' : 'პაროლის დაყენება'}</button>
+      </form>
+    </section>
+  `;
+}
+
+function bindPasswordCard(root) {
+  const card = root.querySelector('#password-card');
+  if (!card) return;
+  const form = card.querySelector('#password-card-form');
+  const errorNode = card.querySelector('.auth-error');
+  const submit = form.querySelector('[type="submit"]');
+  const current = form.querySelector('[name="current"]');
+  const next = form.querySelector('[name="next"]');
+  bindPasswordFields(card);
+
+  const fail = (message, focus) => {
+    errorNode.textContent = message;
+    errorNode.hidden = false;
+    submit.disabled = false;
+    if (focus) focus.select();
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    errorNode.hidden = true;
+    const value = next.value;
+    const problem = passwordProblem(value);
+    if (problem) {
+      fail(problem, next);
+      return;
+    }
+    submit.disabled = true;
+
+    if (current) {
+      const check = await verifyCurrentPassword(current.value);
+      if (check.error) {
+        fail(check.error, current);
+        return;
+      }
+    }
+    const result = await setPassword(value);
+    if (result.error) {
+      fail(result.error, next);
+      return;
+    }
+    // `me` was captured at init, so refresh it before re-rendering — otherwise
+    // a first-time setup would redraw the same "you have no password" card.
+    me = getAuthUser() || me;
+    renderTab();
+    toast('პაროლი შენახულია');
+  });
+}
+
 async function renderProfile(body) {
   const { data: profile, error } = await sb
     .from('profiles')
@@ -557,16 +645,25 @@ async function renderProfile(body) {
         <button class="btn btn-primary auth-submit" type="submit">შენახვა</button>
       </form>
       <aside class="profile-aside">
-        <p><strong>ელფოსტა:</strong> ${escapeAttr(me.email || '-')}</p>
+        ${
+          // A phone-first account's "email" is the shadow address the auth layer
+          // needs; showing p995…@phone.autoswap.ge to its owner would read as a
+          // mistake. Those accounts are identified by their number instead.
+          isShadowEmail(me.email)
+            ? `<p><strong>ნომერი:</strong> ${escapeAttr(me.phone || (me.user_metadata && me.user_metadata.phone) || profile.phone || '-')}</p>`
+            : `<p><strong>ელფოსტა:</strong> ${escapeAttr(me.email || '-')}</p>`
+        }
         <p><strong>დასრულებული გაცვლები:</strong> ${profile.completed_swaps_count || 0}</p>
         <p><strong>წევრი:</strong> ${freshnessLabel(profile.created_at) || '-'}</p>
         ${telegramRow(profile)}
         <button class="btn btn-danger" id="logout-btn" type="button">გასვლა</button>
       </aside>
     </div>
+    ${passwordCardHTML(hasPassword(me))}
   `;
 
   bindTelegramConnect(body, profile);
+  bindPasswordCard(body);
 
   body.querySelector('#profile-form').addEventListener('submit', async (event) => {
     event.preventDefault();

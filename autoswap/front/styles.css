@@ -5477,6 +5477,79 @@ p {
 
 .auth-note { color: var(--muted); font-size: 13px; margin: 16px 0 0; }
 
+/* Hidden until something goes wrong, then filled in place. Re-rendering the
+   step to show an error closes the phone keyboard and throws away what the
+   user typed, which is a heavy price for a message. */
+.auth-error[hidden] { display: none; }
+
+/* ---- Password field ------------------------------------------------------
+   Markup comes from passwordFieldHTML() in shared.js. It uses <label for>
+   rather than the wrapping <label><span> the other fields use, because the
+   reveal button sits beside the input and a click on it must not be read as a
+   click on the label. */
+.pw-field > label {
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pw-input { position: relative; display: block; }
+
+/* Room for the toggle, on the side the script does not read from. */
+.pw-input input { padding-inline-end: 48px; }
+
+.pw-toggle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 46px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.pw-toggle svg {
+  width: 20px; height: 20px;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round;
+}
+
+.pw-toggle[aria-pressed="true"] { color: var(--graphite); }
+
+.pw-rules {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 2px 0 0;
+  padding: 0;
+}
+
+.pw-rules li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.pw-rules svg {
+  width: 14px; height: 14px;
+  fill: none; stroke: currentColor;
+  stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
+  opacity: 0.35;
+}
+
+/* Same green the offer cards use for "adds cash" — this app has exactly one
+   affirmative green and the checklist should not introduce a second. */
+.pw-rules li.is-ok { color: var(--cash-add-fg); }
+.pw-rules li.is-ok svg { opacity: 1; }
+
 .auth-code-input {
   letter-spacing: 0.4em;
   font-family: var(--font); font-variant-numeric: tabular-nums;
@@ -5740,6 +5813,25 @@ p {
 
 .profile-aside p { margin: 0; color: var(--secondary); }
 
+/* Sits under the profile grid, matching the two cards above it. Capped at the
+   form column's width — a lone password field stretched across a desktop is
+   both ugly and harder to aim at. */
+.pw-card {
+  background: var(--card-white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-top: 24px;
+  max-width: 520px;
+}
+
+.pw-card h2 { margin: 0 0 4px; font-size: 17px; }
+
+.pw-card-sub {
+  margin: 0 0 16px;
+  color: var(--secondary);
+  font-size: 14px;
+}
 
 .account-loading { display: grid; gap: 14px; }
 

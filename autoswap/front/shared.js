@@ -55,6 +55,7 @@
     calendar: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>',
     engine: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h5l2-2h3v3h3v5h-3v3h-4l-2-2H6l-2-2H2v-3h2Z"></path><path d="M13 7V5h4"></path></svg>',
     eye: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+    eyeOff: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 6.2A9.9 9.9 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3 3.6"></path><path d="M6.3 7.7A16.7 16.7 0 0 0 2 12s3.6 6 10 6a9.7 9.7 0 0 0 4-.8"></path><path d="M9.9 10.1a3 3 0 0 0 4.2 4.2"></path><path d="m3 3 18 18"></path></svg>',
     upload: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15a4 4 0 0 1 .9-7.9A6 6 0 0 1 17.6 6.8 4.5 4.5 0 0 1 18.5 15.7"></path><path d="M12 12v8"></path><path d="m8.5 15 3.5-3 3.5 3"></path></svg>',
     doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"></path><path d="M14 3v5h5"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>',
     clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>',
@@ -748,6 +749,12 @@
     return `p${String(phone || '').replace(/\D/g, '')}@${SHADOW_EMAIL_DOMAIN}`;
   }
 
+  // A shadow address is plumbing, not something the user ever typed — anywhere
+  // an account's email is shown, this decides whether there is really one.
+  function isShadowEmail(email) {
+    return String(email || '').endsWith(`@${SHADOW_EMAIL_DOMAIN}`);
+  }
+
   // → { user } | { error }. The error text is deliberately the same whether the
   // number is unknown or the password is wrong: distinguishing them turns the
   // login form into a "does this number have an account" oracle.
@@ -786,13 +793,113 @@
     return Boolean(user && user.user_metadata && user.user_metadata.has_password);
   }
 
-  // Shared rule so registration and reset cannot drift apart.
-  function passwordProblem(password, confirm) {
+  // Confirms the signed-in user actually knows their current password before it
+  // can be changed, so a session left open on a shared phone is not by itself
+  // enough to lock the owner out. Signs in against the account's own address
+  // rather than re-deriving one from a number, which also covers a Google
+  // account that later added a password.
+  //
+  // A failed attempt leaves the existing session alone; a successful one just
+  // reissues it for the same user.
+  async function verifyCurrentPassword(password) {
+    if (!sbClient) return { error: 'დემო რეჟიმი.' };
+    const email = authUser && authUser.email;
+    if (!email) return { error: 'ამ ანგარიშს პაროლი ვერ დაუყენდება.' };
+    const { error } = await sbClient.auth.signInWithPassword({ email, password });
+    if (!error) return {};
+    if (/rate|too many/i.test(error.message || '')) {
+      return { error: 'ძალიან ბევრი მცდელობა, დაიცადე ცოტა ხანი და სცადე თავიდან.' };
+    }
+    return { error: 'ამჟამინდელი პაროლი არასწორია.' };
+  }
+
+  // Shared rule so registration, reset and the account page cannot drift apart.
+  // The two checks are exposed individually as well, because the field below
+  // ticks them off live while the user types.
+  const PASSWORD_RULES = [
+    { id: 'len', label: 'მინიმუმ 8 სიმბოლო', ok: (v) => v.length >= 8 },
+    { id: 'mix', label: 'ასო და ციფრი', ok: (v) => /[a-zA-Z]/.test(v) && /\d/.test(v) },
+  ];
+
+  function passwordProblem(password) {
     const value = String(password || '');
-    if (value.length < 8) return 'პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო.';
-    if (!/[a-zA-Z]/.test(value) || !/\d/.test(value)) return 'პაროლი უნდა შეიცავდეს ასოსა და ციფრს.';
-    if (confirm !== undefined && value !== String(confirm || '')) return 'პაროლები არ ემთხვევა.';
-    return '';
+    const failed = PASSWORD_RULES.find((rule) => !rule.ok(value));
+    if (!failed) return '';
+    return failed.id === 'len'
+      ? 'პაროლი უნდა იყოს მინიმუმ 8 სიმბოლო.'
+      : 'პაროლი უნდა შეიცავდეს ასოსა და ციფრს.';
+  }
+
+  // ---- Password field ------------------------------------------------------
+  // One field with a reveal toggle, not a password plus a confirm box. Typing a
+  // masked password twice on a phone keyboard is the most-abandoned step in the
+  // whole flow, and confirmation only exists to catch a typo — being able to
+  // actually look at what you typed catches it better. The downside if someone
+  // still gets it wrong is one code away: they reset it.
+  //
+  // `rules` draws the live checklist. Leave it off for a field that is being
+  // recalled rather than chosen (sign-in, "current password"), where a list of
+  // requirements reads as an accusation.
+  function passwordFieldHTML(options) {
+    const opts = options || {};
+    const name = opts.name || 'password';
+    const id = opts.id || `pw-${name}-${Math.random().toString(36).slice(2, 8)}`;
+    const complete = opts.autocomplete || 'new-password';
+    return `
+      <div class="field pw-field" data-pw-field>
+        <label for="${id}">${escapeAttr(opts.label || 'პაროლი')}</label>
+        <div class="pw-input">
+          <input id="${id}" type="password" name="${escapeAttr(name)}" required
+                 autocomplete="${escapeAttr(complete)}" minlength="8"
+                 autocapitalize="none" autocorrect="off" spellcheck="false"
+                 placeholder="••••••••">
+          <button type="button" class="pw-toggle" data-pw-toggle
+                  aria-controls="${id}" aria-pressed="false" aria-label="პაროლის ჩვენება">${icons.eye}</button>
+        </div>
+        ${opts.rules === false ? '' : `<ul class="pw-rules" data-pw-rules>${
+          PASSWORD_RULES.map((rule) => `<li data-pw-rule="${rule.id}">${icons.check}<span>${rule.label}</span></li>`).join('')
+        }</ul>`}
+      </div>
+    `;
+  }
+
+  // Call once after the markup lands. Safe to re-run; binding is idempotent.
+  function bindPasswordFields(root) {
+    const scope = root || document;
+    scope.querySelectorAll('[data-pw-field]').forEach((field) => {
+      if (field.dataset.pwBound === '1') return;
+      field.dataset.pwBound = '1';
+      const input = field.querySelector('input');
+      const toggle = field.querySelector('[data-pw-toggle]');
+      const rules = field.querySelectorAll('[data-pw-rule]');
+
+      if (toggle) {
+        toggle.addEventListener('click', () => {
+          const show = input.type === 'password';
+          // Swapping `type` drops the caret and, on iOS, the keyboard with it.
+          // Restoring both keeps the reveal from costing the user their place.
+          const at = input.selectionStart;
+          input.type = show ? 'text' : 'password';
+          toggle.setAttribute('aria-pressed', String(show));
+          toggle.setAttribute('aria-label', show ? 'პაროლის დამალვა' : 'პაროლის ჩვენება');
+          toggle.innerHTML = show ? icons.eyeOff : icons.eye;
+          input.focus();
+          try { input.setSelectionRange(at, at); } catch { /* not all engines allow it */ }
+        });
+      }
+
+      if (rules.length) {
+        const paint = () => {
+          const value = input.value;
+          rules.forEach((li) => {
+            const rule = PASSWORD_RULES.find((r) => r.id === li.dataset.pwRule);
+            li.classList.toggle('is-ok', !!rule && rule.ok(value));
+          });
+        };
+        input.addEventListener('input', paint);
+        paint();
+      }
+    });
   }
 
   function isUuid(value) {
@@ -1996,10 +2103,7 @@
           <span>ტელეფონის ნომერი</span>
           <input type="tel" name="phone" inputmode="tel" autocomplete="tel-national" placeholder="5XX XX XX XX" required>
         </label>
-        <label class="field">
-          <span>პაროლი</span>
-          <input type="password" name="password" autocomplete="current-password" minlength="8" placeholder="••••••••" required>
-        </label>
+        ${passwordFieldHTML({ label: 'პაროლი', autocomplete: 'current-password', rules: false })}
         <p class="auth-error" id="auth-error" hidden></p>
         <button type="submit" class="btn btn-primary auth-submit" id="auth-submit">შესვლა</button>
       </form>
@@ -2029,6 +2133,8 @@
     };
 
     function bindPhoneStep() {
+      bindPasswordFields(step);
+
       // Try-it-out account: same local demo path the OTP fallback uses, no SMS.
       step.querySelector('[data-auth-demo]')?.addEventListener('click', async () => {
         await confirmOtp('+995555000000', DEMO_OTP_CODE, true);
@@ -2785,6 +2891,10 @@
     setPassword,
     hasPassword,
     passwordProblem,
+    passwordFieldHTML,
+    bindPasswordFields,
+    verifyCurrentPassword,
+    isShadowEmail,
     shadowEmailForPhone,
     normalizePhone,
     requestPhoneOtp: requestOtp,
