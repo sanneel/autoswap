@@ -277,20 +277,6 @@ function activeFilterCount() {
     .length;
 }
 
-function advFilterCount() {
-  const f = currentFilters;
-  return [
-    f.yearFrom || f.yearTo,
-    f.valueMin || f.valueMax,
-    f.mileageMin || f.mileageMax,
-    f.transmission,
-    f.fuel,
-    f.city,
-    f.fresh,
-    f.verified,
-  ].filter(Boolean).length;
-}
-
 function advChips(fieldName, options, currentVal) {
   return `<div class="adv-chips">${options.map((opt) => {
     const val = typeof opt === 'string' ? opt : opt.value;
@@ -345,48 +331,113 @@ function MyCarFilterPanel() {
 }
 
 
-function FilterSidebar() {
-  const categories = uniqueSorted(allCars.map((c) => c.category));
-  const f = currentFilters;
-  const myCar = getMyCar();
-  const advCount = advFilterCount();
+// A "from / to" pair drawn as two boxes, each with its caption sitting inside
+// the field and the unit pinned to the right. The caption has to be inside:
+// stacked above, a pair of ranges costs four label lines and the panel stops
+// fitting on a phone.
+function rangeField(labelText, fromName, toName, fromValue, toValue, unit) {
+  const box = (name, value, caption, aria) => `
+    <span class="range-box">
+      <span class="range-caption">${caption}</span>
+      <input type="number" name="${name}" value="${escapeHtml(value || '')}"
+             placeholder="– – –" min="0" inputmode="numeric" aria-label="${aria}">
+      ${unit ? `<span class="range-unit">${unit}</span>` : ''}
+    </span>`;
+  return `
+    <div class="filter-field">
+      <span class="filter-label">${labelText}</span>
+      <div class="range-pair">
+        ${box(fromName, fromValue, 'დან', `${labelText} დან`)}
+        ${box(toName, toValue, 'მდე', `${labelText} მდე`)}
+      </div>
+    </div>
+  `;
+}
 
+// Same shape as rangeField, but the values come from a fixed list so they are
+// picked rather than typed — a year is a choice from what exists, not a number
+// to invent.
+function yearRangeField(labelText, years, fromValue, toValue) {
+  const box = (name, value, caption, aria) => `
+    <span class="range-box range-box--select">
+      <span class="range-caption">${caption}</span>
+      <select name="${name}" aria-label="${aria}">
+        <option value="">– – –</option>${optionTags(years, value)}
+      </select>
+    </span>`;
+  return `
+    <div class="filter-field">
+      <span class="filter-label">${labelText}</span>
+      <div class="range-pair">
+        ${box('yearFrom', fromValue, 'დან', `${labelText} დან`)}
+        ${box('yearTo', toValue, 'მდე', `${labelText} მდე`)}
+      </div>
+    </div>
+  `;
+}
+
+function FilterSidebar() {
+  const f = currentFilters;
+  const categories = uniqueSorted(allCars.map((c) => c.category));
+  const fuels = uniqueSorted(allCars.map((c) => c.fuelType));
+  const transmissions = uniqueSorted(allCars.map((c) => c.transmission));
+  const cities = uniqueSorted(allCars.map((c) => c.city));
+  const years = Array.from(new Set(allCars.map((c) => c.yearNum).filter(Boolean))).sort((a, b) => b - a);
+  const myCar = getMyCar();
+
+  // Flat, not a panel plus a modal. Everything that narrows a search is on one
+  // surface now: the split hid price, year and mileage behind a button, which
+  // on a marketplace are the first three things anyone reaches for.
   return `
     <aside class="filters" id="filters" aria-label="ფილტრები">
       <form class="filters-form" id="filters-form">
         <div class="filters-head">
-          <div class="filters-title-row">
-            <span class="filters-title">${icons.filter} ფილტრები</span>
-          </div>
+          <span class="filters-title">${icons.filter} ფილტრები</span>
           <button type="button" class="filters-reset" id="filters-reset">${icons.refresh} გასუფთავება</button>
           <button type="button" class="filters-close" id="filters-close" aria-label="დახურვა">&times;</button>
         </div>
 
         <div class="filters-scroll">
-        ${MyCarFilterPanel()}
+          ${MyCarFilterPanel()}
 
-        <label class="filter-field">
-          <span class="filter-label">საძიებო სიტყვა</span>
-          <div class="combo" data-query-suggest>
-            <span class="filter-search combo-control">${icons.search}
-              <input type="search" name="query" value="${escapeHtml(f.query || '')}" placeholder="მარკა, მოდელი, ქალაქი…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="query-suggest-list">
-            </span>
-            <ul class="combo-list" id="query-suggest-list" role="listbox" hidden></ul>
-          </div>
-        </label>
+          <label class="filter-field">
+            <span class="filter-label">საძიებო სიტყვა</span>
+            <div class="combo" data-query-suggest>
+              <span class="filter-search combo-control">${icons.search}
+                <input type="search" name="query" value="${escapeHtml(f.query || '')}" placeholder="მარკა, მოდელი, ქალაქი…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="query-suggest-list">
+              </span>
+              <ul class="combo-list" id="query-suggest-list" role="listbox" hidden></ul>
+            </div>
+          </label>
 
-        <section class="filter-group">
-          <h3 class="filter-group-head">მანქანა</h3>
+          <div class="filter-rule" role="presentation"></div>
+
           ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა…')}
-          ${comboField('model', 'მოდელი', f.model, 'მოძებნე მოდელი…', !f.makeId)}
+          ${comboField('model', 'მოდელი', f.model, 'აირჩიე მოდელი…', !f.makeId)}
+
           <div class="filter-field">
             <span class="filter-label">ტიპი</span>
             ${advChips('category', [{ value: '', label: 'ნებისმიერი' }, ...categories.map((c) => ({ value: c, label: labelFor(CATEGORY_LABELS, c) }))], f.category)}
           </div>
-        </section>
 
-        <section class="filter-group">
-          <h3 class="filter-group-head">გაცვლის პირობა</h3>
+          <div class="filter-rule" role="presentation"></div>
+
+          ${transmissions.length ? `<div class="filter-field">
+            <span class="filter-label">გადაცემის კოლოფი</span>
+            ${advChips('transmission', [{ value: '', label: 'ნებისმიერი' }, ...transmissions.map((t) => ({ value: t, label: labelFor(TRANSMISSION_LABELS, t) }))], f.transmission)}
+          </div>` : ''}
+
+          ${fuels.length ? `<div class="filter-field">
+            <span class="filter-label">საწვავის ტიპი</span>
+            ${advChips('fuel', [{ value: '', label: 'ნებისმიერი' }, ...fuels.map((t) => ({ value: t, label: labelFor(FUEL_LABELS, t) }))], f.fuel)}
+          </div>` : ''}
+
+          ${rangeField('ფასის დიაპაზონი', 'valueMin', 'valueMax', f.valueMin, f.valueMax, getCurrency() === 'USD' ? 'USD' : 'GEL')}
+          ${years.length ? yearRangeField('მოდელის წელი', years, f.yearFrom, f.yearTo) : ''}
+          ${rangeField('გარბენი (კმ)', 'mileageMin', 'mileageMax', f.mileageMin, f.mileageMax, 'კმ')}
+
+          <div class="filter-rule" role="presentation"></div>
+
           <div class="filter-field">
             <span class="filter-label">თანხის სხვაობა</span>
             ${advChips('cash', [
@@ -399,112 +450,39 @@ function FilterSidebar() {
           </div>
 
           <div class="filter-field filter-cash-amount" id="filter-cash-amount"${(f.cash === 'add' || f.cash === 'ask') ? '' : ' hidden'}>
-            <span class="filter-label">თანხის ოდენობა <span class="cash-cur-tag" data-cash-cur>${getCurrency() === 'USD' ? '$' : '₾'}</span></span>
-            <div class="filter-range">
-              <input type="number" name="cashMin" value="${escapeHtml(f.cashMin || '')}" placeholder="მინ." min="0" inputmode="numeric" aria-label="თანხა დან">
-              <span class="filter-range-sep">-</span>
-              <input type="number" name="cashMax" value="${escapeHtml(f.cashMax || '')}" placeholder="მაქს." min="0" inputmode="numeric" aria-label="თანხა მდე">
-            </div>
+            ${rangeField(`თანხის ოდენობა (${getCurrency() === 'USD' ? '$' : '₾'})`, 'cashMin', 'cashMax', f.cashMin, f.cashMax, '')}
           </div>
+
+          ${cities.length ? `<div class="filter-field">
+            <span class="filter-label">ქალაქი</span>
+            ${advChips('city', [{ value: '', label: 'ნებისმიერი' }, ...cities], f.city)}
+          </div>` : ''}
+
+          <div class="filter-field">
+            <span class="filter-label">განცხადების ასაკი</span>
+            ${advChips('fresh', FRESH_OPTIONS, f.fresh)}
+          </div>
+
+          <label class="filter-check">
+            <input type="checkbox" name="verified" value="1"${f.verified ? ' checked' : ''}>
+            <span>დადასტურებული მფლობელი</span>
+          </label>
 
           ${myCar ? `<label class="filter-check">
             <input type="checkbox" name="onlyMatches" value="1"${f.onlyMatches ? ' checked' : ''}>
             <span>ეძებს ჩემნაირ მანქანას</span>
           </label>` : ''}
-        </section>
-
-        <button type="button" class="filters-adv-btn" id="filters-adv-btn">
-          ${icons.filter} დამატებითი ფილტრები
-          <span class="filters-adv-badge" id="filters-adv-badge"${advCount > 0 ? '' : ' hidden'}>${advCount}</span>
-        </button>
         </div>
 
         <div class="filters-actions">
-          <button type="button" class="btn btn-ghost filters-clear" id="filters-clear">გასუფთავება</button>
-          <button type="button" class="btn btn-primary filters-search" id="filters-search">${icons.search} ძებნა <span class="filters-search-count" id="apply-count">(${getFiltered().length})</span></button>
+          <button type="button" class="btn btn-primary filters-search" id="filters-search">შედეგების ჩვენება <span class="filters-search-count" id="apply-count">(${getFiltered().length})</span></button>
+          <button type="button" class="btn btn-ghost filters-clear" id="filters-clear">${icons.refresh} გასუფთავება</button>
         </div>
       </form>
     </aside>
   `;
 }
 
-
-function AdvFiltersModal() {
-  const f = currentFilters;
-  const fuels = uniqueSorted(allCars.map((c) => c.fuelType));
-  const transmissions = uniqueSorted(allCars.map((c) => c.transmission));
-  const cities = uniqueSorted(allCars.map((c) => c.city));
-  const years = Array.from(new Set(allCars.map((c) => c.yearNum).filter(Boolean))).sort((a, b) => b - a);
-  const count = getFiltered().length;
-
-  return `
-    <div class="adv-modal" id="adv-modal" role="dialog" aria-modal="true" aria-labelledby="adv-modal-title" hidden>
-      <div class="adv-modal-backdrop"></div>
-      <div class="adv-modal-panel">
-        <div class="adv-modal-head">
-          <strong id="adv-modal-title">დამატებითი ფილტრები</strong>
-          <button type="button" class="adv-modal-close" aria-label="დახურვა">&times;</button>
-        </div>
-        <div class="adv-modal-body">
-          <div class="adv-section">
-            <h4 class="adv-section-head">გამოშვების წელი</h4>
-            <div class="adv-range">
-              <select name="yearFrom" data-adv-field aria-label="გამოშვების წელი დან">
-                <option value="">მინ.</option>${optionTags(years, f.yearFrom)}
-              </select>
-              <span class="adv-range-sep">–</span>
-              <select name="yearTo" data-adv-field aria-label="გამოშვების წელი მდე">
-                <option value="">მაქს.</option>${optionTags(years, f.yearTo)}
-              </select>
-            </div>
-          </div>
-          <div class="adv-section">
-            <h4 class="adv-section-head">ღირებულება (₾)</h4>
-            <div class="adv-range">
-              <input type="number" name="valueMin" data-adv-field aria-label="ღირებულება დან" value="${escapeHtml(f.valueMin || '')}" placeholder="მინ." min="0" inputmode="numeric">
-              <span class="adv-range-sep">–</span>
-              <input type="number" name="valueMax" data-adv-field aria-label="ღირებულება მდე" value="${escapeHtml(f.valueMax || '')}" placeholder="მაქს." min="0" inputmode="numeric">
-            </div>
-          </div>
-          <div class="adv-section">
-            <h4 class="adv-section-head">გარბენი (კმ)</h4>
-            <div class="adv-range">
-              <input type="number" name="mileageMin" data-adv-field aria-label="გარბენი დან" value="${escapeHtml(f.mileageMin || '')}" placeholder="მინ." min="0" inputmode="numeric">
-              <span class="adv-range-sep">–</span>
-              <input type="number" name="mileageMax" data-adv-field aria-label="გარბენი მდე" value="${escapeHtml(f.mileageMax || '')}" placeholder="მაქს." min="0" inputmode="numeric">
-            </div>
-          </div>
-          <div class="adv-section">
-            <h4 class="adv-section-head">გადაცემათა კოლოფი</h4>
-            ${advChips('transmission', [{ value: '', label: 'ნებისმიერი' }, ...transmissions.map((t) => ({ value: t, label: labelFor(TRANSMISSION_LABELS, t) }))], f.transmission)}
-          </div>
-          <div class="adv-section">
-            <h4 class="adv-section-head">საწვავი</h4>
-            ${advChips('fuel', [{ value: '', label: 'ნებისმიერი' }, ...fuels.map((t) => ({ value: t, label: labelFor(FUEL_LABELS, t) }))], f.fuel)}
-          </div>
-          <div class="adv-section">
-            <h4 class="adv-section-head">ქალაქი</h4>
-            ${advChips('city', [{ value: '', label: 'ნებისმიერი' }, ...cities], f.city)}
-          </div>
-          <div class="adv-section">
-            <h4 class="adv-section-head">განცხადების ასაკი</h4>
-            ${advChips('fresh', FRESH_OPTIONS, f.fresh)}
-          </div>
-          <div class="adv-section">
-            <label class="adv-check">
-              <input type="checkbox" data-adv-field name="verified" value="1"${f.verified ? ' checked' : ''}>
-              <span>დადასტურებული მფლობელი</span>
-            </label>
-          </div>
-        </div>
-        <div class="adv-modal-foot">
-          <button type="button" class="btn btn-ghost adv-clear-btn">გასუფთავება</button>
-          <button type="button" class="btn btn-primary adv-apply-btn">ძებნა <span id="adv-foot-count">(${count})</span></button>
-        </div>
-      </div>
-    </div>
-  `;
-}
 
 function matchBadge(match) {
   if (match === 'mutual') return `<span class="match-badge match-badge--mutual">${icons.swap} ორმხრივი მატჩი</span>`;
@@ -769,7 +747,6 @@ function CatalogPage() {
         </div>
       </section>
       <div class="filters-overlay" id="filters-overlay" hidden></div>
-      ${AdvFiltersModal()}
       ${StickyCTA()}
     </main>
     ${Footer({ active: 'listings' })}
@@ -902,14 +879,6 @@ function syncFiltersToURL() {
 
 
 
-function updateAdvBadge() {
-  const n = advFilterCount();
-  const badge = document.querySelector('#filters-adv-badge');
-  if (badge) { badge.textContent = String(n); badge.hidden = !n; }
-  const footCount = document.querySelector('#adv-foot-count');
-  if (footCount) footCount.textContent = `(${getFiltered().length})`;
-}
-
 function update() {
   syncFiltersToURL();
   const filtered = getFiltered();
@@ -938,8 +907,6 @@ function update() {
   const more = document.querySelector('#load-more-wrap');
   if (more) more.innerHTML = loadMoreHTML(filtered.length);
 
-  updateAdvBadge();
-
   // (#matches-toggle was a standalone control that no longer renders anywhere;
   // the sidebar checkbox below is the only one left.)
   const sidebarToggle = document.querySelector('#filters-form [name="onlyMatches"]');
@@ -949,14 +916,20 @@ function update() {
 
 function readFiltersFromForm(form) {
   const data = new FormData(form);
-  // Start from currentFilters so advanced-modal values (year, mileage, etc.) are preserved.
+  // Start from currentFilters so chip-group values (category, cash, …) survive:
+  // they are not form controls and would be wiped by a FormData-only read.
   const f = { ...currentFilters };
   // category and cash are chip groups now, not form controls: they live on
   // currentFilters and would be wiped if read from FormData.
-  ['query', 'make', 'model', 'cashMin', 'cashMax']
+  // Price, year and mileage used to live in a separate modal that wrote
+  // straight to currentFilters, so this read only five names. They are form
+  // controls now — leaving them out would have made typing a price do nothing.
+  ['query', 'make', 'model', 'cashMin', 'cashMax',
+    'valueMin', 'valueMax', 'yearFrom', 'yearTo', 'mileageMin', 'mileageMax']
     .forEach((key) => { f[key] = String(data.get(key) || '').trim(); });
   if (f.cash !== 'add' && f.cash !== 'ask') { f.cashMin = ''; f.cashMax = ''; }
   f.onlyMatches = data.get('onlyMatches') ? '1' : '';
+  f.verified = data.get('verified') ? '1' : '';
   if (!f.make || f.make !== currentFilters.make) f.makeId = '';
   return f;
 }
@@ -1571,40 +1544,6 @@ function applyFormFilters(form) {
   update();
 }
 
-// Open/close live at module scope: renderAll() re-runs bindEvents(), so a
-// document-level Escape handler registered in there would stack up one more
-// listener per render.
-let advLastFocus = null;
-
-function openAdvModal() {
-  const modal = document.querySelector('#adv-modal');
-  if (!modal) return;
-  advLastFocus = document.activeElement;
-  modal.removeAttribute('hidden');
-  document.body.classList.add('adv-open');
-  modal.querySelector('.adv-modal-close')?.focus();
-}
-
-function closeAdvModal() {
-  const modal = document.querySelector('#adv-modal');
-  if (!modal || modal.hasAttribute('hidden')) return;
-  modal.setAttribute('hidden', '');
-  document.body.classList.remove('adv-open');
-  // Return focus to whatever opened it, falling back to the trigger, so
-  // keyboard users are not dumped back at the top of the document.
-  const back = (advLastFocus && document.contains(advLastFocus))
-    ? advLastFocus
-    : document.querySelector('#filters-adv-btn');
-  back?.focus();
-  advLastFocus = null;
-}
-
-document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape') return;
-  if (document.querySelector('#adv-modal')?.hasAttribute('hidden') !== false) return;
-  closeAdvModal();
-});
-
 function bindEvents() {
   const form = document.querySelector('#filters-form');
 
@@ -1642,16 +1581,9 @@ function bindEvents() {
 
   form?.addEventListener('submit', (event) => event.preventDefault());
 
-  // Advanced filters modal
-  const advModal = document.querySelector('#adv-modal');
-  document.querySelector('#filters-adv-btn')?.addEventListener('click', openAdvModal);
-  advModal?.querySelector('.adv-modal-close')?.addEventListener('click', closeAdvModal);
-  advModal?.querySelector('.adv-modal-backdrop')?.addEventListener('click', closeAdvModal);
-
-  // Chip groups are radio-style: one value per group. The same component now
-  // serves the sidebar (type, cash direction) and the advanced sheet, so the
-  // handler is delegated from the document and marks every copy of the group
-  // wherever it is rendered.
+  // Chip groups are radio-style: one value per group. Delegated from the
+  // document so every group is handled by one listener, and so it survives the
+  // re-render that follows each pick.
   document.addEventListener('click', (event) => {
     const chip = event.target.closest('[data-adv-chip]');
     if (!chip) return;
@@ -1667,50 +1599,18 @@ function bindEvents() {
       if (amountField) amountField.hidden = !(value === 'add' || value === 'ask');
       if (value !== 'add' && value !== 'ask') { currentFilters.cashMin = ''; currentFilters.cashMax = ''; }
     }
-    // Sidebar chips filter immediately; the sheet waits for its apply button.
-    if (chip.closest('#adv-modal')) updateAdvBadge();
-    else { pagesShown = 1; update(); }
-  });
-
-  // Range selects and text inputs inside modal
-  advModal?.addEventListener('change', (event) => {
-    const el = event.target;
-    if (!el.hasAttribute('data-adv-field')) return;
-    currentFilters[el.name] = el.type === 'checkbox' ? (el.checked ? el.value : '') : el.value;
-    updateAdvBadge();
-  });
-  // Debounced: updateAdvBadge() runs a full filter+sort, and doing that on
-  // every keystroke of a range input janks once the feed is real-sized.
-  let advInputTimer = null;
-  advModal?.addEventListener('input', (event) => {
-    const el = event.target;
-    if (el.tagName !== 'INPUT' || el.type === 'checkbox' || !el.hasAttribute('data-adv-field')) return;
-    currentFilters[el.name] = el.value;
-    clearTimeout(advInputTimer);
-    advInputTimer = setTimeout(updateAdvBadge, 200);
-  });
-
-  // Clear all advanced fields
-  advModal?.querySelector('.adv-clear-btn')?.addEventListener('click', () => {
-    ['yearFrom', 'yearTo', 'valueMin', 'valueMax', 'mileageMin', 'mileageMax',
-      'transmission', 'fuel', 'city', 'fresh', 'verified'].forEach((key) => { currentFilters[key] = ''; });
-    advModal.querySelectorAll('[data-adv-chip]').forEach((c) => {
-      c.classList.toggle('is-active', c.dataset.value === '');
-    });
-    advModal.querySelectorAll('[data-adv-field]').forEach((el) => {
-      if (el.type === 'checkbox') el.checked = false;
-      else el.value = '';
-    });
     pagesShown = 1;
     update();
   });
 
-  // Apply and close
-  advModal?.querySelector('.adv-apply-btn')?.addEventListener('click', () => {
-    clearTimeout(advInputTimer);
-    pagesShown = 1;
-    update();
-    closeAdvModal();
+  // Range inputs are debounced: each keystroke would otherwise run a full
+  // filter and sort, which janks once the feed is real-sized.
+  let rangeTimer = null;
+  form?.addEventListener('input', (event) => {
+    const el = event.target;
+    if (el.tagName !== 'INPUT' || el.type !== 'number') return;
+    clearTimeout(rangeTimer);
+    rangeTimer = setTimeout(() => applyFormFilters(form), 250);
   });
 
   // Both the icon reset in the sheet header and the გასუფთავება button in the
