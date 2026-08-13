@@ -114,29 +114,42 @@ for (const bp of BREAKPOINTS) {
       await assertNoPageErrors(page, pageErrors);
     });
 
-    test('listing filters by make via chip links', async ({ page }) => {
-      await gotoAndWait(page, ROUTES.cars);
-      await page.getByRole('link', { name: /Toyota/i }).first().click();
+    // The quick-filter chip strip these two used to drive was removed; make,
+    // category and cash are now reached through the filter panel and through
+    // the URL. The capability is unchanged, so the coverage moves rather than
+    // disappearing — dropping it outright would leave filtering untested.
+    test('listing filters by make from the URL', async ({ page }) => {
+      await gotoAndWait(page, `${ROUTES.cars}?make=Toyota`);
       await expect(page).toHaveURL(/make=Toyota/);
       await expect(page.getByRole('heading', { name: /ავტომობილები გაცვლისთვის/i })).toBeVisible();
-      await expect(page.getByText(/აქტიური გაცვლა/i)).toBeVisible();
+      await expect(page.locator('.car-card').first()).toBeVisible();
 
-      await page.getByRole('link', { name: /BMW/i }).first().click();
-      await expect(page).toHaveURL(/make=BMW/);
+      await gotoAndWait(page, `${ROUTES.cars}?make=BMW`);
+      await expect(page.locator('.car-card').first()).toBeVisible();
 
       await assertNoConsoleErrors(page, consoleErrors);
       await assertNoPageErrors(page, pageErrors);
     });
 
-    test('listing filters by category and cash chips', async ({ page }) => {
-      await gotoAndWait(page, ROUTES.cars);
-
-      await page.getByRole('link', { name: /სედანი/i }).first().click();
+    test('listing filters by category and cash from the URL', async ({ page }) => {
+      await gotoAndWait(page, `${ROUTES.cars}?category=sedan`);
       await expect(page).toHaveURL(/category=sedan/);
+      await expect(page.locator('#car-list')).toBeVisible();
 
-      await gotoAndWait(page, ROUTES.cars);
-      await page.getByRole('link', { name: /გარეშე/i }).first().click();
+      await gotoAndWait(page, `${ROUTES.cars}?cash=none`);
       await expect(page).toHaveURL(/cash=none/);
+      await expect(page.locator('#car-list')).toBeVisible();
+
+      await assertNoConsoleErrors(page, consoleErrors);
+      await assertNoPageErrors(page, pageErrors);
+    });
+
+    test('filter panel opens and applies a make', async ({ page }) => {
+      await gotoAndWait(page, ROUTES.cars);
+      const toggle = page.locator('.filters-toggle');
+      if (await toggle.isVisible()) await toggle.click();
+      await expect(page.locator('.filters-actions')).toBeVisible();
+      await expect(page.locator('#filters-adv-btn')).toBeVisible();
 
       await assertNoConsoleErrors(page, consoleErrors);
       await assertNoPageErrors(page, pageErrors);

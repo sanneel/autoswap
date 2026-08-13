@@ -39,7 +39,7 @@ const server = http.createServer((req, res) => {
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const BASE = `http://127.0.0.1:${server.address().port}/front`;
 
-const pages = ['index.html', 'cars.html', 'sell.html', 'vehicle.html?id=demo-bmw-530i', 'login.html', 'account.html'];
+const pages = ['index.html', 'cars.html', 'sell.html', 'vehicle.html?id=8f1d8bb3-428b-480c-abd3-8e47fcac681b', 'login.html', 'account.html'];
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext();
@@ -67,26 +67,53 @@ const page = await ctx.newPage();
 const errs = [];
 page.on('pageerror', (e) => errs.push(e.message));
 await page.goto(`${BASE}/cars.html`, { waitUntil: 'domcontentloaded' });
-await page.waitForTimeout(400);
 
-// Offer modal (demo gate) opens from a listing card.
+// This context aborts every external request (line above), which is the point
+// of an offline smoke test — but it also means there is no feed. The listing
+// interactions used to work here only because a demo dataset was bundled into
+// shared.js and painted without a network; that dataset is gone, so offline
+// there is nothing to click. Rather than report four failures for a condition
+// the test itself creates, detect it and say so: the page-render checks above
+// still ran, and these resume the moment the script is pointed at a build that
+// can reach Supabase.
+const gotRows = await page.waitForSelector('.car-card', { timeout: 8000 }).then(() => true, () => false);
+
+if (!gotRows) {
+  const offline = await page.evaluate(() => !window.supabase || !window.AutoSwap?.sb);
+  if (offline) {
+    console.log('↷ interactions skipped — no Supabase client (external requests are blocked by design)');
+  } else {
+    errs.push('no listings rendered although a Supabase client is present');
+  }
+}
+
+if (gotRows) {
+// Offer modal opens from a listing card.
 await page.click('.car-card [data-offer]').catch(() => errs.push('offer button missing'));
 await page.waitForTimeout(300);
 if (!await page.evaluate(() => !!document.querySelector('.modal-overlay'))) errs.push('offer modal did not open');
 await page.keyboard.press('Escape');
 
-// Filters + sort are mirrored into the URL. The value inputs sit behind
-// the filter panel's lite toggle, so flip it to full mode first.
-await page.click('.filter-lite-toggle').catch(() => {});
+// Filters + sort are mirrored into the URL. The value inputs live in the
+// advanced section, which is collapsed until its button is pressed.
+// This clicked `.filter-lite-toggle` for a long time — a class that exists
+// nowhere in the frontend — and swallowed the miss, so valueMin was never
+// reachable and the failure read as a missing input rather than a dead
+// selector. Fail loudly if the real button is gone too.
+await page.click('#filters-adv-btn').catch(() => errs.push('advanced filters button missing'));
+await page.waitForSelector('[name="valueMin"]', { state: 'visible', timeout: 5000 })
+  .catch(() => errs.push('valueMin did not become visible after opening advanced filters'));
 await page.fill('[name="valueMin"]', '40000').catch(() => errs.push('valueMin input missing'));
-await page.dispatchEvent('[name="valueMin"]', 'change');
+await page.dispatchEvent('[name="valueMin"]', 'change').catch(() => {});
 await page.selectOption('#sort-select', 'value_desc').catch(() => errs.push('value sort missing'));
-await page.waitForTimeout(300);
+await page.waitForTimeout(400);
 const url = page.url();
 if (!url.includes('valueMin=40000') || !url.includes('sort=value_desc')) errs.push(`URL not synced: ${url}`);
-if (!await page.locator('.car-card').count()) errs.push('value filter wiped all demo rows');
+if (!await page.locator('.car-card').count()) errs.push('value filter left no rows');
+}
 
-console.log(errs.length ? `✖ interactions:\n  ${errs.join('\n  ')}` : '✓ interactions (offer modal, filters→URL, value sort)');
+if (errs.length) console.log(`✖ interactions:\n  ${errs.join('\n  ')}`);
+else if (gotRows) console.log('✓ interactions (offer modal, filters→URL, value sort)');
 failures += errs.length ? 1 : 0;
 
 await browser.close();
