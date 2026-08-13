@@ -666,8 +666,25 @@ function listBodyHTML(slice) {
   return slice.length ? slice.map(CarRow).join('') : emptyStateHTML();
 }
 
+// Two different empties. "Nothing matched your filters" is wrong advice when
+// the catalog itself is empty — it blames a filter the visitor never set and
+// offers to clear one that does not exist. That is exactly what a brand-new
+// site shows on day one, so the first impression would be a dead end.
 function emptyStateHTML() {
   const myCar = getMyCar();
+  const catalogEmpty = allCars.length === 0;
+
+  if (catalogEmpty) {
+    return `
+      <div class="empty-state empty-state--actions">
+        <p>ჯერ არცერთი განცხადება არ არის. იყავი პირველი.</p>
+        <div class="empty-state-actions">
+          <a class="btn btn-primary" href="/sell">დაამატე შენი მანქანა</a>
+        </div>
+      </div>
+    `;
+  }
+
   return `
     <div class="empty-state empty-state--actions">
       <p>ამ ფილტრებით ვერაფერი მოიძებნა.</p>
