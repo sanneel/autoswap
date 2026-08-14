@@ -13720,8 +13720,6 @@ html {
   appearance: none;
 }
 
-.range-box input::placeholder { color: var(--muted); font-weight: 600; letter-spacing: 0.12em; }
-
 .range-box input:focus,
 .range-box select:focus {
   outline: none;

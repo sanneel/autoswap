@@ -333,7 +333,7 @@ function stepRangeField(labelText, fromName, toName, fromValue, toValue, values)
     <span class="range-box range-box--select">
       <span class="range-caption">${caption}</span>
       <select name="${name}" aria-label="${aria}">
-        <option value="">– – –</option>${stepOptions(values, value)}
+        <option value="">ნებისმიერი</option>${stepOptions(values, value)}
       </select>
     </span>`;
   return `
@@ -352,7 +352,7 @@ function yearRangeField(labelText, years, fromValue, toValue) {
     <span class="range-box range-box--select">
       <span class="range-caption">${caption}</span>
       <select name="${name}" aria-label="${aria}">
-        <option value="">– – –</option>${optionTags(years, value)}
+        <option value="">ნებისმიერი</option>${optionTags(years, value)}
       </select>
     </span>`;
   return `
