@@ -6,34 +6,3 @@
   Permissions-Policy: accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
   Cross-Origin-Opener-Policy: same-origin-allow-popups
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-
-/styles.css
-  Cache-Control: public, max-age=0, must-revalidate
-  X-Probe-Exact: yes
-
-/shared.js
-  Cache-Control: public, max-age=0, must-revalidate
-
-/app.js
-  Cache-Control: public, max-age=0, must-revalidate
-
-/cars.js
-  Cache-Control: public, max-age=0, must-revalidate
-
-/sell.js
-  Cache-Control: public, max-age=0, must-revalidate
-
-/login.js
-  Cache-Control: public, max-age=0, must-revalidate
-
-/account.js
-  Cache-Control: public, max-age=0, must-revalidate
-
-/vehicle.js
-  Cache-Control: public, max-age=0, must-revalidate
-
-/about.js
-  Cache-Control: public, max-age=0, must-revalidate
-
-/supabase-config.js
-  Cache-Control: public, max-age=0, must-revalidate

@@ -72,17 +72,5 @@ if (stale.length) {
   process.exit(1);
 }
 
-// Hashed names never change content, so they may cache forever. Appended to
-// the copied _headers: on Cloudflare Pages the last matching rule wins, so
-// these beat the generic must-revalidate rules for the hashed files only.
-const nl = String.fromCharCode(10);
-const headerLines = [''];
-for (const hashed of renames.values()) {
-  headerLines.push(`/${hashed}`, '  Cache-Control: public, max-age=31536000, immutable');
-}
-const headersPath = join(DIST, '_headers');
-const base = readFileSync(headersPath, 'utf8');
-writeFileSync(headersPath, base.replace(/\s+$/, '') + nl + headerLines.join(nl) + nl);
-
 console.log(`hash-assets: hashed ${renames.size} files, rewrote ${rewrites} references in ${htmlFiles.length} HTML files`);
 for (const [original, hashed] of renames) console.log(`  ${original} → ${hashed}`);
