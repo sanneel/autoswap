@@ -586,6 +586,7 @@
       try { cb(authUser); } catch (_err) {  }
     });
     document.dispatchEvent(new CustomEvent('autoswap:auth'));
+    refreshNotifications();
   }
 
   function onAuth(cb) {
@@ -2081,6 +2082,9 @@
 
   const NOTIFY_SEEN_KEY = 'autoswap.notifySeen';
   let notifyMatches = [];
+  let dbNotifications = [];
+
+  const notifySignedIn = () => Boolean(sbClient && authUser && !authUser.demo);
 
   function notifySeenIds() {
     try {
@@ -2090,7 +2094,33 @@
     }
   }
 
+  function notifyHref(n) {
+    if (n.type === 'offer_received' || n.type === 'offer_countered') return '/account#received';
+    if (n.type === 'offer_accepted' || n.type === 'offer_declined') return '/account#sent';
+    if (n.type === 'message_received') return '/account#messages';
+    if (n.related_vehicle_id) return `/vehicle?id=${encodeURIComponent(n.related_vehicle_id)}`;
+    return '/account';
+  }
+
+  function paintNotifyBadge(count) {
+    document.querySelectorAll('[data-notify-badge]').forEach((badge) => {
+      badge.textContent = count ? String(count) : '';
+      badge.hidden = !count;
+    });
+  }
+
   async function refreshNotifications() {
+    if (notifySignedIn()) {
+      const { data, error } = await sbClient
+        .from('notifications')
+        .select('id, type, title, body, related_vehicle_id, read_at, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      dbNotifications = error ? [] : (data || []);
+      paintNotifyBadge(dbNotifications.filter((n) => !n.read_at).length);
+      return;
+    }
+    dbNotifications = [];
     const myCar = getMyCar();
     if (!authUser || !myCar) {
       notifyMatches = [];
@@ -2099,16 +2129,34 @@
       notifyMatches = (feed || []).filter((car) => matchLevel(car, myCar)).slice(0, 8);
     }
     const seen = notifySeenIds();
-    const unseen = notifyMatches.filter((car) => !seen.has(String(car.id))).length;
-    document.querySelectorAll('[data-notify-badge]').forEach((badge) => {
-      badge.textContent = unseen ? String(unseen) : '';
-      badge.hidden = !unseen;
-    });
+    paintNotifyBadge(notifyMatches.filter((car) => !seen.has(String(car.id))).length);
+  }
+
+  async function markNotificationsRead() {
+    if (!notifySignedIn()) return;
+    if (!dbNotifications.some((n) => !n.read_at)) return;
+    const now = new Date().toISOString();
+    dbNotifications = dbNotifications.map((n) => (n.read_at ? n : { ...n, read_at: now }));
+    await sbClient.from('notifications').update({ read_at: now }).is('read_at', null);
   }
 
   function renderNotifyPanel() {
     const body = document.querySelector('[data-notify-body]');
     if (!body) return;
+    if (notifySignedIn()) {
+      if (!dbNotifications.length) {
+        body.innerHTML = '<p class="notify-empty">შეტყობინება ჯერ არ გაქვს. როცა ვინმეს შენი მანქანა მოუნდება ან შეთავაზება მოგივა, აქ გამოჩნდება.</p>';
+        return;
+      }
+      body.innerHTML = dbNotifications.map((n) => `
+        <a class="notify-item${n.read_at ? '' : ' is-unread'}" href="${notifyHref(n)}">
+          <span class="notify-item-title">${escapeAttr(n.title || '')}</span>
+          <span class="notify-item-meta">${escapeAttr(n.body || '')}</span>
+          <span class="notify-item-time">${escapeAttr(freshnessLabel(n.created_at) || '')}</span>
+        </a>
+      `).join('');
+      return;
+    }
     const myCar = getMyCar();
     if (!myCar) {
       body.innerHTML = `
@@ -2140,7 +2188,11 @@
     btn.setAttribute('aria-expanded', String(open));
     if (open) {
       renderNotifyPanel();
-      try { localStorage.setItem(NOTIFY_SEEN_KEY, JSON.stringify(notifyMatches.map((car) => String(car.id)))); } catch (_err) {  }
+      if (notifySignedIn()) {
+        markNotificationsRead();
+      } else {
+        try { localStorage.setItem(NOTIFY_SEEN_KEY, JSON.stringify(notifyMatches.map((car) => String(car.id)))); } catch (_err) {  }
+      }
       document.querySelectorAll('[data-notify-badge]').forEach((badge) => { badge.hidden = true; });
     }
   }
@@ -2170,6 +2222,7 @@
   });
 
   document.addEventListener('autoswap:mycar', refreshNotifications);
+  authReady.then(() => refreshNotifications());
 
   const ASELECT_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.6 4.5L19 7"></path></svg>';
   const aselect = { select: null, panel: null, activeIndex: -1 };
@@ -2688,6 +2741,7 @@
     repositionComboLists,
     mmPanelHTML,
     bindMakeModelPicker,
+    refreshNotifications,
     mapFeedRow,
     Header,
     Footer,
