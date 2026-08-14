@@ -13569,20 +13569,6 @@ html {
     color: var(--secondary);
   }
 
-  .catalog .filters-form select,
-  .catalog .filters-form input:not([type="checkbox"]):not([type="range"]) {
-    min-height: 40px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--warm-ivory);
-  }
-
-  .catalog .filters-form select:focus-visible,
-  .catalog .filters-form input:focus-visible {
-    border-color: var(--copper);
-    outline: 0;
-  }
-
   .catalog .adv-chip {
     min-height: 32px;
     border-radius: 999px;
@@ -13881,4 +13867,35 @@ html {
 .notify-item-time {
   color: var(--muted);
   font-size: 11.5px;
+}
+
+/* Desktop drew a second box on the inputs themselves: a bordered, filled
+   rectangle inside the already-filled wrapper, with the clear button left
+   outside it. The wrapper is the field now; inputs inside it paint nothing.
+   The doubled :not() below is deliberate, it has to outrank the legacy
+   double-:not() rule this replaces wherever an override survives. */
+.filters-form .combo-control input:not([type="checkbox"]):not([type="range"]),
+.filters-form .filter-search input:not([type="checkbox"]):not([type="range"]),
+.filters-form .range-box input:not([type="checkbox"]):not([type="range"]),
+.filters-form .range-box select {
+  border: 0;
+  background: transparent;
+  min-height: 0;
+}
+
+/* The drawer head at 375px: title, a labelled reset and the close disc need
+   369px of a 351px row. The title yields, the controls never do, and the
+   decorative funnel icon goes before any text does. */
+.filters-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filters-head .filters-reset { flex: 0 0 auto; }
+
+@media (max-width: 480px) {
+  .filters-title { font-size: 17px; }
+  .filters-title svg { display: none; }
 }
