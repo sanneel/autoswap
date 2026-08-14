@@ -89,24 +89,28 @@ for (const bp of BREAKPOINTS) {
       await expect(page.getByText(/აქტიური განცხადება/i).first()).toBeVisible();
       await expect(page.getByRole('link', { name: /დაამატე მანქანა/i }).first()).toBeVisible();
       await expect(page.getByRole('combobox', { name: /დალაგება/i })).toBeVisible();
-      await expect(page.getByRole('link', { name: /Toyota/i }).first()).toBeVisible();
-      await expect(page.getByRole('link', { name: /BMW/i }).first()).toBeVisible();
-      await expect(page.getByRole('link', { name: /Bentley/i }).first()).toBeVisible();
-      await expect(page.getByRole('link', { name: /BENTLEY ARMOURED ARNAGE/i }).first()).toBeVisible();
-      await expect(page.getByRole('link', { name: /MERCEDES-BENZ 190/i }).first()).toBeVisible();
-      await expect(page.getByText(/თანაბარი გაცვლა|სხვაობა შეთანხმებით/i).first()).toBeVisible();
+      // Structure, not inventory: asserting named cars pinned the test to
+      // whatever happened to be listed, and every deletion broke it.
+      await expect(page.locator('.car-card').first()).toBeVisible();
+      const cardCount = await page.locator('.car-card').count();
+      expect(cardCount).toBeGreaterThan(0);
 
       await assertNoConsoleErrors(page, consoleErrors);
       await assertNoPageErrors(page, pageErrors);
     });
 
     test('listing filters by make from the URL', async ({ page }) => {
-      await gotoAndWait(page, `${ROUTES.cars}?make=Toyota`);
-      await expect(page).toHaveURL(/make=Toyota/);
-      await expect(page.getByRole('heading', { name: /ავტომობილები გაცვლისთვის/i })).toBeVisible();
+      // Take the make from what is actually listed, then filter by it. A
+      // hardcoded make breaks the day that brand has no listings.
+      await gotoAndWait(page, ROUTES.cars);
       await expect(page.locator('.car-card').first()).toBeVisible();
+      const title = (await page.locator('.car-card h3 a, .car-card .card-title-link').first().textContent()) || '';
+      const make = title.trim().split(/\s+/)[0];
+      expect(make.length).toBeGreaterThan(1);
 
-      await gotoAndWait(page, `${ROUTES.cars}?make=BMW`);
+      await gotoAndWait(page, `${ROUTES.cars}?make=${encodeURIComponent(make)}`);
+      await expect(page).toHaveURL(new RegExp(`make=${make}`, 'i'));
+      await expect(page.getByRole('heading', { name: /ავტომობილები გაცვლისთვის/i })).toBeVisible();
       await expect(page.locator('.car-card').first()).toBeVisible();
 
       await assertNoConsoleErrors(page, consoleErrors);
@@ -131,7 +135,11 @@ for (const bp of BREAKPOINTS) {
       const toggle = page.locator('.filters-toggle');
       if (await toggle.isVisible()) await toggle.click();
       await expect(page.locator('.filters-actions')).toBeVisible();
-      await expect(page.locator('#filters-adv-btn')).toBeVisible();
+      // The flat panel: ranges and chips live directly in the form now, there
+      // is no advanced button to click.
+      await expect(page.locator('[name="valueMin"]')).toBeAttached();
+      await expect(page.locator('.adv-chip').first()).toBeVisible();
+      await expect(page.locator('#filters-search')).toBeVisible();
 
       await assertNoConsoleErrors(page, consoleErrors);
       await assertNoPageErrors(page, pageErrors);
@@ -225,7 +233,13 @@ for (const bp of BREAKPOINTS) {
     test('regression: city query param page stays stable', async ({ page }) => {
       await gotoAndWait(page, ROUTES.carsTbilisi);
       await expect(page).toHaveURL(/city=/);
-      await expect(page.getByText(/თბილისი/i).first()).toBeVisible();
+      // Scoped to the results: the flat filter panel now holds a city chip in
+      // the DOM ahead of the list, and on mobile that chip is hidden inside
+      // the closed drawer, so an unscoped first() landed on it.
+      await expect(page.locator('#car-list .car-card, #car-list .empty-state').first()).toBeVisible();
+      if (await page.locator('#car-list .car-card').count()) {
+        await expect(page.locator('.results').getByText(/თბილისი/i).first()).toBeVisible();
+      }
       await expect(page.locator('body')).not.toContainText(/404|Not Found|Something went wrong/i);
 
       await assertNoConsoleErrors(page, consoleErrors);
@@ -236,7 +250,11 @@ for (const bp of BREAKPOINTS) {
       await gotoAndWait(page, ROUTES.carsTbilisi);
       const saveButtons = page.getByRole('button', { name: /შენახვა/i });
       await expect(saveButtons.first()).toBeVisible();
-      await expect(saveButtons).toHaveCount(12);
+      // One save button per card, however many cards there are. The old
+      // hardcoded 12 was the page size of a catalog that no longer exists.
+      const cardCount = await page.locator('.car-card').count();
+      expect(cardCount).toBeGreaterThan(0);
+      await expect(saveButtons).toHaveCount(cardCount);
 
       await assertNoConsoleErrors(page, consoleErrors);
       await assertNoPageErrors(page, pageErrors);
