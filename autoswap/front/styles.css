@@ -1,32 +1,3 @@
-@font-face {
-  font-family: "FiraGO";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("assets/fonts/firago-400.woff2") format("woff2");
-}
-@font-face {
-  font-family: "FiraGO";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("assets/fonts/firago-500.woff2") format("woff2");
-}
-@font-face {
-  font-family: "FiraGO";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("assets/fonts/firago-600.woff2") format("woff2");
-}
-@font-face {
-  font-family: "FiraGO";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("assets/fonts/firago-700.woff2") format("woff2");
-}
-
 :root {
   --ink: #161a15;
   --ink-elevated: #222921;
@@ -62,9 +33,8 @@
   --radius-sm: 12px;
   --container: 1280px;
 
-  --font: "FiraGO", "Noto Sans Georgian", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font: "Noto Sans Georgian", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font);
-  --font-serif: "Noto Serif Georgian", "Noto Sans Georgian", Georgia, serif;
   --font-mono: var(--font);
 }
 
