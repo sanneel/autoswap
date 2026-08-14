@@ -307,13 +307,34 @@ function MyCarFilterPanel() {
   `;
 }
 
-function rangeField(labelText, fromName, toName, fromValue, toValue, unit) {
+const PRICE_STEPS = [1000, 2000, 3000, 5000, 7000, 10000, 15000, 20000, 25000, 30000, 40000, 50000, 60000, 80000, 100000, 150000, 200000, 300000];
+const MILEAGE_STEPS = [10000, 30000, 50000, 80000, 100000, 120000, 150000, 180000, 200000, 250000, 300000, 400000];
+const CASH_STEPS = [500, 1000, 1500, 2000, 3000, 4000, 5000, 7000, 10000, 15000, 20000];
+
+function fmtStep(n) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+function stepOptions(values, selected) {
+  const sel = String(selected || '');
+  const list = [...values];
+  if (sel) {
+    const n = Number(sel);
+    if (Number.isFinite(n) && !list.includes(n)) {
+      list.push(n);
+      list.sort((a, b) => a - b);
+    }
+  }
+  return list.map((v) => `<option value="${v}"${String(v) === sel ? ' selected' : ''}>${fmtStep(v)}</option>`).join('');
+}
+
+function stepRangeField(labelText, fromName, toName, fromValue, toValue, values) {
   const box = (name, value, caption, aria) => `
-    <span class="range-box">
+    <span class="range-box range-box--select">
       <span class="range-caption">${caption}</span>
-      <input type="number" name="${name}" value="${escapeHtml(value || '')}"
-             placeholder="– – –" min="0" inputmode="numeric" aria-label="${aria}">
-      ${unit ? `<span class="range-unit">${unit}</span>` : ''}
+      <select name="${name}" aria-label="${aria}">
+        <option value="">– – –</option>${stepOptions(values, value)}
+      </select>
     </span>`;
   return `
     <div class="filter-field">
@@ -398,9 +419,9 @@ function FilterSidebar() {
             ${advChips('fuel', [{ value: '', label: 'ნებისმიერი' }, ...fuels.map((t) => ({ value: t, label: labelFor(FUEL_LABELS, t) }))], f.fuel)}
           </div>` : ''}
 
-          ${rangeField('ფასის დიაპაზონი', 'valueMin', 'valueMax', f.valueMin, f.valueMax, getCurrency() === 'USD' ? 'USD' : 'GEL')}
+          ${stepRangeField('ფასის დიაპაზონი (₾)', 'valueMin', 'valueMax', f.valueMin, f.valueMax, PRICE_STEPS)}
           ${years.length ? yearRangeField('მოდელის წელი', years, f.yearFrom, f.yearTo) : ''}
-          ${rangeField('გარბენი (კმ)', 'mileageMin', 'mileageMax', f.mileageMin, f.mileageMax, 'კმ')}
+          ${stepRangeField('გარბენი (კმ)', 'mileageMin', 'mileageMax', f.mileageMin, f.mileageMax, MILEAGE_STEPS)}
 
           <div class="filter-rule" role="presentation"></div>
 
@@ -416,7 +437,7 @@ function FilterSidebar() {
           </div>
 
           <div class="filter-field filter-cash-amount" id="filter-cash-amount"${(f.cash === 'add' || f.cash === 'ask') ? '' : ' hidden'}>
-            ${rangeField(`თანხის ოდენობა (${getCurrency() === 'USD' ? '$' : '₾'})`, 'cashMin', 'cashMax', f.cashMin, f.cashMax, '')}
+            ${stepRangeField('თანხის ოდენობა (₾)', 'cashMin', 'cashMax', f.cashMin, f.cashMax, CASH_STEPS)}
           </div>
 
           ${cities.length ? `<div class="filter-field">
@@ -1472,14 +1493,6 @@ function bindEvents() {
     }
     pagesShown = 1;
     update();
-  });
-
-  let rangeTimer = null;
-  form?.addEventListener('input', (event) => {
-    const el = event.target;
-    if (el.tagName !== 'INPUT' || el.type !== 'number') return;
-    clearTimeout(rangeTimer);
-    rangeTimer = setTimeout(() => applyFormFilters(form), 250);
   });
 
   const clearAllFilters = () => {

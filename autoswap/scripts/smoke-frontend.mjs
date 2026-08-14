@@ -74,7 +74,7 @@ await page.keyboard.press('Escape');
 await page.click('#filters-adv-btn').catch(() => errs.push('advanced filters button missing'));
 await page.waitForSelector('[name="valueMin"]', { state: 'visible', timeout: 5000 })
   .catch(() => errs.push('valueMin did not become visible after opening advanced filters'));
-await page.fill('[name="valueMin"]', '40000').catch(() => errs.push('valueMin input missing'));
+await page.selectOption('[name="valueMin"]', '40000').catch(() => errs.push('valueMin select missing'));
 await page.dispatchEvent('[name="valueMin"]', 'change').catch(() => {});
 await page.selectOption('#sort-select', 'value_desc').catch(() => errs.push('value sort missing'));
 await page.waitForTimeout(400);
