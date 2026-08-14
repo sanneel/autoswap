@@ -3,8 +3,8 @@
   "short_name": "AutoSwap",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8f8f7",
-  "theme_color": "#f8f8f7",
+  "background_color": "#f2f6f1",
+  "theme_color": "#f2f6f1",
   "description": "AutoSwap",
   "orientation": "portrait-primary",
   "prefer_related_applications": false

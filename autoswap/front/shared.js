@@ -500,7 +500,7 @@
     }
 
     if (isPlaceholderConfig(url, key)) {
-      console.info('AutoSwap: running on demo data. Set real values in supabase-config.js to load live listings.');
+      console.warn('AutoSwap: supabase-config.js still has placeholder values, listings cannot load.');
       return null;
     }
 

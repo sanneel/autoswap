@@ -172,7 +172,10 @@ function friendlyError(message) {
   if (/expired|invalid/i.test(msg)) {
     return 'კოდი არასწორია ან ვადა გაუვიდა, სცადე თავიდან.';
   }
-  return msg || 'რაღაც შეცდომა მოხდა, სცადე თავიდან.';
+  if (!msg || (/[a-z]{3,}/i.test(msg) && !/[ა-ჰ]/.test(msg))) {
+    return 'რაღაც შეცდომა მოხდა, სცადე თავიდან.';
+  }
+  return msg;
 }
 
 function startResendCooldown() {
