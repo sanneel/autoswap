@@ -1,18 +1,4 @@
 #!/usr/bin/env node
-/* ===================================================================
-   smoke-frontend.mjs — offline browser smoke test for the front pages.
-
-   Serves the repo over a local static server, loads every page in
-   headless Chromium with ALL external requests blocked (fonts, the
-   supabase-js CDN), and fails on any uncaught page error or an empty
-   #app container. Also exercises: the offer modal demo gate, the
-   value filter → URL sync, and the value sort.
-
-   Requires Playwright with Chromium installed:
-     npm i -D playwright && npx playwright install chromium
-   Run from the project root:
-     node scripts/smoke-frontend.mjs
-=================================================================== */
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -68,38 +54,23 @@ const errs = [];
 page.on('pageerror', (e) => errs.push(e.message));
 await page.goto(`${BASE}/cars.html`, { waitUntil: 'domcontentloaded' });
 
-// This context aborts every external request (line above), which is the point
-// of an offline smoke test — but it also means there is no feed. The listing
-// interactions used to work here only because a demo dataset was bundled into
-// shared.js and painted without a network; that dataset is gone, so offline
-// there is nothing to click. Rather than report four failures for a condition
-// the test itself creates, detect it and say so: the page-render checks above
-// still ran, and these resume the moment the script is pointed at a build that
-// can reach Supabase.
 const gotRows = await page.waitForSelector('.car-card', { timeout: 8000 }).then(() => true, () => false);
 
 if (!gotRows) {
   const offline = await page.evaluate(() => !window.supabase || !window.AutoSwap?.sb);
   if (offline) {
-    console.log('↷ interactions skipped — no Supabase client (external requests are blocked by design)');
+    console.log('↷ interactions skipped: no Supabase client (external requests are blocked by design)');
   } else {
     errs.push('no listings rendered although a Supabase client is present');
   }
 }
 
 if (gotRows) {
-// Offer modal opens from a listing card.
 await page.click('.car-card [data-offer]').catch(() => errs.push('offer button missing'));
 await page.waitForTimeout(300);
 if (!await page.evaluate(() => !!document.querySelector('.modal-overlay'))) errs.push('offer modal did not open');
 await page.keyboard.press('Escape');
 
-// Filters + sort are mirrored into the URL. The value inputs live in the
-// advanced section, which is collapsed until its button is pressed.
-// This clicked `.filter-lite-toggle` for a long time — a class that exists
-// nowhere in the frontend — and swallowed the miss, so valueMin was never
-// reachable and the failure read as a missing input rather than a dead
-// selector. Fail loudly if the real button is gone too.
 await page.click('#filters-adv-btn').catch(() => errs.push('advanced filters button missing'));
 await page.waitForSelector('[name="valueMin"]', { state: 'visible', timeout: 5000 })
   .catch(() => errs.push('valueMin did not become visible after opening advanced filters'));

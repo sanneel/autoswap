@@ -1,28 +1,3 @@
--- =============================================================
--- AutoSwap — Server-side logic (Postgres functions + triggers)
--- Run AFTER schema.sql.
---
--- Contents:
---   * vehicle_matches_desire()            — does a vehicle satisfy a desire?
---   * find_mutual_matches_for_vehicle()   — create mutual match_suggestions
---   * run_matching_for_vehicle()          — RPC-friendly wrapper
---   * matching triggers (desires, swap_preferences, vehicle re-activation)
---   * accept_offer / decline_offer / counter_offer / mark_offer_viewed
---   * dismiss_match_suggestion()
---   * offer / message / saved-listing notification + event triggers
---
--- KEY PRODUCT RULE: a match_suggestion is SYSTEM-generated. It NEVER
--- auto-creates an offer. Offers are user-generated.
--- =============================================================
-
--- -------------------------------------------------------------
--- vehicle_matches_desire(vehicle_id, desired_vehicle_id) -> bool
---   * exact make match when desired_make present
---   * exact model match when desired_model present
---   * exact category match when desired_category present
---   * year within [min_year, max_year] when provided
---   * if no structured fields at all, fall back to label text matching
--- -------------------------------------------------------------
 create or replace function public.vehicle_matches_desire(
   p_vehicle_id uuid,
   p_desired_vehicle_id uuid
@@ -57,9 +32,6 @@ $$;
 
 grant execute on function public.vehicle_matches_desire(uuid, uuid) to authenticated, service_role;
 
--- -------------------------------------------------------------
--- find_mutual_matches_for_vehicle(vehicle_id) -> int (matches created)
--- -------------------------------------------------------------
 create or replace function public.find_mutual_matches_for_vehicle(p_vehicle_id uuid)
 returns int
 language plpgsql
@@ -144,9 +116,6 @@ begin
 end;
 $$;
 
--- The raw matcher is internal: triggers and run_matching_for_vehicle (both
--- SECURITY DEFINER, owned by a privileged role) call it directly. Clients must
--- go through the ownership-checked wrapper below, never this.
 revoke execute on function public.find_mutual_matches_for_vehicle(uuid) from public, authenticated, anon;
 grant execute on function public.find_mutual_matches_for_vehicle(uuid) to service_role;
 
@@ -158,7 +127,7 @@ set search_path = public
 as $$
 begin
   -- Only the vehicle's owner (or the service role, used by triggers and the
-  -- edge function) may kick off matching — otherwise anyone could spray
+  -- edge function) may kick off matching, otherwise anyone could spray
   -- match_suggestions + notifications against arbitrary listings.
   if coalesce(auth.role(), '') <> 'service_role'
      and not exists (
@@ -174,11 +143,6 @@ $$;
 
 grant execute on function public.run_matching_for_vehicle(uuid) to authenticated, service_role;
 
--- -------------------------------------------------------------
--- Guard: owners cannot reopen a completed swap or edit a listing
--- that is under moderation. accept_offer (active -> completed) and admin/
--- moderation flows run as service_role and are exempt.
--- -------------------------------------------------------------
 create or replace function public.trg_vehicles_guard_status()
 returns trigger
 language plpgsql
@@ -208,10 +172,6 @@ create trigger vehicles_guard_status
   before update on public.vehicles
   for each row execute function public.trg_vehicles_guard_status();
 
--- -------------------------------------------------------------
--- Rate limit: cap outgoing offers per sender to blunt spam/abuse.
--- Server-side backstop independent of any client throttle.
--- -------------------------------------------------------------
 create or replace function public.trg_offers_rate_limit()
 returns trigger
 language plpgsql
@@ -229,7 +189,7 @@ begin
   where from_user_id = new.from_user_id
     and created_at > now() - interval '1 hour';
   if recent_count >= 30 then
-    raise exception 'too many offers in the last hour — please slow down'
+    raise exception 'too many offers in the last hour, please slow down'
       using errcode = 'check_violation';
   end if;
   return new;
@@ -241,10 +201,6 @@ create trigger offers_rate_limit
   before insert on public.offers
   for each row execute function public.trg_offers_rate_limit();
 
--- -------------------------------------------------------------
--- Matching triggers: desires (insert/update), swap_preferences
--- (insert/update), and vehicle re-activation.
--- -------------------------------------------------------------
 create or replace function public.trg_match_on_desire()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
@@ -284,15 +240,6 @@ drop trigger if exists match_on_vehicle_activate on public.vehicles;
 create trigger match_on_vehicle_activate after update of status on public.vehicles
   for each row execute function public.trg_match_on_vehicle_activate();
 
--- -------------------------------------------------------------
--- accept_offer(offer_id) -> conversation_id (atomic)
---   Accepting completes the swap:
---     * both vehicles row-locked in canonical id order so two competing
---       accepts serialize — the second one fails the active check
---     * both vehicles -> status 'completed'
---     * every other open offer touching either vehicle is auto-declined
---     * both owners' completed_swaps_count is bumped
--- -------------------------------------------------------------
 create or replace function public.accept_offer(offer_id_input uuid)
 returns uuid
 language plpgsql security definer set search_path = public
@@ -368,7 +315,7 @@ begin
     values (competing.id, null, 'declined', 'auto-declined: vehicle was swapped in another offer');
     insert into public.notifications (user_id, type, title, body, related_offer_id, related_vehicle_id)
     values (competing.from_user_id, 'offer_declined', 'შეთავაზება აღარ არის აქტუალური',
-            'ერთ-ერთი მანქანა უკვე გაიცვალა — შეთავაზება ავტომატურად დაიხურა.',
+            'ერთ-ერთი მანქანა უკვე გაიცვალა, შეთავაზება ავტომატურად დაიხურა.',
             competing.id, competing.target_vehicle_id);
   end loop;
 
@@ -383,10 +330,6 @@ $$;
 
 grant execute on function public.accept_offer(uuid) to authenticated;
 
--- -------------------------------------------------------------
--- cancel_offer(offer_id) — sender withdraws a pending/viewed offer.
--- The 'cancelled' offer_event is logged by trg_offer_after_status.
--- -------------------------------------------------------------
 create or replace function public.cancel_offer(offer_id_input uuid)
 returns boolean
 language plpgsql security definer set search_path = public
@@ -407,9 +350,6 @@ $$;
 
 grant execute on function public.cancel_offer(uuid) to authenticated;
 
--- -------------------------------------------------------------
--- decline_offer(offer_id)
--- -------------------------------------------------------------
 create or replace function public.decline_offer(offer_id_input uuid)
 returns boolean
 language plpgsql security definer set search_path = public
@@ -434,12 +374,6 @@ $$;
 
 grant execute on function public.decline_offer(uuid) to authenticated;
 
--- -------------------------------------------------------------
--- counter_offer(...) -> new offer id
---   The receiver of the original counters with reversed direction:
---     new target  = original.offered_vehicle (the original sender's car)
---     new offered = chosen owned vehicle (defaults to original target)
--- -------------------------------------------------------------
 create or replace function public.counter_offer(
   p_original_offer_id uuid,
   p_offered_vehicle_id uuid,
@@ -487,9 +421,6 @@ $$;
 
 grant execute on function public.counter_offer(uuid, uuid, text, int, text) to authenticated;
 
--- -------------------------------------------------------------
--- mark_offer_viewed(offer_id)
--- -------------------------------------------------------------
 create or replace function public.mark_offer_viewed(offer_id_input uuid)
 returns boolean
 language plpgsql security definer set search_path = public
@@ -512,9 +443,6 @@ $$;
 
 grant execute on function public.mark_offer_viewed(uuid) to authenticated;
 
--- -------------------------------------------------------------
--- dismiss_match_suggestion(match_id) — sets the correct dismissed_by side.
--- -------------------------------------------------------------
 create or replace function public.dismiss_match_suggestion(p_match_id uuid)
 returns boolean
 language plpgsql security definer set search_path = public
@@ -534,13 +462,6 @@ $$;
 
 grant execute on function public.dismiss_match_suggestion(uuid) to authenticated;
 
--- -------------------------------------------------------------
--- Offer triggers
---   INSERT  -> log 'created' event; notify receiver (only for fresh offers,
---              not counters — counter notifications are sent by counter_offer).
---   UPDATE  -> log 'cancelled' / 'expired' events (accept/decline/counter/view
---              are logged by their RPCs).
--- -------------------------------------------------------------
 create or replace function public.trg_offer_after_insert()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
@@ -577,9 +498,6 @@ drop trigger if exists offers_after_status on public.offers;
 create trigger offers_after_status after update of status on public.offers
   for each row execute function public.trg_offer_after_status();
 
--- -------------------------------------------------------------
--- Message notifications: notify the other participant.
--- -------------------------------------------------------------
 create or replace function public.trg_message_notifications()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare
@@ -600,9 +518,6 @@ drop trigger if exists messages_notify on public.messages;
 create trigger messages_notify after insert on public.messages
   for each row execute function public.trg_message_notifications();
 
--- -------------------------------------------------------------
--- Saved-listing notifications: notify the listing owner.
--- -------------------------------------------------------------
 create or replace function public.trg_saved_listing_notify()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare owner_id uuid;

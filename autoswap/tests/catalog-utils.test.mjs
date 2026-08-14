@@ -21,10 +21,10 @@ test('normalizeMakeName collapses whitespace, trailing dot, case', () => {
 test('dedupeMakes keeps first row per MakeId and applies the blocklist', () => {
   const raw = [
     { MakeId: 1, MakeName: 'BMW' },
-    { MakeId: 1, MakeName: 'BMW' },          // duplicate per vehicle type
+    { MakeId: 1, MakeName: 'BMW' },
     { MakeId: 2, MakeName: 'SpamTrucks Inc.' },
     { MakeId: 3, MakeName: ' Audi ' },
-    { MakeId: null, MakeName: 'Ghost' },     // invalid rows dropped
+    { MakeId: null, MakeName: 'Ghost' },
     null,
   ];
   const blocked = new Set([normalizeMakeName('SpamTrucks Inc.')]);
@@ -42,7 +42,7 @@ test('dedupeMakes tolerates non-array input', () => {
 test('dedupeModels dedupes case-insensitively within a make', () => {
   const models = dedupeModels([
     { Model_Name: '530i' },
-    { Model_Name: '530I' },                  // same model, different case
+    { Model_Name: '530I' },
     { Model_Name: ' X5 ' },
     { Model_Name: '' },
     {},

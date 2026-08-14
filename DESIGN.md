@@ -1,10 +1,10 @@
-# AutoSwap — Glass / Soft-Futurism Design System
+# AutoSwap - Glass / Soft-Futurism Design System
 
 Premium car-exchange marketplace, Georgian-first. Frosted vibrancy materials, layered translucency, one warm copper accent reserved for CTAs. The cars are the content; glass is the frame. (Adapted from the Apple glass reference; see PRODUCT.md for strategy.)
 
 ## 1. Visual Theme & Atmosphere
 
-Soft futurism showroom. Light sage-green base, frosted panels floating over subtle atmospheric gradients, car photography at full contrast (the road-and-forest hero photo is a keep). Every chrome surface (nav, filter bars, modals) is translucent; every content surface (cards, forms) is elevated glass. Hardware-adjacent — surfaces imply physical depth.
+Soft futurism showroom. Light sage-green base, frosted panels floating over subtle atmospheric gradients, car photography at full contrast (the road-and-forest hero photo is a keep). Every chrome surface (nav, filter bars, modals) is translucent; every content surface (cards, forms) is elevated glass. Hardware-adjacent - surfaces imply physical depth.
 
 Mood: calm, premium, trustworthy. Not: beige, saturated forest-green panels, classifieds clutter.
 
@@ -13,17 +13,17 @@ Mood: calm, premium, trustworthy. Not: beige, saturated forest-green panels, cla
 ```
 /* base (light) */
 --bg:                  #f2f6f1      /* light sage page base */
---bg-atmo-1:           #e6ede4      /* soft gradient stop — green haze */
---bg-atmo-2:           #e9efe7      /* soft gradient stop — mist */
+--bg-atmo-1:           #e6ede4      /* soft gradient stop - green haze */
+--bg-atmo-2:           #e9efe7      /* soft gradient stop - mist */
 --bg-elevated:         #ffffff
 --separator:           rgba(56,64,56,0.14)
 --text:                #161a15      /* green-cast ink */
 --text-secondary:      rgba(48,58,48,0.76)
 --text-tertiary:       rgba(48,58,48,0.66)
 
-/* accent — single calm action color, deep forest green (replaced copper).
+/* accent - single calm action color, deep forest green (replaced copper).
    No orange/red anywhere; green carries all interactive states. */
---accent:              #1e4d34      /* deep green — primary actions ONLY */
+--accent:              #1e4d34      /* deep green - primary actions ONLY */
 --accent-hover:        #163a27
 --accent-soft:         rgba(30,77,52,0.12)    /* focus halos, tint washes */
 
@@ -37,7 +37,7 @@ Mood: calm, premium, trustworthy. Not: beige, saturated forest-green panels, cla
 --material-regular:    rgba(255,255,255,0.72)
 --material-thick:      rgba(255,255,255,0.88)
 
-/* dark surfaces (footer, cinematic bands) — green-cast ink, never blue-black */
+/* dark surfaces (footer, cinematic bands) - green-cast ink, never blue-black */
 --ink:                 #101410
 --ink-elevated:        #191f18
 --material-dark:       rgba(20,26,21,0.65)
@@ -52,9 +52,9 @@ Rules:
 
 Georgian script coverage is mandatory.
 
-- **Display / headings:** `Noto Sans Georgian` 700–800, tight tracking (-0.02em), used LARGE. Headings earn their size; no timid 24px section titles.
-- **Body / UI:** `Noto Sans Georgian` 400–600, fallback `system-ui`.
-- **Numeric / data (prices, mileage, years):** `JetBrains Mono` 500–600, `tabular-nums`.
+- **Display / headings:** `Noto Sans Georgian` 700-800, tight tracking (-0.02em), used LARGE. Headings earn their size; no timid 24px section titles.
+- **Body / UI:** `Noto Sans Georgian` 400-600, fallback `system-ui`.
+- **Numeric / data (prices, mileage, years):** `JetBrains Mono` 500-600, `tabular-nums`.
 
 Scale: 12 / 13 / 15 / 17 / 22 / 28 / 36 / 48 / 64. Body 17px touch, 15px dense desktop.
 
@@ -66,7 +66,7 @@ Scale: 12 / 13 / 15 / 17 / 22 / 28 / 36 / 48 / 64. Body 17px touch, 15px dense d
 - Ghost: text-only copper, no border.
 
 **Listing cards**
-- `--material-thick` over blur 20px, radius 18, NO 1px hard border — hairline `rgba(255,255,255,0.6)` inner stroke + soft ambient shadow `0 8px 32px rgba(16,19,25,0.08)`.
+- `--material-thick` over blur 20px, radius 18, NO 1px hard border - hairline `rgba(255,255,255,0.6)` inner stroke + soft ambient shadow `0 8px 32px rgba(16,19,25,0.08)`.
 - Image edge-to-edge at card top, radius follows card.
 - Price in mono, large; meta in `--text-secondary`.
 
@@ -89,7 +89,7 @@ Scale: 12 / 13 / 15 / 17 / 22 / 28 / 36 / 48 / 64. Body 17px touch, 15px dense d
 - Container 1200px; generous section padding (96px+ desktop, 56px mobile).
 - Touch targets ≥44px.
 - Content edge-to-edge; chrome floats above it.
-- The hero "I have / I want" two-car swap stage is the signature layout moment — give it space and depth.
+- The hero "I have / I want" two-car swap stage is the signature layout moment - give it space and depth.
 
 ## 6. Depth & Elevation
 
@@ -109,7 +109,7 @@ Fallback: where `backdrop-filter` is unsupported, materials resolve to solid `#f
 - Beige backgrounds, green panels, or any return to the v1 palette.
 - Hard 1px borders on cards.
 - Multiple accents or saturated decorative fills.
-- Timid typography — headings go big or not at all.
+- Timid typography - headings go big or not at all.
 
 ## 8. Responsive Behavior
 
@@ -119,6 +119,6 @@ Fallback: where `backdrop-filter` is unsupported, materials resolve to solid `#f
 
 ## 9. Agent Prompt Guide
 
-Bias: cool near-white base with atmospheric gradients, frosted glass panels (blur+alpha) instead of solid fills or borders, copper #a14e21 as the single accent on CTAs, Noto Sans Georgian display-large headings, JetBrains Mono tabular numerals for prices/specs, radius 12–20, soft ambient shadows.
+Bias: cool near-white base with atmospheric gradients, frosted glass panels (blur+alpha) instead of solid fills or borders, copper #a14e21 as the single accent on CTAs, Noto Sans Georgian display-large headings, JetBrains Mono tabular numerals for prices/specs, radius 12-20, soft ambient shadows.
 
 Reject: beige/cream backgrounds, forest green, bordered gray cards, purple gradients, timid same-size typography, multi-accent surfaces.

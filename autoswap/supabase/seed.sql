@@ -1,17 +1,3 @@
--- =============================================================
--- AutoSwap — Seed / mutual-match test scenario  (LOCAL DEV ONLY)
--- Run AFTER schema.sql, functions.sql, policies.sql, storage.sql.
---
--- Canonical test:
---   User A: Audi A7 2020 (50,000 km, Tbilisi)  wants  BMW 550i 2018
---   User B: BMW 550i 2018 (70,000 km, Tbilisi) wants  Audi A7 2020
---   => exactly ONE match_suggestion, TWO match_found notifications, ZERO offers.
---
--- User C owns six extra listings to populate the feed.
--- Re-runnable: seed vehicles + their match notifications are reset each run.
--- =============================================================
-
--- ids:  A=aaaa…  B=bbbb…  C=cccc…
 delete from public.notifications
   where type = 'match_found'
     and user_id in (
@@ -28,7 +14,6 @@ delete from public.vehicles where id in (
   '77777777-7777-7777-7777-777777777777',
   '88888888-8888-8888-8888-888888888888');
 
--- Auth users (handle_new_user trigger auto-creates their profiles).
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, created_at, updated_at,
@@ -54,9 +39,6 @@ values
   ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'User C', 'ბათუმი')
 on conflict (id) do update set display_name = excluded.display_name, city = excluded.city;
 
--- Vehicles (active listings require city + condition).
--- created_at is staggered so the catalog's freshness labels vary
--- ("დღეს", "გუშინ", "N დღის წინ") instead of every card saying "today".
 insert into public.vehicles (id, owner_id, make, model, year, mileage, fuel_type, transmission, city, category, condition, status, created_at)
 values
   ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Audi',          'A7',                2020, 50000, 'petrol', 'automatic', 'თბილისი', 'sedan', 'excellent', 'active', now() - interval '2 hours'),
@@ -68,7 +50,6 @@ values
   ('77777777-7777-7777-7777-777777777777', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Lexus',         'RX',                2020, 54000, 'hybrid', 'automatic', 'ბათუმი',  'suv',   'excellent', 'active', now() - interval '6 days'),
   ('88888888-8888-8888-8888-888888888888', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Land Rover',    'Range Rover Sport', 2018, 95000, 'diesel', 'automatic', 'ბათუმი',  'suv',   'good',      'active', now() - interval '8 days');
 
--- Swap preferences (cash terms). Inserting these runs matching (no desires yet).
 insert into public.swap_preferences (vehicle_id, cash_mode, cash_amount)
 values
   ('11111111-1111-1111-1111-111111111111', 'none',      0),
@@ -80,7 +61,6 @@ values
   ('77777777-7777-7777-7777-777777777777', 'none',      0),
   ('88888888-8888-8888-8888-888888888888', 'add_money', 3000);
 
--- Desired vehicles. The A<->B pair is mutual; the rest just populate the feed.
 insert into public.desired_vehicles (vehicle_id, desired_make, desired_model, desired_category, min_year, max_year, label)
 values
   ('11111111-1111-1111-1111-111111111111', 'BMW',           '550i',    null,  2018, 2018, 'BMW 550i 2018'),
@@ -92,7 +72,6 @@ values
   ('77777777-7777-7777-7777-777777777777', 'Land Rover',    null,      null,  null, null, 'Land Rover'),
   ('88888888-8888-8888-8888-888888888888', 'Lexus',         'RX',      null,  null, null, 'Lexus RX');
 
--- Verification.
 do $$
 declare match_count int; notif_count int; offer_count int;
 begin

@@ -4,7 +4,7 @@
 
 product
 
-(The home page leans brand — it sells the idea of swapping cars — but every other
+(The home page leans brand - it sells the idea of swapping cars - but every other
 surface is task UI: browse, list, offer, chat, account. Product register is the
 default; the home hero may borrow brand permissions.)
 
@@ -14,7 +14,7 @@ Georgian car owners (Tbilisi and regions) who want to *swap* cars rather than
 sell-then-buy. They are used to myauto.ge and Facebook Marketplace: dense
 listings, phone-first contact, photos with watermarks, prices in GEL and USD.
 They browse on mid-range Android phones and on desktop at work. Trust is the
-scarce resource — a marketplace that looks fake or machine-made loses them
+scarce resource - a marketplace that looks fake or machine-made loses them
 before the first tap.
 
 ## Product Purpose
@@ -41,20 +41,20 @@ clear states), not from polish effects.
 
 ## Design Principles
 
-1. **Earned familiarity** — marketplace affordances people already know from
+1. **Earned familiarity** - marketplace affordances people already know from
    myauto.ge; the tool disappears into the task.
-2. **Instrument-cluster precision** — tabular numerals, mono for plates/prices/
+2. **Instrument-cluster precision** - tabular numerals, mono for plates/prices/
    codes, exact alignment; data looks measured, not decorated.
-3. **One loud thing per screen** — copper accent reserved for the primary
+3. **One loud thing per screen** - copper accent reserved for the primary
    action; everything else stays in the green/ivory neutrals.
-4. **States are designed, not defaulted** — hover/focus/disabled/empty/loading
+4. **States are designed, not defaulted** - hover/focus/disabled/empty/loading
    all deliberate; skeletons over spinners.
-5. **Hand-built texture over template gloss** — asymmetry, varied rhythm, real
+5. **Hand-built texture over template gloss** - asymmetry, varied rhythm, real
    photography; never a pattern repeated identically section after section.
 
 ## Constraints (owner-set, June 2026)
 
-- Never write or edit Georgian copy — owner handles all user-facing text.
+- Never write or edit Georgian copy - owner handles all user-facing text.
 - "De-AI" passes are design-only: colors, icons, radii, shadows, logo,
   typography, spacing, markup classes. Not copy, not features, not page
   structure.

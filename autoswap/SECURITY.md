@@ -1,4 +1,4 @@
-# AutoSwap — security hardening & deploy checklist
+# AutoSwap - security hardening & deploy checklist
 
 This documents the fixes applied after the security review and what still needs
 to be configured in the Supabase dashboard (things code can't set).
@@ -25,13 +25,13 @@ telegram.sql   (optional, for Telegram notifications)
 
 ## Must configure in the Supabase dashboard (not in code)
 
-- **OTP / auth rate limits** — Authentication → Rate Limits. The app relies on
+- **OTP / auth rate limits** - Authentication → Rate Limits. The app relies on
   Supabase Auth's built-in phone-OTP throttling; the 60-second client resend
   timer is UX only and is bypassable. Set sensible per-hour OTP send limits
   here. (No third-party SMS provider is wired in this repo by design.)
-- **Google OAuth** — Authentication → Providers → Google (client id/secret +
+- **Google OAuth** - Authentication → Providers → Google (client id/secret +
   redirect URLs) for the "Google-ით შესვლა" button.
-- **`front/supabase-config.js`** — copy from `supabase-config.example.js` and
+- **`front/supabase-config.js`** - copy from `supabase-config.example.js` and
   fill the project URL + anon key (and, optionally, the Telegram bot username).
 
 ## Deploy (Netlify)
@@ -41,5 +41,5 @@ step. Point the site at your Supabase project via `supabase-config.js`.
 
 ## Not classic-SQL-injectable
 
-The app uses Supabase query builders / RPC params and static SQL — no
+The app uses Supabase query builders / RPC params and static SQL - no
 string-built queries.

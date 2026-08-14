@@ -1,11 +1,3 @@
-// =============================================================
-// Edge Function: decline-offer
-// The receiver declines an offer. Delegates to public.decline_offer(offer_id),
-// which sets status=declined, logs an offer_event, and notifies the sender.
-//
-// Request:  POST { "offer_id": "<uuid>" }   (Authorization: Bearer <jwt>)
-// Response: 200 { "declined": true } | 4xx/5xx { "error": "..." }
-// =============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 

@@ -1,16 +1,3 @@
-// =============================================================
-// Edge Function: telegram-bot
-// Webhook target for the AutoSwap Telegram bot. Handles the linking flow:
-// a user opens https://t.me/<bot>?start=<code> (or sends "/start <code>"),
-// and this function matches <code> to profiles.telegram_link_code, stores the
-// Telegram chat id on that profile, and clears the one-time code.
-//
-// Set the webhook once:
-//   https://api.telegram.org/bot<TOKEN>/setWebhook?url=<function-url>&secret_token=<SECRET>
-//
-// Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, TELEGRAM_BOT_TOKEN,
-//      TELEGRAM_WEBHOOK_SECRET
-// =============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 
 const TG_API = `https://api.telegram.org/bot${Deno.env.get("TELEGRAM_BOT_TOKEN")}`;
@@ -28,7 +15,6 @@ Deno.serve(async (req) => {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  // Telegram sends the configured secret in this header — reject anything else.
   const secret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
   if (!secret) return new Response("Server misconfigured: TELEGRAM_WEBHOOK_SECRET not set", { status: 500 });
   if (req.headers.get("x-telegram-bot-api-secret-token") !== secret) {
@@ -46,7 +32,6 @@ Deno.serve(async (req) => {
   const chatId = message?.chat?.id;
   const text = (message?.text ?? "").trim();
 
-  // Always 200 to Telegram so it doesn't retry; act only on /start <code>.
   if (!chatId) return new Response("ok");
 
   const match = text.match(/^\/start(?:\s+(\S+))?/);

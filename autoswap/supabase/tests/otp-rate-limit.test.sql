@@ -1,22 +1,5 @@
--- =============================================================
--- otp-rate-limit.test.sql — unit test for public.otp_rate_check().
---
--- Covers the three guards:
---   1. per-IP burst        — 2 allowed, 3rd from the same IP blocked
---   2. per-phone bombing   — 3 allowed, 4th to the same number blocked
---   3. distributed velocity— 3 distinct IPs allowed, 4th trips a global cooldown
--- ...plus: an active block short-circuits later requests.
---
--- Requires otp_rate_limit.sql applied. A transaction has a single now(), so all
--- inserts land inside every time window — ideal for exercising the counters.
--- Tables are cleared between cases for isolation; the whole test rolls back.
---
---   psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/otp-rate-limit.test.sql
--- =============================================================
-
 begin;
 
--- ---- 1) per-IP burst: 3rd request from one IP is blocked -----------------
 do $$
 declare v jsonb;
 begin
@@ -31,9 +14,6 @@ begin
   assert (v->>'retry_after')::int = 300, 'ip burst: retry_after should be 5 min';
 end $$;
 
--- ---- 2) per-phone bombing: 4th code to one number is blocked -------------
--- Distinct IPs each time so the per-IP rule never fires; the phone rule is
--- evaluated before the global rule, so it wins on the 4th.
 do $$
 declare v jsonb;
 begin
@@ -49,8 +29,6 @@ begin
   assert v->>'scope' = 'phone',        'phone: 4th block scope should be phone';
 end $$;
 
--- ---- 3) distributed velocity: 4th distinct IP trips a global cooldown ----
--- Distinct IP AND distinct phone every time, so only the global rule applies.
 do $$
 declare v jsonb;
 begin

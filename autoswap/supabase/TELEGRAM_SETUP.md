@@ -1,4 +1,4 @@
-# Telegram notifications — setup
+# Telegram notifications - setup
 
 AutoSwap can deliver offer / message / match notifications over a Telegram bot
 (no SMS or email provider needed). Notifications are still stored in-app; this

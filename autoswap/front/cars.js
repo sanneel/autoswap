@@ -1,4 +1,3 @@
-
 const {
   Header,
   Footer,
@@ -23,10 +22,6 @@ const {
   placeComboList,
 } = window.AutoSwap;
 
-// On touch the filter combos open keyboard-down: the field is readOnly, the
-// dropdown shows its options plus a ძებნა row, and only tapping that row makes
-// the field editable and raises the keyboard. On a phone the keyboard covers
-// half the page, so it has to be opt-in rather than the price of a tap.
 const IS_TOUCH = typeof window.matchMedia === 'function'
   && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
@@ -38,7 +33,6 @@ const PAGE_SIZE = 24;
 const STICKY_CTA_DISMISSED_KEY = 'autoswap_cta_dismissed';
 const NUMERIC_FILTER_KEYS = ['yearFrom', 'yearTo', 'mileageMin', 'mileageMax', 'valueMin', 'valueMax', 'cashMin', 'cashMax'];
 
-// Car brand logos from car-logos-dataset via jsdelivr CDN
 const MAKE_LOGOS = {
   'BMW': 'bmw.png',
   'Mercedes-Benz': 'mercedes-benz.png',
@@ -53,9 +47,6 @@ const MAKE_LOGOS = {
 };
 const LOGO_CDN = 'https://cdn.jsdelivr.net/gh/filippofilip95/car-logos-dataset@master/logos/optimized/';
 
-// These five appear as a logo row pinned to the top of the make dropdown and
-// as the quick-filter chips. Their logos appear there and nowhere else: every
-// row in the list itself is text, these five included.
 const FEATURED_MAKES = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Porsche'];
 const FEATURED_MAKE_SLUGS = new Set(FEATURED_MAKES.map((m) => m.toLowerCase().replace(/[^a-z0-9]+/g, '-')));
 function makeSlug(name) {
@@ -88,10 +79,6 @@ function urlKnownMakes() {
   ]));
 }
 
-// The catalog returns some makes in caps (BENTLEY, MERCEDES-BENZ) and others
-// in title case, so the chip row read as a mix of shouting and normal words.
-// Title-case anything long enough to be a word; 3 letters or fewer is left
-// alone so genuine initialisms — BMW, KIA, GMC — are not mangled into Bmw.
 function tidyMakeCase(name) {
   const raw = String(name || '');
   if (raw.length <= 3 || raw !== raw.toUpperCase()) return raw;
@@ -157,11 +144,6 @@ function seedMyCarFromURL() {
     source: 'hero-search-url',
   });
 }
-// Starts empty, not seeded with a stand-in dataset. Rendering placeholder
-// cars and then swapping them for the real feed meant every visit began with
-// a full re-render of different cars — the flash of wrong content that made
-// the page feel slow. Now the first paint is a skeleton and the real rows
-// land in it once.
 let allCars = [];
 let feedLoaded = false;
 seedMyCarFromURL();
@@ -204,8 +186,6 @@ function readFiltersFromURL() {
   Object.keys(f).forEach((key) => {
     const value = p.get(key);
     if (!value) return;
-    // Numeric filters come straight off the URL into number inputs; keep
-    // digits only so a crafted ?valueMin=... can't break out of the attribute.
     f[key] = NUMERIC_FILTER_KEYS.includes(key) ? value.replace(/[^0-9]/g, '') : value.trim();
   });
   return f;
@@ -253,8 +233,6 @@ function comboField(kind, labelText, value, placeholder, disabled = false) {
   const disabledClass = disabled ? ' is-disabled' : '';
   const clearHidden = disabled || !value ? ' hidden' : '';
   const displayPlaceholder = disabled ? 'ჯერ აირჩიე მარკა…' : placeholder;
-  // The visible label is a <span>, not a <label>, so it has to be wired to the
-  // input by id or a screen reader announces the field with no name at all.
   const labelId = `${kind}-combo-label`;
   return `
     <div class="filter-field">
@@ -307,7 +285,6 @@ function HeroTrust() {
   `;
 }
 
-
 function MyCarFilterPanel() {
   const myCar = getMyCar();
   if (!myCar) {
@@ -330,11 +307,6 @@ function MyCarFilterPanel() {
   `;
 }
 
-
-// A "from / to" pair drawn as two boxes, each with its caption sitting inside
-// the field and the unit pinned to the right. The caption has to be inside:
-// stacked above, a pair of ranges costs four label lines and the panel stops
-// fitting on a phone.
 function rangeField(labelText, fromName, toName, fromValue, toValue, unit) {
   const box = (name, value, caption, aria) => `
     <span class="range-box">
@@ -354,9 +326,6 @@ function rangeField(labelText, fromName, toName, fromValue, toValue, unit) {
   `;
 }
 
-// Same shape as rangeField, but the values come from a fixed list so they are
-// picked rather than typed — a year is a choice from what exists, not a number
-// to invent.
 function yearRangeField(labelText, years, fromValue, toValue) {
   const box = (name, value, caption, aria) => `
     <span class="range-box range-box--select">
@@ -385,9 +354,6 @@ function FilterSidebar() {
   const years = Array.from(new Set(allCars.map((c) => c.yearNum).filter(Boolean))).sort((a, b) => b - a);
   const myCar = getMyCar();
 
-  // Flat, not a panel plus a modal. Everything that narrows a search is on one
-  // surface now: the split hid price, year and mileage behind a button, which
-  // on a marketplace are the first three things anyone reaches for.
   return `
     <aside class="filters" id="filters" aria-label="ფილტრები">
       <form class="filters-form" id="filters-form">
@@ -483,18 +449,12 @@ function FilterSidebar() {
   `;
 }
 
-
 function matchBadge(match) {
   if (match === 'mutual') return `<span class="match-badge match-badge--mutual">${icons.swap} ორმხრივი მატჩი</span>`;
   if (match === 'reverse') return `<span class="match-badge match-badge--reverse">${icons.search} ეძებს შენნაირ მანქანას</span>`;
   return '';
 }
 
-
-// Category price baselines for the "კარგი ფასი" badge, recomputed whenever the
-// feed changes so the claim reflects what is actually on the market. A category
-// needs a real sample before we call anything a deal — with three listings the
-// "average" is noise, and a false badge is worse than no badge.
 const GOOD_PRICE_RATIO = 0.88;
 const GOOD_PRICE_MIN_SAMPLE = 5;
 let priceBaselines = new Map();
@@ -519,8 +479,6 @@ function isGoodPrice(car) {
   return car.estimatedValue <= baseline * GOOD_PRICE_RATIO;
 }
 
-// Icon-labelled spec row. Reads faster than a comma-separated string because
-// the icon carries the category and the eye can skip to the one it wants.
 function specStrip(car) {
   const items = [
     car.fuel ? [icons.fuel, car.fuel] : null,
@@ -535,14 +493,10 @@ function specStrip(car) {
 
 function cashLine(car) {
   const iconMap = { add: icons.trendUp, ask: icons.trendDown, flexible: icons.swap, none: icons.equals };
-  // Only amounts get the inline flip; "თანაბარი გაცვლა" has no figure to convert.
   const flip = car.cashAmount > 0 ? priceCurrencyToggle() : '';
   return `<p class="trade-cash trade-cash--${car.cashType}">${iconMap[car.cashType] || icons.equals}<span>${escapeHtml(car.cash)}</span>${flip}</p>`;
 }
 
-// Exchange-first hierarchy: the first desired-vehicle label (already carries
-// make/model, and year when the owner set one, e.g. "BMW 550i 2018") reads as
-// a headline; any further wants trail as small chips so they don't compete.
 function wantsPrimary(car) {
   const myCar = getMyCar();
   const myMake = myCar ? String(myCar.make || '').toLowerCase().replace(/[^a-z0-9]+/g, '') : '';
@@ -564,7 +518,7 @@ function wantsPrimary(car) {
 
 function trustStrip(car) {
   if (!car.ownerName) {
-    
+
     return car.freshness ? `<div class="trade-trust"><span class="trust-item">განახლდა ${car.freshness}</span></div>` : '';
   }
   const items = [
@@ -576,7 +530,6 @@ function trustStrip(car) {
   ].filter(Boolean);
   return `<div class="trade-trust">${items.join('')}</div>`;
 }
-
 
 function ownerLine(car) {
   if (!car.ownerName) {
@@ -593,7 +546,6 @@ function ownerLine(car) {
     </span>
   `;
 }
-
 
 function CarRow(car) {
   const detailHref = `/vehicle?id=${encodeURIComponent(car.id)}`;
@@ -634,9 +586,6 @@ function CarRow(car) {
   `;
 }
 
-// What goes in the list body. Three states, not two: still loading is not the
-// same as "nothing matched", and showing the empty state before the feed has
-// answered told people the site was broken when it was merely busy.
 function listBodyHTML(slice) {
   if (!feedLoaded) {
     return Array.from({ length: 6 }, () => '<div class="skeleton-row"></div>').join('');
@@ -644,10 +593,6 @@ function listBodyHTML(slice) {
   return slice.length ? slice.map(CarRow).join('') : emptyStateHTML();
 }
 
-// Two different empties. "Nothing matched your filters" is wrong advice when
-// the catalog itself is empty — it blames a filter the visitor never set and
-// offers to clear one that does not exist. That is exactly what a brand-new
-// site shows on day one, so the first impression would be a dead end.
 function emptyStateHTML() {
   const myCar = getMyCar();
   const catalogEmpty = allCars.length === 0;
@@ -753,12 +698,11 @@ function CatalogPage() {
   `;
 }
 
-
 function rankCar(car) {
-  
+
   const match = matchFor(car);
   const matchRank = match === 'mutual' ? 0 : match === 'reverse' ? 1 : 2;
-  const openRank = car.openToOffers ? 1 : 0; 
+  const openRank = car.openToOffers ? 1 : 0;
   const boostRank = car.boosted ? 0 : 1;
   return [matchRank, openRank, boostRank];
 }
@@ -784,12 +728,12 @@ function sortCars(list, sort) {
     case 'mileage_asc':
       return copy.sort((a, b) => (a.mileageNum || 0) - (b.mileageNum || 0));
     case 'value_asc':
-      
+
       return copy.sort((a, b) => (a.estimatedValue ?? Infinity) - (b.estimatedValue ?? Infinity));
     case 'value_desc':
       return copy.sort((a, b) => (b.estimatedValue ?? -Infinity) - (a.estimatedValue ?? -Infinity));
     default:
-      
+
       return copy.sort((a, b) => {
         if (a.openToOffers !== b.openToOffers) return a.openToOffers ? 1 : -1;
         if (a.boosted !== b.boosted) return a.boosted ? -1 : 1;
@@ -798,16 +742,11 @@ function sortCars(list, sort) {
   }
 }
 
-// Unicode-aware (Georgian city names must survive), unlike
-// normalizeVehicleSearchText which keeps latin/digits only.
 function queryHaystackText(value) {
   return String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
 function applyFilters(cars, f) {
-  // Token match so "BMW 5 Series" (a family suggestion) finds "BMW 530i":
-  // every query token must appear somewhere in the haystack, which also
-  // carries the model's family label ("530i" → "5 Series").
   const queryTokens = queryHaystackText(f.query).split(' ').filter(Boolean);
   const yearFrom = Number(f.yearFrom) || null;
   const yearTo = Number(f.yearTo) || null;
@@ -816,8 +755,6 @@ function applyFilters(cars, f) {
   const valueMin = Number(f.valueMin) || null;
   const valueMax = Number(f.valueMax) || null;
   const maxDays = f.fresh === '' ? null : Number(f.fresh);
-  // Cash amount is entered in the displayed currency; stored amounts are GEL,
-  // so convert the bounds to GEL before comparing.
   const toGel = (n) => (getCurrency() === 'USD' ? Math.round(n * getUsdRate()) : n);
   const cashActive = (f.cash === 'add' || f.cash === 'ask');
   const cashMin = cashActive && Number(f.cashMin) ? toGel(Number(f.cashMin)) : null;
@@ -827,8 +764,7 @@ function applyFilters(cars, f) {
     const family = familyLabelForModel(car.model, car.make);
     const haystack = queryHaystackText(`${car.make} ${car.model} ${family} ${car.year} ${car.city} ${car.wants}`);
     if (queryTokens.length && !queryTokens.every((token) => haystack.includes(token))) return false;
-    
-    
+
     if (f.owner && car.ownerId !== f.owner) return false;
     if (f.make && !car.make.toLowerCase().includes(f.make.toLowerCase())) return false;
     if (f.category && car.category !== f.category) return false;
@@ -865,19 +801,15 @@ function pageSlice(list) {
   return list.slice(0, pagesShown * PAGE_SIZE);
 }
 
-
-
 function syncFiltersToURL() {
   const params = new URLSearchParams();
   Object.entries(currentFilters).forEach(([key, value]) => {
-    if (key === 'modelTerms' || key === 'modelGroup') return; 
+    if (key === 'modelTerms' || key === 'modelGroup') return;
     if (value) params.set(key, value);
   });
   const query = params.toString();
   window.history.replaceState(null, '', query ? `?${query}` : window.location.pathname);
 }
-
-
 
 function update() {
   syncFiltersToURL();
@@ -898,7 +830,6 @@ function update() {
     badge.hidden = !n;
   }
 
-
   const list = document.querySelector('#car-list');
   if (list) {
     list.innerHTML = listBodyHTML(slice);
@@ -907,8 +838,6 @@ function update() {
   const more = document.querySelector('#load-more-wrap');
   if (more) more.innerHTML = loadMoreHTML(filtered.length);
 
-  // (#matches-toggle was a standalone control that no longer renders anywhere;
-  // the sidebar checkbox below is the only one left.)
   const sidebarToggle = document.querySelector('#filters-form [name="onlyMatches"]');
   if (sidebarToggle) sidebarToggle.checked = !!currentFilters.onlyMatches;
 
@@ -916,14 +845,7 @@ function update() {
 
 function readFiltersFromForm(form) {
   const data = new FormData(form);
-  // Start from currentFilters so chip-group values (category, cash, …) survive:
-  // they are not form controls and would be wiped by a FormData-only read.
   const f = { ...currentFilters };
-  // category and cash are chip groups now, not form controls: they live on
-  // currentFilters and would be wiped if read from FormData.
-  // Price, year and mileage used to live in a separate modal that wrote
-  // straight to currentFilters, so this read only five names. They are form
-  // controls now — leaving them out would have made typing a price do nothing.
   ['query', 'make', 'model', 'cashMin', 'cashMax',
     'valueMin', 'valueMax', 'yearFrom', 'yearTo', 'mileageMin', 'mileageMax']
     .forEach((key) => { f[key] = String(data.get(key) || '').trim(); });
@@ -1074,10 +996,7 @@ async function loadCurrentMakeModels() {
   return modelCatalogCache.get(makeId) || [];
 }
 
-
 async function comboSearch(kind, term) {
-  // 200 not 40: the catalog holds 156 makes and the dropdown scrolls, so a
-  // page-sized cap silently hid the alphabet's second half.
   if (kind === 'make') return searchMakes(term, 200);
 
   if (!currentFilters.make) return [];
@@ -1093,9 +1012,6 @@ async function comboSearch(kind, term) {
   return modelFamilyOptions(models, currentFilters.make, term);
 }
 
-// Positioning lives in shared.js (placeComboList) so the sell page's dropdown,
-// which uses the same .combo-list class, is placed the same way. It used to be
-// defined only here, which left that one unpositioned and sitting over its label.
 function positionComboList(combo) {
   placeComboList(combo.querySelector('.combo-list'), combo.querySelector('.combo-control'));
 }
@@ -1107,8 +1023,6 @@ function setComboOpen(combo, open) {
   if (list) list.hidden = !open;
   if (input) input.setAttribute('aria-expanded', String(open));
   if (control) control.setAttribute('aria-expanded', String(open));
-  // Closing re-arms the keyboard suppression: the next tap should again give
-  // options first, whatever unlocking happened during this open.
   if (!open && input && combo.dataset.touchLock === '1') input.readOnly = true;
   if (open) positionComboList(combo);
 }
@@ -1129,9 +1043,6 @@ function setActiveComboOption(list, index) {
   return active;
 }
 
-// Logos live in the featured row at the top of the make dropdown and nowhere
-// else. Repeating them beside list rows made five brands look promoted over the
-// rest and turned the list into a logo gallery instead of a list of names.
 function featuredMakeRow() {
   return `
     <li class="combo-featured" role="presentation">
@@ -1146,14 +1057,9 @@ function renderComboList(combo, items) {
   const list = combo.querySelector('.combo-list');
   combo.__comboItems = items;
   const isMakeCombo = combo.dataset.combo === 'make';
-  // Featured tiles only at rest; while filtering, the matches are the answer.
   const comboInput = combo.querySelector('.combo-input');
   const typing = Boolean(comboInput?.value.trim());
   const featured = isMakeCombo && !typing ? featuredMakeRow() : '';
-  // The ძებნა row only exists while the field is still locked; once the user
-  // unlocks and types, the caret lives in the field and the row is done. It is
-  // re-rendered with the list, so it survives every innerHTML rewrite without
-  // any focus juggling — the input being typed into is outside this list.
   const unlock = IS_TOUCH && comboInput?.readOnly
     ? '<li class="combo-unlock" role="option" data-combo-unlock><span class="combo-unlock-icon"></span>ძებნა</li>'
     : '';
@@ -1211,8 +1117,6 @@ function setComboValue(kind, name, id, item = null) {
     if (changed) {
       resetModelFilter();
     }
-    // Warm the model catalog as soon as a make is settled, so opening the
-    // model field is instant instead of waiting on searchMakes → searchModels.
     if (currentFilters.makeId) loadCurrentMakeModels().catch(() => {});
   } else {
     currentFilters.model = name;
@@ -1247,8 +1151,6 @@ function chooseComboOption(combo, option) {
   setComboValue(kind, name, item ? item.id : option.dataset.id, item);
 }
 
-// Free-text query suggestions (same idea as the hero search): contains-match
-// against the make/model catalog so "bmw 5" offers "BMW 5 Series", "BMW X5"…
 let queryMakesPromise = null;
 function queryMakesCatalog() {
   if (!queryMakesPromise) queryMakesPromise = searchMakes('', 500).catch(() => []);
@@ -1325,7 +1227,7 @@ function bindQuerySuggest() {
     const option = event.target.closest('.combo-option');
     if (!option) return;
     event.preventDefault();
-    seq += 1; // drop any in-flight suggestion render
+    seq += 1;
     clearTimeout(timer);
     input.value = option.textContent.trim();
     close();
@@ -1347,8 +1249,6 @@ function initCombos() {
     let timer = null;
 
     if (IS_TOUCH && input) {
-      // Locked until the dropdown's ძებნა row is tapped; the tap on the field
-      // still focuses it, so the option list opens keyboard-down.
       input.readOnly = true;
       combo.dataset.touchLock = '1';
     }
@@ -1359,9 +1259,6 @@ function initCombos() {
       const items = await comboSearch(kind, term);
       renderComboList(combo, items);
 
-      // Typing a name out in full commits it exactly like clicking the option
-      // would, so "alfa romeo" unlocks the model field and "giulia" then
-      // settles the model without ever touching the dropdown.
       const exact = term
         ? items.find((it) => String(it.name).toLowerCase() === term.toLowerCase())
         : null;
@@ -1380,17 +1277,10 @@ function initCombos() {
       if (input.disabled) return;
       clear.hidden = !input.value;
       clearTimeout(timer);
-      // Debounced: setComboValue re-runs the whole filter + list render, so
-      // calling it per keystroke made every character feel like a page reload.
       timer = setTimeout(run, 150);
     });
-    
+
     list.addEventListener('mousedown', (event) => {
-      // The ძებნა row hands the field back to the keyboard. blur() before
-      // focus() because the readonly field is already the active element —
-      // without the round trip iOS will not raise the keyboard for it. The
-      // __unlocking flag stops the blur handler's deferred close from
-      // slamming the dropdown shut mid-handoff.
       const unlockRow = event.target.closest('[data-combo-unlock]');
       if (unlockRow) {
         event.preventDefault();
@@ -1403,8 +1293,6 @@ function initCombos() {
         });
         return;
       }
-      // A featured tile behaves as if the make had been typed, so the model
-      // combo unlocks and the results update exactly as they would otherwise.
       const tile = event.target.closest('[data-featured-make]');
       if (tile) {
         event.preventDefault();
@@ -1449,8 +1337,6 @@ function initCombos() {
     });
   });
 
-  
-  
   const modelCombo = document.querySelector('.combo[data-combo="model"]');
   modelCombo?.addEventListener('click', () => {
     if (!modelCombo.classList.contains('is-disabled')) return;
@@ -1479,8 +1365,6 @@ function bindDragRails(root = document) {
     rail.addEventListener('pointermove', (event) => {
       if (!active) return;
       const delta = event.clientX - startX;
-      // Defer capture until real drag begins — capturing on pointerdown
-      // retargets the eventual click to the rail and kills chip link clicks.
       if (!moved && Math.abs(delta) > 6) {
         moved = true;
         rail.classList.add('is-dragging');
@@ -1518,9 +1402,6 @@ function bindDragRails(root = document) {
     });
   });
 
-  // Generic rail plumbing, kept because it is bound by selector and simply
-  // finds nothing now that the quick-filter strip is gone. Any rail added to
-  // this page later gets drag-scroll and arrow sync for free.
   const syncRailArrows = () => {
     root.querySelectorAll('[data-drag-scroll]').forEach((rail) => {
       rail.parentElement?.classList.toggle('rail-no-overflow', rail.scrollWidth <= rail.clientWidth + 1);
@@ -1547,23 +1428,17 @@ function applyFormFilters(form) {
 function bindEvents() {
   const form = document.querySelector('#filters-form');
 
-
-  
   form?.addEventListener('change', (event) => {
     if (event.target.classList.contains('combo-input')) return;
     applyFormFilters(form);
   });
 
-  // Reveal the amount inputs only for the "adds / asks money" directions.
   const cashSelect = form?.querySelector('[name="cash"]');
   cashSelect?.addEventListener('change', () => {
     const field = document.querySelector('#filter-cash-amount');
     if (field) field.hidden = !(cashSelect.value === 'add' || cashSelect.value === 'ask');
   });
 
-  // Keep the ₾/$ tag and the amount conversion in sync with the header toggle.
-  // Subscribed once: bindEvents() re-runs on every renderAll(), and there is no
-  // unsubscribe, so re-subscribing here stacked a duplicate callback per render.
   if (!currencySubscribed && typeof onCurrencyChange === 'function') {
     currencySubscribed = true;
     onCurrencyChange((cur) => {
@@ -1581,9 +1456,6 @@ function bindEvents() {
 
   form?.addEventListener('submit', (event) => event.preventDefault());
 
-  // Chip groups are radio-style: one value per group. Delegated from the
-  // document so every group is handled by one listener, and so it survives the
-  // re-render that follows each pick.
   document.addEventListener('click', (event) => {
     const chip = event.target.closest('[data-adv-chip]');
     if (!chip) return;
@@ -1593,7 +1465,6 @@ function bindEvents() {
     document.querySelectorAll(`[data-adv-chip="${field}"]`).forEach((c) => {
       c.classList.toggle('is-active', c.dataset.value === value);
     });
-    // The amount inputs only apply to the two directional cash modes.
     if (field === 'cash') {
       const amountField = document.querySelector('#filter-cash-amount');
       if (amountField) amountField.hidden = !(value === 'add' || value === 'ask');
@@ -1603,8 +1474,6 @@ function bindEvents() {
     update();
   });
 
-  // Range inputs are debounced: each keystroke would otherwise run a full
-  // filter and sort, which janks once the feed is real-sized.
   let rangeTimer = null;
   form?.addEventListener('input', (event) => {
     const el = event.target;
@@ -1613,13 +1482,10 @@ function bindEvents() {
     rangeTimer = setTimeout(() => applyFormFilters(form), 250);
   });
 
-  // Both the icon reset in the sheet header and the გასუფთავება button in the
-  // sticky footer clear everything — same action, two reachable places, the
-  // footer one so it sits beside ძებნა the way the advanced sheet does.
   const clearAllFilters = () => {
     currentFilters = emptyFilters();
     pagesShown = 1;
-    syncFiltersToURL(); // otherwise a refresh re-applies the cleared filters
+    syncFiltersToURL();
     renderAll();
   };
   document.querySelector('#filters-reset')?.addEventListener('click', clearAllFilters);
@@ -1637,7 +1503,6 @@ function bindEvents() {
     update();
   });
 
-  
   const openFilters = () => {
     document.body.classList.add('filters-open');
     document.querySelector('#filters-overlay')?.removeAttribute('hidden');
@@ -1650,8 +1515,6 @@ function bindEvents() {
   document.querySelector('#filters-close')?.addEventListener('click', closeFilters);
   document.querySelector('#filters-overlay')?.addEventListener('click', closeFilters);
 
-  
-  
   document.querySelector('#filters-search')?.addEventListener('click', () => {
     applyFormFilters(form);
     closeFilters();
@@ -1660,7 +1523,6 @@ function bindEvents() {
     }
   });
 
-  
   document.querySelectorAll('.view-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
@@ -1676,7 +1538,6 @@ function bindEvents() {
     });
   });
 
-  
   document.querySelector('#car-list')?.addEventListener('click', (event) => {
     if (!event.target.closest('#empty-reset')) return;
     currentFilters = emptyFilters();
@@ -1695,11 +1556,9 @@ function bindEvents() {
   bindDragRails();
 }
 
-
 document.addEventListener('click', (event) => {
   if (event.target.closest('[data-mycar-edit]')) openMyCarModal();
 });
-
 
 document.addEventListener('autoswap:mycar', () => {
   pagesShown = 1;
@@ -1707,7 +1566,6 @@ document.addEventListener('autoswap:mycar', () => {
 });
 
 function renderAll() {
-  // Before the markup: CarRow reads the baselines to decide the good-price badge.
   recomputePriceBaselines();
   document.querySelector('#app').innerHTML = CatalogPage();
   bindEvents();
@@ -1717,8 +1575,6 @@ function renderAll() {
 
 async function hydrateFromSupabase() {
   const mapped = await fetchFeed();
-  // An empty feed is an answer, not a failure: it has to clear the skeleton
-  // and show the real empty state rather than leave placeholders spinning.
   allCars = mapped || [];
   feedLoaded = true;
   recomputePriceBaselines();

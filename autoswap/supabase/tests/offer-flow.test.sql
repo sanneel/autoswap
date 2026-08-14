@@ -1,27 +1,4 @@
--- =============================================================
--- offer-flow.test.sql — integration test for the offer lifecycle.
---
--- Covers:
---   * accept_offer completes the swap atomically:
---       - offer -> accepted, conversation created
---       - both vehicles -> completed
---       - competing open offers on either vehicle -> auto-declined
---       - completed_swaps_count bumped for both parties
---   * accept_offer refuses a second accept on an already-swapped vehicle
---   * cancel_offer is sender-only and only from pending/viewed
---
--- Run against a LOCAL database that has schema.sql + functions.sql +
--- policies.sql applied (see supabase/README.md). Never run in production.
---
---   psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/offer-flow.test.sql
---
--- auth.uid() is simulated through request.jwt.claim.sub, exactly how
--- PostgREST/Supabase provide it. The whole test rolls back.
--- =============================================================
-
 begin;
-
--- Make notification/event triggers run as usual; we assert on their output.
 
 do $$
 declare

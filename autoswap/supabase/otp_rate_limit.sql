@@ -1,37 +1,3 @@
--- =============================================================
--- AutoSwap — OTP request rate limiting (server-side, abuse-proof core)
--- Run AFTER schema.sql (independent of the rest; idempotent).
---
--- WHY THIS EXISTS
---   The frontend is a static site that talks to Supabase directly with the
---   public anon key, so any rate check living in the browser is trivially
---   bypassable. The authority therefore lives in Postgres: every OTP send is
---   funnelled through the `request-otp` Edge Function, which calls
---   public.otp_rate_check() with the service role BEFORE asking Supabase Auth
---   to dispatch an SMS. Same function can be wired as a Supabase "Send SMS"
---   auth hook for bypass-proof enforcement (see supabase/SUPABASE_SETUP.md).
---
--- POLICY (all thresholds are named constants in otp_rate_check, easy to tune):
---   1. Per-IP burst .......... > 2 sends from one IP within 60s  -> block that
---                               IP for 5 minutes.
---   2. Per-phone bombing ..... > 3 sends to one number within 10m -> block that
---                               number for 15 minutes (protects the victim, not
---                               just the attacker).
---   3. Distributed velocity .. an IP-rotation attack shows up as many distinct
---                               IPs in a tiny window. >= 4 distinct IPs within
---                               30s -> global cooldown of 3 minutes (3 get
---                               through, the rest are blocked).
---
---   Rule 3 is intentionally a short, self-healing global cooldown rather than a
---   long ban: a long global block would itself be a denial-of-service lever an
---   attacker could pull on purpose. Keep Supabase's own project-level auth rate
---   limits enabled as the hard backstop against the raw /auth/v1/otp endpoint.
--- =============================================================
-
--- -------------------------------------------------------------
--- Append-only audit of OTP send attempts. One row per request that reached
--- the limiter (allowed or not). Rows older than an hour are pruned on write.
--- -------------------------------------------------------------
 create table if not exists public.otp_request_events (
   id         bigint generated always as identity primary key,
   ip         inet,
@@ -47,9 +13,6 @@ create index if not exists otp_request_events_phone_time_idx
 create index if not exists otp_request_events_time_idx
   on public.otp_request_events (created_at desc);
 
--- -------------------------------------------------------------
--- Active blocks, keyed by scope: 'ip:<addr>', 'phone:<e164>', or 'global'.
--- -------------------------------------------------------------
 create table if not exists public.otp_blocks (
   scope         text primary key,
   blocked_until timestamptz not null,
@@ -60,24 +23,12 @@ create table if not exists public.otp_blocks (
 create index if not exists otp_blocks_until_idx
   on public.otp_blocks (blocked_until);
 
--- These tables hold no user-readable data and must never be exposed through
--- PostgREST. RLS on + zero policies = anon/authenticated see nothing; the
--- service role (Edge Function) bypasses RLS.
 alter table public.otp_request_events enable row level security;
 alter table public.otp_blocks         enable row level security;
 
 revoke all on table public.otp_request_events from anon, authenticated;
 revoke all on table public.otp_blocks         from anon, authenticated;
 
--- -------------------------------------------------------------
--- otp_rate_check(p_ip, p_phone) -> jsonb
---   Records the attempt, applies the three rules, and reports the verdict:
---     { "allowed": bool, "retry_after": int (seconds), "scope": text,
---       "reason": text }
---   `allowed = false` means: do NOT send an SMS; tell the client to wait
---   `retry_after` seconds. SECURITY DEFINER so the service role (and only it)
---   can mutate the throttle tables.
--- -------------------------------------------------------------
 create or replace function public.otp_rate_check(
   p_ip    inet,
   p_phone text
@@ -197,6 +148,5 @@ begin
 end;
 $$;
 
--- Only the service role (Edge Function / auth hook) may invoke the limiter.
 revoke all on function public.otp_rate_check(inet, text) from public, anon, authenticated;
 grant execute on function public.otp_rate_check(inet, text) to service_role;

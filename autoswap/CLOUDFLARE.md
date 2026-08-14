@@ -1,10 +1,10 @@
 # Deploying AutoSwap on Cloudflare Pages
 
-The site is static files plus Supabase — there is no server to move. The only
+The site is static files plus Supabase - there is no server to move. The only
 things Pages needs are a build command, an output folder, and the two public
 Supabase values the build inlines into `front/supabase-config.js`.
 
-`npm run build` writes `dist/` — a copy of `front/` in which every JS and CSS
+`npm run build` writes `dist/` - a copy of `front/` in which every JS and CSS
 file is renamed after a hash of its own contents and the HTML is repointed at
 those names. **The output directory is `dist`, not `front`.** Pointing it at
 `front` still deploys a working site, just the unhashed one, so a mismatch
@@ -13,7 +13,7 @@ degrades quietly rather than breaking.
 Why the hash: assets are served immutable for a year, and HTML and assets
 deploy as separate objects that can become visible at different moments. With
 hand-written `?v=N` there was a window where a browser read new HTML, requested
-the new name, and was handed the old file body — then cached it under that name
+the new name, and was handed the old file body - then cached it under that name
 for a year. It happened on 2026-08-13 and could only be escaped by shipping a
 version nobody had requested yet. A content-hashed name cannot exist before the
 bytes that produced it, so there is nothing stale to serve under it, and there
@@ -36,7 +36,7 @@ Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** →
 
 **Do not add a `wrangler.toml` to this project.** When Pages finds one it reads
 the build configuration from the file instead of the dashboard, and the build
-log then reports `Build environment variables: (none found)` — the dashboard
+log then reports `Build environment variables: (none found)` - the dashboard
 variables below are ignored and the build fails on the missing Supabase config.
 Putting them in the file instead would mean committing the anon key, and this
 repo deliberately gitignores `front/supabase-config.js` to keep environment
@@ -53,25 +53,25 @@ These are what the first build fails without. Set them in the project's
 | `AUTO_SWAP_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
 | `AUTO_SWAP_SUPABASE_ANON_KEY` | the publishable (`sb_publishable_…`) key |
 
-Both are public — the anon key is shipped to every browser by design — so
+Both are public - the anon key is shipped to every browser by design - so
 neither needs to be marked as a secret.
 
 If either is missing the **build fails** rather than shipping a broken site:
 `gen-config.mjs` exits non-zero and Pages reports the error. It also refuses a
 `sb_secret_…` or service-role key outright, so a wrong paste here cannot leak a
-privileged key into browser code — you will get a failed build instead.
+privileged key into browser code - you will get a failed build instead.
 
 Set them for Preview as well as Production, or preview deploys of pull
 requests will fail on a missing variable.
 
 ## 3. Things that carry over unchanged
 
-- **`front/_headers`** — Pages uses the same format as Netlify, so the CSP and
+- **`front/_headers`** - Pages uses the same format as Netlify, so the CSP and
   the security headers apply with no edit.
-- **Extensionless URLs** — `/cars` resolves to `cars.html` on Pages exactly as
+- **Extensionless URLs** - `/cars` resolves to `cars.html` on Pages exactly as
   it did on Netlify, so the internal links and `nextTarget()` in `login.js`
   keep working. No `_redirects` file is needed.
-- **Long-lived asset caching** — Pages sets its own immutable caching on
+- **Long-lived asset caching** - Pages sets its own immutable caching on
   hashed assets. This repo instead versions by hand with `?v=` query strings in
   the `<link>` and `<script>` tags, which works identically on either host.
 
@@ -83,7 +83,7 @@ requests will fail on a missing variable.
 ## 4. Domain cutover
 
 `autoswap.ge` already uses Cloudflare nameservers (`charles.ns.cloudflare.com`,
-`mia.ns.cloudflare.com`) — it was only its A records that pointed at Netlify. So
+`mia.ns.cloudflare.com`) - it was only its A records that pointed at Netlify. So
 there is **no registrar step**: adding the custom domain makes Cloudflare
 rewrite its own DNS.
 
@@ -95,7 +95,7 @@ rewrite its own DNS.
    claiming it, and delete `netlify.toml`.
 
 The domain does not change, so **Supabase Auth → URL Configuration needs no
-edit** — the Google OAuth redirect already allows this origin. That step only
+edit** - the Google OAuth redirect already allows this origin. That step only
 applies if the site ever moves to a different hostname.
 
 ## 5. Supabase is unaffected

@@ -1,4 +1,3 @@
-
 const { icons, Header, Footer } = window.AutoSwap;
 
 function AboutPage() {

@@ -1,5 +1,3 @@
-/* FiraGO — self-hosted, subset to Latin + Georgian (SIL OFL). The primary UI
-   typeface; Noto Sans Georgian stays as the fallback for any missing glyphs. */
 @font-face {
   font-family: "FiraGO";
   font-style: normal;
@@ -30,8 +28,6 @@
 }
 
 :root {
-  /* Glass / soft-futurism system — see DESIGN.md. Legacy names kept as
-     aliases so every existing usage picks up the new palette. */
   --ink: #161a15;
   --ink-elevated: #222921;
   --deep-green: var(--ink);
@@ -40,20 +36,11 @@
   --panel-green-soft: rgba(33, 41, 33, 0.55);
   --warm-ivory: #f2f6f1;
   --soft-beige: #e8eee6;
-  /* Opaque. Translucent cards over a blur were glassmorphism used as the
-     default surface: it dropped text contrast against whatever scrolled
-     underneath and made 33 surfaces read as one soft haze. Glass is kept for
-     sticky chrome (--material-thin), where content genuinely passes behind. */
   --card-white: #ffffff;
   --border: rgba(122, 138, 122, 0.22);
   --graphite: #161a15;
   --secondary: rgba(48, 58, 48, 0.76);
-  /* Was rgba(48,58,48,0.66) — 4.05:1 on the page background, under the 4.5:1
-     minimum for body text. Solid #5a6459 measures 5.65:1 and matches
-     --market-muted, so the two muted greys are now one value. */
   --muted: #5a6459;
-  /* Single calm action color — deep forest green. Kept under the old
-     token names so every reference flips at once. No orange/copper. */
   --copper: #1e4d34;
   --copper-hover: #163a27;
   --accent-soft: rgba(30, 77, 52, 0.12);
@@ -64,7 +51,6 @@
   --material-thick: rgba(255, 255, 255, 0.88);
   --hairline: rgba(255, 255, 255, 0.6);
   --blur-chrome: blur(24px) saturate(180%);
-  /* No-op: card surfaces are opaque now, so this only cost compositing. */
   --blur-card: none;
 
   --cash-add-bg: rgba(46, 119, 65, 0.12);   --cash-add-fg: #2E7741;
@@ -77,14 +63,8 @@
   --container: 1280px;
 
   --font: "FiraGO", "Noto Sans Georgian", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  /* --font-display was byte-identical to --font: a "display" token that added
-     a name but no contrast. Kept as an alias so existing usages resolve. */
   --font-display: var(--font);
   --font-serif: "Noto Serif Georgian", "Noto Sans Georgian", Georgia, serif;
-  /* JetBrains Mono has no Georgian glyphs, so any label mixing Georgian with
-     digits rendered in two different typefaces mid-word. It also read as a code
-     font in a consumer marketplace. Numerals now align via font-variant-numeric
-     rather than a second family. */
   --font-mono: var(--font);
 }
 
@@ -164,7 +144,6 @@ svg {
   outline-offset: 3px;
 }
 
-
 .site-footer :focus-visible {
   outline-color: rgba(243, 246, 241, 0.6);
 }
@@ -205,7 +184,6 @@ svg {
   background: var(--copper-hover);
 }
 
-/* Plain hover: no growing-dot trick, just a quiet fill + lift. */
 .btn-interactive {
   gap: 8px;
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
@@ -273,7 +251,6 @@ svg {
   overflow: hidden;
 }
 
-
 .text-link {
   display: inline-flex;
   align-items: center;
@@ -288,14 +265,6 @@ svg {
   height: 16px;
 }
 
-
-/* Opaque, like the tab bar. A sticky header over a translucent ground let the
-   page slide visibly behind the logo and nav as you scrolled.
-
-   The padding-top is the other half of viewport-fit=cover: with cover on, the
-   page paints under the status bar / notch, so without this the brand row
-   would sit beneath the clock. It resolves to 0 everywhere that has no inset,
-   so nothing changes off-iOS. */
 .site-header {
   position: sticky;
   top: 0;
@@ -327,7 +296,6 @@ svg {
   white-space: nowrap;
 }
 
-
 .brand {
   gap: 9px;
 }
@@ -348,7 +316,6 @@ svg {
   height: 15px;
   stroke-width: 2.2;
 }
-
 
 .brand-word {
   color: var(--deep-green);
@@ -459,7 +426,6 @@ svg {
   gap: clamp(14px, 2vw, 24px);
   min-width: 0;
 }
-
 
 .hero {
   position: relative;
@@ -649,7 +615,6 @@ svg {
   stroke-width: 2.1;
 }
 
-
 .hero-car-caption {
   position: relative;
   z-index: 2;
@@ -680,7 +645,6 @@ svg {
   font-size: 13px;
   font-weight: 700;
 }
-
 
 .sound-btn {
   position: absolute;
@@ -714,7 +678,6 @@ svg {
   color: #fff;
 }
 
-
 .hero-car-left .sound-btn {
   left: calc(50% + 26px);
 }
@@ -739,7 +702,6 @@ svg {
     left: 50%;
   }
 }
-
 
 .search-bar {
   display: grid;
@@ -862,7 +824,6 @@ svg {
   min-width: 142px;
   min-height: 48px;
 }
-
 
 .search-bar.swap-search {
   display: grid;
@@ -996,7 +957,6 @@ svg {
   }
 }
 
-
 @media (max-width: 1279px) {
   .swap-label {
     display: none;
@@ -1040,7 +1000,6 @@ svg {
     margin-left: 6%;
   }
 }
-
 
 .listings-section {
   padding: 88px 0 72px;
@@ -1163,7 +1122,6 @@ svg {
   color: var(--copper);
 }
 
-
 .listing-wants {
   display: flex;
   align-items: center;
@@ -1191,7 +1149,6 @@ svg {
   min-height: 50px;
   margin: 0;
 }
-
 
 .wanted-line,
 .car-row-wants {
@@ -1256,24 +1213,20 @@ svg {
   font-weight: 800;
 }
 
-
 .cash-line.cash-none {
   background: var(--cash-none-bg);
   color: var(--cash-none-fg);
 }
-
 
 .cash-line.cash-add {
   background: var(--cash-add-bg);
   color: var(--cash-add-fg);
 }
 
-
 .cash-line.cash-ask {
   background: var(--cash-ask-bg);
   color: var(--cash-ask-fg);
 }
-
 
 .cash-line.cash-flexible {
   background: var(--soft-beige);
@@ -1334,7 +1287,6 @@ svg {
   text-align: center;
 }
 
-
 .process-section {
   position: relative;
   overflow: hidden;
@@ -1342,7 +1294,6 @@ svg {
   padding: 68px 0;
   border-block: 1px solid var(--border);
 }
-
 
 .process-section::before {
   content: "";
@@ -1366,7 +1317,6 @@ svg {
   top: 90px;
 }
 
-
 .process-route {
   --route-gap: 28px;
   display: grid;
@@ -1381,7 +1331,6 @@ svg {
   position: relative;
   padding-top: 54px;
 }
-
 
 .process-step::before {
   content: "";
@@ -1438,7 +1387,6 @@ svg {
   font-weight: 600;
 }
 
-
 .benefits-section {
   padding: 88px 0;
 }
@@ -1481,7 +1429,6 @@ svg {
   height: 20px;
   stroke-width: 1.7;
 }
-
 
 .cta-section {
   padding: 0 0 88px;
@@ -1532,7 +1479,6 @@ svg {
 .cta-actions .btn {
   min-width: 170px;
 }
-
 
 .site-footer {
   background: var(--ink);
@@ -1616,7 +1562,6 @@ svg {
   font-size: 12px;
   font-weight: 500;
 }
-
 
 .footer-base::before {
   content: "";
@@ -1817,7 +1762,6 @@ svg {
     order: 0;
   }
 
-  
   .hero-car-left {
     grid-column: 1;
     justify-items: start;
@@ -1843,7 +1787,6 @@ svg {
     filter: blur(10px);
   }
 
-  
   .hero-car-caption {
     margin-top: 2px;
     padding: 5px 12px;
@@ -1959,7 +1902,6 @@ svg {
     grid-template-columns: 1fr;
   }
 
-  
   .process-route {
     --route-gap: 30px;
     grid-template-columns: 1fr;
@@ -1980,7 +1922,6 @@ svg {
     background: repeating-linear-gradient(180deg, rgba(20, 26, 20, 0.32) 0 12px, transparent 12px 22px);
   }
 
-  
   .benefit-row {
     grid-template-columns: 24px 1fr;
     padding: 20px;
@@ -2041,11 +1982,9 @@ svg {
   }
 }
 
-
 .catalog-shell {
   background: var(--warm-ivory);
 }
-
 
 .catalog-hero,
 .sell-hero {
@@ -2085,7 +2024,6 @@ svg {
   align-items: start;
   padding: 22px 0 72px;
 }
-
 
 .filterbar {
   display: block;
@@ -2194,9 +2132,6 @@ svg {
   }
 }
 
-
-/* Two regions: the filter list scrolls, the apply footer is pinned. The
-   panel itself no longer scrolls, so the footer can't drift out of view. */
 .filters {
   position: sticky;
   top: 78px;
@@ -2216,7 +2151,6 @@ svg {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  /* Room for the scrollbar so it doesn't sit on top of the fields. */
   padding-right: 2px;
 }
 
@@ -2227,11 +2161,6 @@ svg {
   width: 100%;
   min-height: 0;
   max-height: 100%;
-  /* The footer bar bleeds to the panel edge by cancelling this padding, and
-     the padding changes three times across breakpoints (16 / 14 / 12). It was
-     cancelled with one hardcoded number, so the bar could only line up at one
-     width and hung over the edge at the other two. Carried as a variable so
-     the bleed tracks whatever the padding currently is. */
   --filters-pad: 16px;
   padding: var(--filters-pad) var(--filters-pad) 0;
   border: 1px solid var(--border);
@@ -2239,9 +2168,6 @@ svg {
   background: var(--card-white);
 }
 
-/* Section heading — the sidebar was one undifferentiated stack of fields;
-   these give the eye somewhere to land and make the lite/full toggle legible
-   as "a whole group appeared" rather than "rows shuffled". */
 .filter-group-head {
   margin: 0;
   color: var(--graphite);
@@ -2301,7 +2227,6 @@ svg {
   transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
 }
 
-
 .filters-form select:hover,
 .filter-search:hover {
   border-color: var(--panel-green);
@@ -2335,7 +2260,6 @@ svg {
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
-
 .filter-search:focus-within {
   border-color: var(--panel-green);
   box-shadow: 0 0 0 3px rgba(30, 77, 52, 0.16);
@@ -2359,8 +2283,6 @@ svg {
   background: transparent;
 }
 
-/* Desktop runs dense so the whole filter set is visible without scrolling;
-   touch gets the 44px target back. */
 @media (pointer: coarse) {
   .filters-form select,
   .filters-form input:not([type="checkbox"]),
@@ -2368,7 +2290,6 @@ svg {
     min-height: 44px;
   }
 }
-
 
 .combo {
   position: relative;
@@ -2408,8 +2329,6 @@ svg {
   color: var(--graphite);
 }
 
-/* Fixed, not absolute: as an absolute child it was clipped by the
-   .filters-scroll overflow. Coordinates are set by positionComboList(). */
 .combo-list {
   position: fixed;
   z-index: 120;
@@ -2418,8 +2337,6 @@ svg {
   padding: 4px;
   list-style: none;
   overflow-y: auto;
-  /* Solid fill — a translucent dropdown let the filter labels behind it
-     bleed through and made the list unreadable. */
   background: #ffffff;
   border: 1px solid rgba(30, 77, 52, 0.18);
   border-radius: var(--radius-sm);
@@ -2474,24 +2391,14 @@ svg {
   font-weight: 800;
 }
 
-/* Pinned to the bottom of the scrolling sidebar — the advanced filter set is
-   taller than the viewport, so a static button meant scrolling back down to
-   apply. */
 .filters-actions {
   flex: 0 0 auto;
   display: grid;
   gap: 8px;
-  /* Full-bleed to the panel edge, so this has to cancel exactly the form's
-     padding. It was -16px against a 14px padding, which pushed the bar 2px
-     past the panel on each side — the footer sat visibly wider than the thing
-     it belongs to. */
   margin: 0 calc(var(--filters-pad, 14px) * -1);
   padding: 12px var(--filters-pad, 14px);
   background: var(--card-white);
   border-top: 1px solid var(--border);
-  /* No radius of its own: .filters clips with overflow:hidden, so the bar
-     picks up whatever the panel's bottom corners are instead of asserting an
-     11px curve that matched nothing else in the panel. */
   border-radius: 0;
 }
 
@@ -2500,8 +2407,6 @@ svg {
   opacity: 0.72;
 }
 
-/* Vehicle search rows: make muted, model emphasised. Every row repeats the
-   same make, so leading with it in full weight made the list hard to scan. */
 .vehicle-option {
   display: flex;
   align-items: baseline;
@@ -2525,19 +2430,17 @@ svg {
   white-space: nowrap;
 }
 
-/* Typed vehicle matched nothing in the catalog. */
 .sell-shell--v3 .sell-section .field--unknown .field-control > input {
   border-color: #A33627;
   background: #fdf4f2;
 }
 
 .sell-shell--v3 .field--unknown > span::after {
-  content: " — ვერ მოიძებნა კატალოგში";
+  content: " · ვერ მოიძებნა კატალოგში";
   color: #A33627;
   font-weight: 600;
 }
 
-/* Photo upload: drop target + drag-to-reorder feedback */
 .upload-zone.is-dropping {
   border-color: var(--copper);
   background: #eef4ee;
@@ -2554,15 +2457,12 @@ svg {
   cursor: grabbing;
 }
 
-/* Insertion marker on the photo the drop would land on. */
 .upload-preview.is-drop-target {
   outline: 2px solid var(--copper);
   outline-offset: 2px;
   transform: translateY(-2px);
 }
 
-/* Field flagged by validation: the border, the label and the placeholder all
-   go red, so the eye lands on the field itself rather than only the message. */
 .sell-shell--v3 .field--invalid > span {
   color: #A33627;
 }
@@ -2582,14 +2482,10 @@ svg {
   color: #A33627;
 }
 
-/* Swapped in when a listing photo fails to load. Contain, not cover, so the
-   glyph is not cropped by the card's usual object-fit. */
 .img-placeholder {
   object-fit: contain !important;
   background: #eceee9;
 }
-
-/* ---- Advanced filters button + modal ---------------------------------- */
 
 .filters-adv-btn {
   display: flex;
@@ -2635,7 +2531,6 @@ body.adv-open {
   overflow: hidden;
 }
 
-/* Modal backdrop + centering */
 .adv-modal {
   position: fixed;
   inset: 0;
@@ -2739,7 +2634,6 @@ body.adv-open {
   white-space: nowrap;
 }
 
-/* Sections inside modal */
 .adv-section {
   display: flex;
   flex-direction: column;
@@ -2755,7 +2649,6 @@ body.adv-open {
   text-transform: none;
 }
 
-/* Range row */
 .adv-range {
   display: flex;
   align-items: center;
@@ -2789,7 +2682,6 @@ body.adv-open {
   flex: 0 0 auto;
 }
 
-/* Chip group */
 .adv-chips {
   display: flex;
   flex-wrap: wrap;
@@ -2821,7 +2713,6 @@ body.adv-open {
   color: #fff;
 }
 
-/* Checkbox inside modal */
 .adv-check {
   display: flex;
   align-items: center;
@@ -2840,7 +2731,6 @@ body.adv-open {
   accent-color: var(--copper);
 }
 
-/* Mobile: bottom sheet */
 @media (max-width: 600px) {
   .adv-modal {
     align-items: flex-end;
@@ -2852,8 +2742,6 @@ body.adv-open {
     border-radius: 16px 16px 0 0;
   }
 }
-
-/* ---- Listing card: spec strip, good-price badge, listing age ---------- */
 
 .spec-strip {
   display: flex;
@@ -2914,8 +2802,6 @@ body.adv-open {
   height: 13px;
 }
 
-/* Inline currency flip beside a price. Quiet until hovered — it sits next to
-   the number it converts, so it must not compete with it. */
 .cur-flip {
   flex: 0 0 auto;
   display: inline-grid;
@@ -2961,15 +2847,13 @@ body.adv-open {
   background: var(--soft-beige);
 }
 
-
 .results {
   display: grid;
-  
+
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   min-width: 0;
 }
-
 
 .results-head {
   display: flex;
@@ -3015,7 +2899,6 @@ body.adv-open {
   background-size: 16px;
 }
 
-
 .filters-count {
   margin: 4px 0 0;
   color: var(--secondary);
@@ -3049,9 +2932,6 @@ body.adv-open {
   width: 15px;
   height: 15px;
 }
-
-
-
 
 .car-list {
   display: flex;
@@ -3126,7 +3006,6 @@ body.adv-open {
   color: #2f7d44;
 }
 
-
 .car-row-body {
   display: flex;
   flex-direction: column;
@@ -3142,7 +3021,6 @@ body.adv-open {
   line-height: 1.1;
   letter-spacing: -0.01em;
 }
-
 
 .car-row-year {
   display: inline-block;
@@ -3189,13 +3067,9 @@ body.adv-open {
   color: var(--muted);
 }
 
-
-
 .car-row-wants {
   margin-top: auto;
 }
-
-
 
 .trade-deal {
   display: flex;
@@ -3263,7 +3137,6 @@ body.adv-open {
   min-height: 48px;
 }
 
-
 .pagination {
   display: flex;
   align-items: center;
@@ -3307,7 +3180,7 @@ body.adv-open {
 }
 
 @media (max-width: 980px) {
-  
+
   .catalog {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3340,9 +3213,6 @@ body.adv-open {
   }
 }
 
-
-
-
 .listing-media-link,
 .car-row-media-link {
   display: block;
@@ -3359,7 +3229,6 @@ body.adv-open {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-
 
 body.modal-open {
   overflow: hidden;
@@ -3465,7 +3334,6 @@ body.modal-open {
   border-color: var(--panel-green);
 }
 
-
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3506,7 +3374,6 @@ body.modal-open {
   color: var(--muted);
   font-size: 13px;
 }
-
 
 .detail-shell {
   background: var(--warm-ivory);
@@ -3635,10 +3502,6 @@ body.modal-open {
 }
 
 .detail-save {
-  /* relative, not static: this button carries a ::after hit-area expander at
-     inset -8px. Static made that pseudo-element resolve against a distant
-     positioned ancestor, stretching it to 404x559 across the whole panel and
-     swallowing every click on "შესთავაზე გაცვლა" beside it. */
   position: relative;
   width: 50px;
   height: 50px;
@@ -3762,7 +3625,6 @@ body.modal-open {
   margin-top: 6px;
 }
 
-
 .sell-shell {
   background: var(--warm-ivory);
 }
@@ -3772,14 +3634,12 @@ body.modal-open {
   padding: 28px 0 64px;
 }
 
-
 .sell-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 318px;
   gap: 24px;
   align-items: start;
 }
-
 
 .sell-preview {
   position: sticky;
@@ -3800,7 +3660,6 @@ body.modal-open {
   font-weight: 800;
 }
 
-
 .sell-preview-label::before {
   content: "";
   flex: 0 0 auto;
@@ -3808,7 +3667,6 @@ body.modal-open {
   height: 7px;
   background: var(--copper);
 }
-
 
 .sell-preview-card {
   border-radius: 4px;
@@ -3849,13 +3707,11 @@ body.modal-open {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  
   .sell-preview {
     position: static;
     max-width: 360px;
   }
 }
-
 
 .sell-hero {
   padding: 14px 0 24px;
@@ -3883,12 +3739,10 @@ body.modal-open {
   font-size: 13px;
 }
 
-
 .sell-form {
   gap: 18px;
   counter-reset: sell-step;
 }
-
 
 .sell-section {
   padding: 22px;
@@ -3910,7 +3764,6 @@ body.modal-open {
   font-weight: 600;
 }
 
-
 .sell-section h2::before {
   counter-increment: sell-step;
   content: counter(sell-step, decimal-leading-zero);
@@ -3921,14 +3774,12 @@ body.modal-open {
   font-weight: 600;
 }
 
-
 @media (min-width: 981px) {
   .sell {
     max-width: none;
     padding: 10px 0 44px;
   }
 
-  
   .sell-hero {
     padding: 10px 0 18px;
   }
@@ -4115,7 +3966,6 @@ body.modal-open {
   }
 }
 
-
 .car-row-cash,
 .cash-line strong,
 .results-count strong,
@@ -4132,7 +3982,6 @@ body.modal-open {
   font-variant-numeric: tabular-nums;
 }
 
-
 .catalog-hero h1,
 .sell-head h1,
 .auth-card h1,
@@ -4145,7 +3994,6 @@ body.modal-open {
   font-weight: 600;
   letter-spacing: -0.005em;
 }
-
 
 .car-row-cash,
 .cash-line strong,
@@ -4166,7 +4014,6 @@ body.modal-open {
   background: rgba(30, 77, 52, 0.22);
 }
 
-
 body::after {
   content: "";
   position: fixed;
@@ -4179,7 +4026,6 @@ body::after {
   pointer-events: none;
 }
 
-
 h1,
 h2,
 h3 {
@@ -4189,7 +4035,6 @@ h3 {
 p {
   text-wrap: pretty;
 }
-
 
 .stat-row {
   display: grid;
@@ -4231,7 +4076,6 @@ p {
   text-overflow: ellipsis;
 }
 
-
 .detail-panel .stat-row {
   grid-auto-flow: row;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4254,7 +4098,6 @@ p {
   font-size: 12px;
 }
 
-
 .stat-row--card {
   margin: 14px 0 0;
   border-radius: 8px;
@@ -4272,13 +4115,6 @@ p {
 .stat-row--card .stat-cell strong {
   font-size: 13.5px;
 }
-
-
-/* Card images used to scale up on hover. Removed: on a marketplace the photo
-   is the content, and nudging it under the cursor made the whole grid feel
-   restless while telling the user nothing about the car. */
-
-
 
 .results-count strong {
   font-size: 20px;
@@ -4302,9 +4138,6 @@ p {
     border-top: 1px solid var(--border);
   }
 }
-
-
-
 
 .mycar-panel {
   min-width: 0;
@@ -4394,9 +4227,6 @@ p {
 }
 
 .matches-toggle,
-/* Was inline-flex with centre alignment, so a label that wrapped to three
-   lines left the box floating in the middle of the text. Now a real row:
-   fixed control column, text block beside it, hover bleeding to panel edge. */
 .filter-check {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -4422,8 +4252,6 @@ p {
   background: var(--soft-beige);
 }
 
-/* Fill the row instead of collapsing to min-content, which wrapped a
-   two-word Georgian label onto three lines inside a 280px sidebar. */
 .filter-check span {
   min-width: 0;
 }
@@ -4439,7 +4267,6 @@ p {
   cursor: pointer;
 }
 
-
 .matches-toggle {
   flex: 0 0 auto;
   padding: 9px 14px;
@@ -4452,7 +4279,6 @@ p {
 .matches-toggle input {
   accent-color: var(--copper);
 }
-
 
 .filter-group {
   display: grid;
@@ -4501,7 +4327,6 @@ p {
 .more-filters summary::-webkit-details-marker {
   display: none;
 }
-
 
 .more-filters summary::after {
   content: "";
@@ -4615,8 +4440,6 @@ p {
   display: none;
   width: 36px;
   height: 36px;
-  /* Flex item in a tight header row: without this it shrank to 30px on a
-     375px screen, so the disc went oval right where taps are least accurate. */
   flex: 0 0 36px;
   border-radius: 50%;
   background: var(--warm-ivory);
@@ -4624,7 +4447,6 @@ p {
   font-size: 20px;
   line-height: 1;
 }
-
 
 .combo-control.is-flash {
   animation: combo-flash 0.9s ease;
@@ -4634,7 +4456,6 @@ p {
   0%, 100% { border-color: var(--border); box-shadow: none; }
   30% { border-color: var(--copper); box-shadow: 0 0 0 3px rgba(30, 77, 52, 0.22); }
 }
-
 
 .results-controls {
   display: inline-flex;
@@ -4680,7 +4501,6 @@ p {
   font-weight: 700;
 }
 
-
 .trust-note {
   display: flex;
   align-items: flex-start;
@@ -4706,7 +4526,6 @@ p {
   font-weight: 600;
   line-height: 1.5;
 }
-
 
 .trade-card {
   grid-template-columns: 240px minmax(0, 1fr) 224px;
@@ -4742,7 +4561,6 @@ p {
   width: 15px;
   height: 15px;
 }
-
 
 .trade-card.is-mutual {
   background: #f0f5ee;
@@ -4808,7 +4626,6 @@ p {
   color: var(--copper);
 }
 
-
 .trade-wants {
   display: grid;
   gap: 8px;
@@ -4845,7 +4662,6 @@ p {
   font-family: var(--font); font-variant-numeric: tabular-nums;
 }
 
-
 .trade-cash {
   display: flex;
   align-items: center;
@@ -4864,7 +4680,6 @@ p {
   min-width: 0;
 }
 
-
 .trade-cash svg {
   flex: 0 0 auto;
   width: 32px;
@@ -4882,7 +4697,6 @@ p {
 .trade-cash--none svg { background: var(--cash-none-fg); }
 .trade-cash--flexible { background: var(--soft-beige); color: #6f6256; }
 .trade-cash--flexible svg { background: #6f6256; }
-
 
 .trade-trust {
   grid-area: trust;
@@ -4941,7 +4755,6 @@ p {
   background: var(--cash-add-fg);
 }
 
-
 .load-more-wrap {
   display: grid;
 }
@@ -4975,11 +4788,9 @@ p {
   gap: 10px;
 }
 
-
 .sticky-cta {
   display: none;
 }
-
 
 .offer-owner-line {
   display: flex;
@@ -5084,7 +4895,6 @@ p {
   text-underline-offset: 2px;
 }
 
-
 .upload-zone {
   display: flex;
   align-items: center;
@@ -5102,7 +4912,6 @@ p {
   border-color: var(--panel-green);
   background: #f0f5ee;
 }
-
 
 .field .upload-zone .upload-input {
   position: absolute;
@@ -5185,7 +4994,6 @@ p {
   text-align: center;
 }
 
-
 @media (max-width: 980px) {
   .trade-card {
     grid-template-columns: 216px minmax(0, 1fr);
@@ -5195,7 +5003,6 @@ p {
       "trust trust";
   }
 
-  
   .trade-deal {
     flex-direction: row;
     flex-wrap: wrap;
@@ -5233,14 +5040,12 @@ p {
     right: 0;
     bottom: 0;
     z-index: 95;
-    
+
     max-height: 86vh;
     max-height: 80dvh;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    /* Was 10px 18px — the drawer's two top corners were rounded by different
-       amounts, which is the kind of asymmetry you feel before you spot it. */
     border-radius: 18px 18px 0 0;
     background: var(--card-white);
     box-shadow: 0 -2px 10px rgba(15, 20, 15, 0.12);
@@ -5248,8 +5053,6 @@ p {
 
   body.filters-open .filters-form {
     border: 0;
-    /* Was 10px 18px — the drawer's two top corners were rounded by different
-       amounts, which is the kind of asymmetry you feel before you spot it. */
     border-radius: 18px 18px 0 0;
     box-shadow: none;
     padding-bottom: 22px;
@@ -5305,7 +5108,7 @@ p {
   }
 
   .catalog {
-    padding-bottom: 96px; 
+    padding-bottom: 96px;
   }
 }
 
@@ -5328,7 +5131,6 @@ p {
     justify-content: center;
   }
 
-  
   .trade-wants {
     overflow: hidden;
   }
@@ -5365,7 +5167,6 @@ p {
     min-width: 0;
   }
 
-  
   .make-chips {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -5392,7 +5193,6 @@ p {
   }
 }
 
-
 @media (max-width: 480px) {
   .hero-car-caption {
     display: none;
@@ -5402,9 +5202,6 @@ p {
     bottom: 8px;
   }
 }
-
-
-
 
 .toast-host {
   position: fixed;
@@ -5444,7 +5241,6 @@ p {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-
 .auth-shell {
   min-height: 70vh;
   display: grid;
@@ -5462,7 +5258,6 @@ p {
   margin: 0 auto;
   text-align: center;
 }
-
 
 .auth-icon {
   display: inline-flex;
@@ -5497,16 +5292,8 @@ p {
 
 .auth-note { color: var(--muted); font-size: 13px; margin: 16px 0 0; }
 
-/* Hidden until something goes wrong, then filled in place. Re-rendering the
-   step to show an error closes the phone keyboard and throws away what the
-   user typed, which is a heavy price for a message. */
 .auth-error[hidden] { display: none; }
 
-/* ---- Password field ------------------------------------------------------
-   Markup comes from passwordFieldHTML() in shared.js. It uses <label for>
-   rather than the wrapping <label><span> the other fields use, because the
-   reveal button sits beside the input and a click on it must not be read as a
-   click on the label. */
 .pw-field > label {
   color: var(--secondary);
   font-size: 12px;
@@ -5515,8 +5302,6 @@ p {
 
 .pw-input { position: relative; display: block; }
 
-/* Off-screen, not display:none — a hidden or undisplayed username field is one
-   several password managers refuse to read. */
 .pw-username {
   position: absolute;
   width: 1px; height: 1px;
@@ -5526,7 +5311,6 @@ p {
   white-space: nowrap;
 }
 
-/* Room for the toggle, on the side the script does not read from. */
 .pw-input input { padding-inline-end: 48px; }
 
 .pw-toggle {
@@ -5576,8 +5360,6 @@ p {
   opacity: 0.35;
 }
 
-/* Same green the offer cards use for "adds cash" — this app has exactly one
-   affirmative green and the checklist should not introduce a second. */
 .pw-rules li.is-ok { color: var(--cash-add-fg); }
 .pw-rules li.is-ok svg { opacity: 1; }
 
@@ -5601,23 +5383,15 @@ p {
   font-size: 14px;
   font-weight: 600;
   text-decoration: underline;
-  /* No side padding: with both labels on one line at 375px the pair needed
-     303px against 293px available, and the 8px per link was the whole
-     difference. Vertical padding stays for the tap target. */
   padding: 4px 0;
 }
 
-/* „დაგავიწყდა პაროლი?" broke across two lines next to the register link,
-   leaving one side of the row a line taller than the other. Named rather than
-   positional: the code step's row is also two links, but „კოდის თავიდან
-   გაგზავნა (60)" is long enough that it must still be allowed to wrap. */
 #go-register,
 #go-forgot {
   white-space: nowrap;
 }
 
 .auth-link:disabled { color: var(--muted); text-decoration: none; cursor: default; }
-
 
 .account-shell { padding: 32px 0 64px; min-height: 70vh; }
 
@@ -5740,7 +5514,6 @@ p {
 .status-badge--expired  { background: var(--cash-ask-bg); color: var(--cash-ask-fg); }
 .status-badge--completed { background: var(--soft-copper); color: var(--copper); }
 
-
 .offer-pair {
   display: flex;
   align-items: center;
@@ -5757,10 +5530,6 @@ p {
 
 .offer-arrow { color: var(--copper); }
 
-/* Specificity, not just order: the later `.account-card` rule sets a 3-column
-   template (110px media, body, actions). An offer card has no media, only body
-   and actions, so those two landed in the 110px and 1fr tracks: the text was
-   crushed into 110px while the button stretched across the rest. */
 .account-card.offer-card {
   grid-template-columns: minmax(0, 1fr) auto;
 }
@@ -5774,7 +5543,6 @@ p {
 }
 
 .offer-card-msg { margin: 4px 0; font-size: 13px; color: var(--secondary); font-style: italic; }
-
 
 .conversation-card { grid-template-columns: 56px 1fr auto; }
 
@@ -5829,7 +5597,6 @@ p {
   background: var(--card-white);
 }
 
-
 .profile-grid {
   display: grid;
   grid-template-columns: 1fr 280px;
@@ -5856,9 +5623,6 @@ p {
 
 .profile-aside p { margin: 0; color: var(--secondary); }
 
-/* Sits under the profile grid, matching the two cards above it. Capped at the
-   form column's width — a lone password field stretched across a desktop is
-   both ugly and harder to aim at. */
 .pw-card {
   background: var(--card-white);
   border: 1px solid var(--border);
@@ -5890,7 +5654,6 @@ p {
   from { background-position: 130% 0; }
   to   { background-position: -30% 0; }
 }
-
 
 .upload-preview { position: relative; }
 
@@ -5929,7 +5692,6 @@ p {
 
   .profile-grid { grid-template-columns: 1fr; }
 }
-
 
 .header-auth {
   display: inline-flex;
@@ -6044,7 +5806,6 @@ a.header-user:hover {
   text-align: center;
 }
 
-
 .auth-modal .modal-title {
   margin: 2px 0 12px;
   color: var(--deep-green);
@@ -6074,15 +5835,10 @@ a.header-user:hover {
   color: var(--copper);
 }
 
-
 .sell-locked {
   position: relative;
 }
 
-/* Filter the form's CHILDREN, not the form: a filter on an ancestor becomes
-   the containing block for position:fixed, which trapped the mobile action
-   bar mid-page in the locked state. Per-child filtering looks identical and
-   leaves fixed descendants anchored to the viewport. */
 .sell-locked .sell-head,
 .sell-locked .sell-form > *,
 .sell-locked .sell-stepper-grid {
@@ -6105,7 +5861,6 @@ a.header-user:hover {
   justify-content: center;
   align-items: flex-start;
   pointer-events: none;
-  /* Scrim so the locked form behind is muted instead of showing through. */
   background: rgba(242, 246, 241, 0.74);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
@@ -6174,12 +5929,10 @@ a.header-user:hover {
     display: none;
   }
 
-  
   .header-user {
     padding: 4px;
   }
 }
-
 
 .auth-providers {
   display: grid;
@@ -6211,7 +5964,6 @@ a.header-user:hover {
   cursor: default;
 }
 
-
 .btn-google {
   border: 1px solid #d5cdbf;
   background: #fff;
@@ -6240,14 +5992,6 @@ a.header-user:hover {
   background: var(--border);
 }
 
-/* SMS / WhatsApp delivery choice. A two-option segmented control rather than
-   a dropdown or a pair of buttons: the options are peers, both always visible,
-   and the pick is a preference rather than an action — so it reads quiet and
-   stays out of the way of the primary submit below it. */
-/* SMS / WhatsApp delivery choice. Two peer options, both always visible —
-   picking the wrong one leaves someone staring at an app the code will never
-   reach, so the selected state has to be unmistakable at a glance on a phone.
-   Sized to match .field input (46px) so the form reads as one column. */
 .otp-channel {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -6287,8 +6031,6 @@ a.header-user:hover {
   color: var(--graphite);
 }
 
-/* Selected: green border + tinted ground + weight. Three cues rather than one,
-   because a lone border change is easy to miss in daylight on a phone. */
 .otp-channel-opt.is-on {
   border-color: var(--copper);
   background: var(--accent-soft);
@@ -6307,8 +6049,6 @@ a.header-user:hover {
   }
 }
 
-
-
 .sell-section .field input,
 .sell-section .field select,
 .sell-section .field textarea {
@@ -6323,11 +6063,9 @@ a.header-user:hover {
   box-shadow: 0 0 0 3px rgba(30, 77, 52, 0.14);
 }
 
-
 .sell-grid > .field:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
-
 
 .voice-fill[hidden] {
   display: none;
@@ -6392,7 +6130,6 @@ a.header-user:hover {
   line-height: 1.45;
 }
 
-
 .field input.field-flash,
 .field select.field-flash,
 .field textarea.field-flash {
@@ -6406,7 +6143,6 @@ a.header-user:hover {
     animation: none;
   }
 }
-
 
 @media (min-width: 981px) {
   .voice-fill {
@@ -6424,7 +6160,6 @@ a.header-user:hover {
     height: 17px;
   }
 
-  
   .voice-copy {
     display: flex;
     flex-wrap: wrap;
@@ -6472,7 +6207,6 @@ a.header-user:hover {
   }
 }
 
-
 @media (min-width: 981px) {
   .sell-grid {
     gap: 10px;
@@ -6482,7 +6216,6 @@ a.header-user:hover {
     margin-top: 10px;
   }
 }
-
 
 @media (min-width: 981px) and (max-height: 740px) {
   .sell {
@@ -6523,9 +6256,6 @@ a.header-user:hover {
     min-height: 40px;
   }
 }
-
-
-
 
 .catalog-hero-copy {
   flex: 1 1 240px;
@@ -6594,7 +6324,6 @@ a.header-user:hover {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-
 .mycar-rail {
   display: grid;
   gap: 8px;
@@ -6619,7 +6348,6 @@ a.header-user:hover {
   width: 100%;
   gap: 8px;
 }
-
 
 .view-toggle {
   display: inline-flex;
@@ -6659,7 +6387,6 @@ a.header-user:hover {
   color: #fff;
 }
 
-
 .car-list {
   border: 0;
   border-radius: 0;
@@ -6679,7 +6406,6 @@ a.header-user:hover {
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 16px;
 }
-
 
 .car-card {
   display: grid;
@@ -6718,7 +6444,6 @@ a.header-user:hover {
   min-height: 212px;
   object-fit: cover;
 }
-
 
 .car-card-body {
   display: flex;
@@ -6772,7 +6497,6 @@ a.header-user:hover {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-
 
 .car-card-aside {
   display: flex;
@@ -6843,7 +6567,6 @@ a.header-user:hover {
   min-height: 40px;
 }
 
-
 .car-list.view-grid .car-card {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -6860,7 +6583,6 @@ a.header-user:hover {
   border-right: 0;
   border-bottom: 1px solid var(--border);
 }
-
 
 @media (max-width: 720px) {
   .car-card,
@@ -6886,7 +6608,6 @@ a.header-user:hover {
     border-bottom: 1px solid var(--border);
   }
 }
-
 
 .sell-shell--stepper { background: var(--warm-ivory); }
 
@@ -6932,7 +6653,6 @@ a.header-user:hover {
   gap: 24px;
   align-items: start;
 }
-
 
 .step-nav {
   position: sticky;
@@ -6981,7 +6701,6 @@ a.header-user:hover {
 .step-nav-item.is-active .step-nav-text b { color: rgba(255, 255, 255, 0.7); }
 .step-nav-item.is-active .step-nav-text span { color: #fff; }
 .step-nav-item.is-done .step-nav-icon { background: var(--cash-add-bg); color: var(--cash-add-fg); }
-
 
 .sell--stepper .sell-form {
   display: flex;
@@ -7059,7 +6778,6 @@ a.header-user:hover {
 .step-back svg { transform: rotate(180deg); }
 .sell-review-note { margin: 0; color: var(--secondary); font-size: 14px; line-height: 1.6; }
 
-
 .sell-subgroup + .sell-subgroup { margin-top: 18px; }
 
 .sell-subgroup-title {
@@ -7073,7 +6791,6 @@ a.header-user:hover {
 }
 
 .sell-step-error { margin: 16px 0 0; }
-
 
 .sell-locked-lock {
   display: grid;
@@ -7095,7 +6812,6 @@ a.header-user:hover {
   font-size: 12px;
   font-weight: 600;
 }
-
 
 .sell--stepper .sell-preview {
   position: sticky;
@@ -7202,7 +6918,6 @@ a.header-user:hover {
 .preview-progress-num { flex: 0 0 auto; font-family: var(--font); font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 600; color: var(--graphite); }
 .preview-publish { width: 100%; min-height: 48px; gap: 8px; }
 
-
 @media (max-width: 1080px) {
   .sell-stepper-grid { grid-template-columns: 196px minmax(0, 1fr) 320px; }
 }
@@ -7222,7 +6937,6 @@ a.header-user:hover {
   .step-nav-item { white-space: nowrap; }
   .sell--stepper .sell-preview { position: static; max-width: 460px; }
 }
-
 
 .sell-shell--v3 .sell-hero {
   position: relative;
@@ -7266,7 +6980,6 @@ a.header-user:hover {
   font-size: 13.5px;
   line-height: 1.45;
 }
-
 
 .sell-shell--v3 .sell-steps {
   position: relative;
@@ -7320,7 +7033,6 @@ a.header-user:hover {
 }
 .sell-shell--v3 .sell-step-pip.is-active .sell-step-pip-label { color: var(--warm-ivory); }
 
-
 .sell-shell--v3 .sell { max-width: 1200px; padding: 22px 0 60px; }
 
 .sell-mode-bar {
@@ -7370,7 +7082,6 @@ a.header-user:hover {
 }
 .sell-shell--v3 .sell-form { display: grid; gap: 16px; align-content: start; }
 
-
 .sell-shell--v3 .voice-fill {
   display: flex;
   align-items: center;
@@ -7397,7 +7108,6 @@ a.header-user:hover {
 .sell-shell--v3 .voice-copy strong { display: block; color: var(--graphite); font-size: 14px; font-weight: 800; }
 .sell-shell--v3 .voice-copy small { display: block; margin-top: 2px; color: var(--secondary); font-size: 12.5px; line-height: 1.45; }
 
-
 .sell-shell--v3 .sell-section {
   padding: 20px 22px 22px;
   border: 1px solid var(--border);
@@ -7406,11 +7116,6 @@ a.header-user:hover {
   box-shadow: 0 1px 2px rgba(15, 20, 15, 0.05), 0 16px 36px -24px rgba(15, 20, 15, 0.3);
 }
 
-/* Three identical white boxes gave the form no sense of place. Each section is
-   tinted by what it means: green for the car you own, blue for the car you
-   want (the same two sides the cash badges already use across the site), warm
-   neutral for the optional details. Flat fills, not gradients: a tint fading
-   to white down a card is decoration that says nothing about the content. */
 .sell-shell--v3 .sell-section.sell-section--car {
   border-color: rgba(30, 77, 52, 0.22);
   background: #eef4ee;
@@ -7426,7 +7131,6 @@ a.header-user:hover {
   background: #f5f3ea;
 }
 
-/* Badge picks up its own section's hue instead of one green for all three. */
 .sell-shell--v3 .sell-section--car .sell-section-badge {
   background: #dfeade;
   border-color: rgba(30, 77, 52, 0.24);
@@ -7445,14 +7149,12 @@ a.header-user:hover {
   color: #6b5f45;
 }
 
-/* Inputs stay white so they read as fields against the tint. */
 .sell-shell--v3 .sell-section .field-control > input,
 .sell-shell--v3 .sell-section .field-control > select,
 .sell-shell--v3 .sell-section .field-control--area textarea {
   background: #fff;
 }
 
-/* The engine size is fixed at 0.0 for electric cars: show it as locked. */
 .sell-shell--v3 .field--locked .field-control > input {
   background: rgba(20, 26, 20, 0.05);
   color: var(--muted);
@@ -7496,7 +7198,6 @@ a.header-user:hover {
 }
 .sell-shell--v3 .sell-section-badge svg { width: 23px; height: 23px; stroke-width: 2.1; }
 
-
 .sell-shell--v3 .sell-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -7508,9 +7209,6 @@ a.header-user:hover {
 .sell-shell--v3 .field { display: grid; gap: 6px; }
 .sell-shell--v3 .field[hidden] { display: none; }
 .sell-shell--v3 .field > span { color: var(--secondary); font-size: 12.5px; font-weight: 700; }
-/* Flex, not block: as a block the inline <input> sat on the text baseline and
-   left ~7px of descender space under it, so an input field measured 55px tall
-   against a select's 48px and the two columns did not line up. */
 .sell-shell--v3 .field-control { position: relative; display: flex; }
 
 .sell-shell--v3 .field-control > input,
@@ -7519,7 +7217,6 @@ a.header-user:hover {
   min-width: 0;
 }
 
-/* Equal-height cells so labels of differing line counts still bottom-align. */
 .sell-shell--v3 .sell-grid > .field {
   align-self: stretch;
 }
@@ -7575,7 +7272,6 @@ a.header-user:hover {
   box-shadow: 0 0 0 3px rgba(30, 77, 52, 0.14);
 }
 
-
 .sell-shell--v3 .field-control--area { position: relative; display: block; }
 .sell-shell--v3 .field-control--area textarea { padding-bottom: 26px; }
 .sell-shell--v3 .field-counter {
@@ -7587,7 +7283,6 @@ a.header-user:hover {
   font-size: 11px;
   pointer-events: none;
 }
-
 
 .sell-shell--v3 .upload-zone {
   display: flex;
@@ -7617,10 +7312,8 @@ a.header-user:hover {
 .sell-shell--v3 .upload-text small { color: var(--muted); font-size: 12px; }
 .sell-shell--v3 .upload-previews { margin-top: 12px; }
 
-
 .sell-shell--v3 .sell-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 2px; }
 .sell-shell--v3 .sell-actions .btn { min-height: 46px; gap: 8px; padding: 0 22px; border-radius: 12px; }
-
 
 .sell-shell--v3 .sell-preview {
   position: sticky;
@@ -7667,8 +7360,6 @@ a.header-user:hover {
   display: none;
 }
 
-/* Voice fill stays in the lite shell — it is the fastest way to fill the
-   form, not decoration. */
 .sell-shell--lite .voice-fill {
   margin-bottom: 4px;
   border: 1px solid rgba(30, 77, 52, 0.16);
@@ -7698,7 +7389,6 @@ a.header-user:hover {
   padding-top: 6px;
 }
 
-/* Mode chips become a numbered stepper with connector lines. */
 .sell-shell--lite .sell-mode-bar {
   justify-content: center;
   gap: 0;
@@ -7742,7 +7432,6 @@ a.header-user:hover {
   display: block;
 }
 
-/* Sections fuse into one continuous glass card. */
 .sell-shell--lite .sell-form {
   gap: 0;
 }
@@ -7810,7 +7499,6 @@ a.header-user:hover {
 .sell-shell--lite .sell-section-badge svg {
   width: 23px;
   height: 23px;
-  /* Was rendering hairline-thin at this size against a tinted disc. */
   stroke-width: 2.1;
 }
 
@@ -7867,8 +7555,6 @@ a.header-user:hover {
   color: var(--muted);
 }
 
-/* Sticky action bar — opaque, matching the header and tab bar. It had the same
-   defect they do: form fields scrolled visibly through it. */
 .sell-shell--lite .sell-actions {
   position: sticky;
   bottom: 12px;
@@ -7930,20 +7616,15 @@ a.header-user:hover {
     max-width: 880px;
     margin: 0 auto;
   }
-  /* Reset the full-mode grid-area placements so every block stacks in the
-     single lite column. Without this, .voice-fill's orphaned "voice" area
-     spawns phantom columns and collapses each section to ~58px wide. */
   .sell-shell--lite .sell-form > * {
     grid-area: auto;
     grid-column: 1 / -1;
   }
 }
 
-
 @media (max-width: 1179px) {
   .sell-shell--v3 .sell-steps { display: none; }
 }
-
 
 @media (max-width: 980px) {
   .sell-shell--v3 .sell-preview { position: static; }
@@ -7963,8 +7644,6 @@ a.header-user:hover {
     min-width: 0;
   }
 
-  /* Numbers-only stepper on small screens; full labels live in the
-     section headers directly below. */
   .sell-shell--lite .sell-mode-chip {
     padding: 6px 8px;
     font-size: 0;
@@ -8358,8 +8037,6 @@ body {
 .trade-cash--ask,
 .car-row-cash--ask {
   background: #F7DFDA;
-  /* --market-red (#B64032) measured 4.38:1 here, just under the 4.5 minimum;
-     its add/none siblings both pass, so this darkens only the red. */
   color: #A33627;
 }
 
@@ -9025,8 +8702,6 @@ body {
   background-attachment: fixed;
 }
 
-/* Opaque. This is the third and last .site-header background in the file, and
-   the one that actually won — the two earlier ones were already solid. */
 .site-header {
   background: #ffffff;
 }
@@ -9773,7 +9448,6 @@ body {
   min-width: 0;
 }
 
-
 .car-card {
   grid-template-columns: minmax(300px, 0.92fr) minmax(300px, 1fr) 278px;
   min-height: 286px;
@@ -9805,7 +9479,6 @@ body {
   padding: 0;
   object-fit: cover;
 }
-
 
 .fresh-tag {
   left: 12px;
@@ -9945,11 +9618,6 @@ body {
   }
 }
 
-/* The catalog sidebar returns at >1180px, but the 3-column car card needs
-   ~880px on its own. Between 1181px and 1280px the sidebar leaves the list
-   column too narrow, so the third column used to overflow and the aside
-   spilled past the card edge. Keep the stacked-aside layout until all three
-   columns genuinely fit. */
 @media (min-width: 1181px) and (max-width: 1280px) {
   .car-card {
     grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1fr);
@@ -9975,13 +9643,9 @@ body {
 
 .hero--garage {
   position: relative;
-  /* Above the browse strip / listings so the search dropdown that hangs
-     below the hero paints over them, not under. */
   z-index: 20;
   min-height: auto;
   padding: 8px 0 0;
-  /* Clip only sideways (the hero cars bleed 126% wide); vertical must stay
-     visible so the search dropdown can extend below the hero. */
   overflow-x: clip;
   overflow-y: visible;
   border-bottom: 0;
@@ -10082,9 +9746,6 @@ body {
   width: min(100%, 1160px);
   margin: -52px auto 0;
   padding: 12px;
-  /* Crisp white panel with a defined green edge so it clearly floats above
-     the sage background instead of blending into it. The accent stays
-     reserved for actions, so no decorative bar here. */
   border: 1px solid rgba(30, 77, 52, 0.22);
   border-radius: 16px;
   background: #ffffff;
@@ -10133,7 +9794,6 @@ body {
 }
 
 .garage-search .search-field input::placeholder {
-  /* ≥4.5:1 on the sage field — 0.6 alpha sat at ~3.5:1 */
   color: rgba(48, 58, 48, 0.78);
 }
 
@@ -10284,7 +9944,6 @@ body {
   object-fit: cover;
 }
 
-
 .listing-wants {
   display: flex;
   align-items: center;
@@ -10389,10 +10048,6 @@ body {
   white-space: nowrap;
 }
 
-/* Icon-only by design — font-size:0 hides the label while leaving it in the
-   DOM for screen readers. What it did NOT do was give the button a body: at
-   34x16 it was a sliver sitting beside a 36px round close button, so the pair
-   read as two unrelated controls rather than a set. Same disc, same size. */
 .filters-reset {
   width: 36px;
   min-width: 36px;
@@ -10502,8 +10157,6 @@ body {
     grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
   }
 
-  /* Anchor each car to the centre gap (like desktop) instead of letting a
-     legacy ≤680 rule flip them so they bleed into each other and overlap. */
   .hero--garage .hero-car-left {
     justify-items: end;
   }
@@ -10541,8 +10194,6 @@ body {
     height: 36px;
   }
 
-  /* Cars are justified toward the centre gap, so their visible bodies sit
-     off the column centre. Nudge each sound button onto its own car. */
   .hero--garage .hero-car-left .sound-btn {
     left: 42%;
     transform: translate(-50%, -50%);
@@ -10595,8 +10246,6 @@ body {
   }
 }
 
-
-/* Landing: featured swap + trio (asymmetric listings layout). */
 .featured-swap {
   display: grid;
   grid-template-columns: minmax(280px, 1.05fr) minmax(0, 1fr) 236px;
@@ -10713,7 +10362,6 @@ body {
   }
 }
 
-/* Landing: quiet closing line. */
 .closing-strip {
   padding: 26px 0 84px;
 }
@@ -10740,10 +10388,6 @@ body {
   padding-inline: 24px;
 }
 
-
-/* ─── Buttons: plain, solid, readable ─────────────────────────────
-   Deep-green fill, white text, a quiet lift on hover. No animation,
-   no gradient tricks. The label is the point. */
 .btn-liquid {
   border: 0;
   color: #fff;
@@ -10764,8 +10408,6 @@ body {
   background: #1e4d34 !important;
 }
 
-
-/* ─── Brand chips (browse by make, logo + count → search) ───────── */
 .brand-chip {
   display: flex;
   flex: 0 0 auto;
@@ -10830,7 +10472,6 @@ body {
   box-shadow: 0 4px 12px -6px rgba(20, 26, 20, 0.3);
 }
 
-/* Real brand logos: contained, full color on a white tile. */
 .brand-mark .brand-logo-img,
 .brand-mark .brand-logo {
   width: 32px;
@@ -10838,7 +10479,6 @@ body {
   object-fit: contain;
 }
 
-/* Fallback icon for makes without a bundled logo. */
 .brand-mark svg {
   width: 24px;
   height: 24px;
@@ -10880,8 +10520,6 @@ body {
   background: var(--market-line);
 }
 
-
-/* ─── Catalog: light, readable header (replaces dark hero + quickbar) ── */
 .catalog-topbar {
   padding: 32px 0 6px;
 }
@@ -10919,7 +10557,6 @@ body {
   min-height: 48px;
 }
 
-/* ─── Catalog card: simplified, readable ─────────────────────────── */
 .car-card-specs {
   margin: 0;
   color: var(--secondary);
@@ -10930,7 +10567,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* "· 23 დღის წინ" next to the city — quiet, secondary. */
 .listing-age {
   margin-left: 4px;
   color: var(--muted);
@@ -10967,8 +10603,6 @@ body {
   padding: 14px 16px;
 }
 
-/* Cash difference stays visible but reads as a footnote next to the wanted
-   car headline below — smaller pill, quieter icon. */
 .car-card-aside .trade-cash {
   margin: 0;
   padding: 6px 9px;
@@ -10993,10 +10627,6 @@ body {
   min-height: 40px;
 }
 
-/* "ეძებს" gets its own tinted panel so the swap target reads before anything
-   else in the aside — it's the question this whole product answers. It grows
-   to fill the column's free height so the sought car sits centered instead
-   of leaving dead space above the cash line and buttons. */
 .aside-wants {
   display: flex;
   flex: 1;
@@ -11013,9 +10643,6 @@ body {
   color: var(--copper);
 }
 
-/* The headline: make + model (and year, when the owner set one — it's
-   already baked into the label text) at near-title weight so the sought
-   car reads at a glance, not as an afterthought next to the cash pill. */
 .wants-primary {
   margin: 0;
   color: var(--graphite);
@@ -11049,8 +10676,6 @@ body {
   font-weight: 700;
 }
 
-
-/* ─── Legal / long-form content pages (terms, privacy) ───────────── */
 .legal-header {
   position: sticky;
   top: 0;
@@ -11126,10 +10751,6 @@ body {
 
 .legal-doc a { color: var(--copper); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 
-
-/* ─── UX review polish pass ──────────────────────────────────────── */
-
-/* (C) card year + featured meta in the mono data font */
 .car-row-year,
 .featured-meta {
   font-family: var(--font); font-variant-numeric: tabular-nums;
@@ -11137,11 +10758,9 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* (#1) tighten the hero → listings whitespace */
 .browse-strip--garage { padding-bottom: 18px; }
 .listings-section { padding-top: 22px; }
 
-/* (#2) filter chips must never clip text mid-word */
 .browse-pill {
   flex: 0 0 auto;
   min-width: 0;
@@ -11150,7 +10769,6 @@ body {
 .browse-pill span,
 .browse-pill small { white-space: nowrap; }
 
-/* Offer CTA: give the swap glyph clear breathing room from the label. */
 .featured-aside .btn-accent,
 .car-row-offer,
 .detail-offer {
@@ -11171,7 +10789,6 @@ body {
     inset 0 0 0 1px rgba(255, 255, 255, 0.86);
 }
 
-/* Sell page: active step is unmistakably filled and labeled. */
 .sell-shell--v3 .sell-step-pip-num {
   border: 1px solid rgba(20, 26, 20, 0.22);
   background: #f8faf6;
@@ -11205,7 +10822,6 @@ body {
   color: #fff;
 }
 
-/* Vehicle detail: keep the footer tight to the content on short pages. */
 #app:has(.detail-shell) {
   min-height: 0;
   display: block;
@@ -11219,7 +10835,6 @@ body {
   padding-bottom: 16px;
 }
 
-/* (#8) photo-count pill on the detail hero image */
 .detail-main-media { position: relative; }
 .detail-photo-count {
   position: absolute;
@@ -11239,7 +10854,6 @@ body {
 }
 .detail-photo-count svg { width: 14px; height: 14px; }
 
-/* (#9) owner "სხვა განცხადებები" link */
 .detail-owner { flex-wrap: wrap; }
 .detail-owner-info { flex: 1 1 auto; min-width: 0; }
 .owner-more {
@@ -11255,7 +10869,6 @@ body {
 .owner-more svg { width: 15px; height: 15px; }
 .owner-more:hover { text-decoration: underline; text-underline-offset: 3px; }
 
-/* Modal/filter readability pass: solid surfaces + cleaner Georgian type. */
 .modal {
   border-color: rgba(20, 26, 20, 0.16);
   background: #fff;
@@ -11264,8 +10877,6 @@ body {
 
 .modal-title {
   color: var(--graphite);
-  /* Was the only --font-serif usage in the app: one serif heading among all-sans
-     headings is an orphan, not a type system, and it cost a whole webfont. */
   font-family: var(--font);
   font-size: 23px;
   font-weight: 700;
@@ -11347,7 +10958,6 @@ body {
   font-weight: 700;
 }
 
-/* Car cards: requested visible font change across the full listing card. */
 .car-card {
   background: #fff;
 }
@@ -11393,7 +11003,6 @@ body {
   font-weight: 700;
 }
 
-/* Homepage search: searchable brand picker with auto-selection. */
 .garage-search .search-brand-field {
   position: relative;
   overflow: visible;
@@ -11433,7 +11042,6 @@ body {
   background: #fff;
 }
 
-/* Have field: mirror the brand picker so both open the same custom dropdown */
 .garage-search .have-search-field {
   position: relative;
   overflow: visible;
@@ -11445,8 +11053,6 @@ body {
   z-index: 60;
 }
 
-/* Keep the slider/city row behind an open panel so the dropdown doesn't
-   visually collide with those controls. */
 .garage-search .swap-search-bottom {
   position: relative;
   z-index: 10;
@@ -11490,7 +11096,6 @@ body {
   transform: translateY(-50%);
 }
 
-/* display:grid above would otherwise defeat the hidden attribute */
 .brand-picker-clear[hidden] {
   display: none;
 }
@@ -11540,15 +11145,12 @@ body {
   background: #f2f6f1;
 }
 
-/* Unfeatured makes carry no logo cell at all, so the label sits flush instead
-   of indenting past an empty square. */
 .brand-picker-option.is-textonly {
   grid-template-columns: minmax(0, 1fr);
   min-height: 40px;
   padding-left: 12px;
 }
 
-/* Featured marks pinned above the list */
 .brand-featured {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -11584,7 +11186,6 @@ body {
   object-fit: contain;
 }
 
-/* "მარკები" / "მოდელები" section headers inside the suggestion list */
 .brand-picker-group {
   padding: 8px 8px 3px;
   color: var(--graphite);
@@ -11592,9 +11193,6 @@ body {
   font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
-  /* Sticky inside .brand-picker-list, which scrolls at 260px tall. Mercedes
-     groups into 35 families over 300 models, so a static heading is gone from
-     view long before the models under it are. Opaque, or rows show through. */
   position: sticky;
   top: 0;
   z-index: 1;
@@ -11623,13 +11221,7 @@ body {
   font-weight: 700;
 }
 
-/* Desktop: drop DOWN like a normal combobox (myauto-style); the field's
-   z-index keeps the panel above the city/slider row below it. */
-
 @media (max-width: 680px) {
-  /* Mobile: the two search fields stack, so let the dropdown float above
-     the field below with a strong shadow instead of pushing it away. Outside
-     tap dismisses the panel. */
   .garage-search .have-search-field,
   .garage-search .search-brand-field {
     position: relative;
@@ -11650,7 +11242,6 @@ body {
   }
 }
 
-/* ─── Browse strip v2: no "all" chip, no counts — bold CTA-style pills ── */
 .browse-strip--garage .browse-strip-inner {
   grid-template-columns: 34px minmax(0, 1fr) 34px;
 }
@@ -11691,7 +11282,6 @@ body {
   letter-spacing: 0.01em;
 }
 
-/* Quiet hover: no lift, no fill animation — just a clear green border. */
 .brand-chip:hover,
 .brand-chip:focus-visible,
 .browse-pill:hover,
@@ -11714,7 +11304,6 @@ body {
   }
 }
 
-/* When chips all fit, drop the arrows and shrink the card to content width. */
 .browse-strip--garage .browse-strip-inner.rail-no-overflow {
   grid-template-columns: minmax(0, 1fr);
   width: max-content;
@@ -11727,8 +11316,6 @@ body {
   display: none;
 }
 
-/* ─── Styled select popup (replaces the OS dropdown on fine pointers) ── */
-/* Layer: above modals (220), below toasts (2000). */
 .aselect-panel {
   position: fixed;
   z-index: 1500;
@@ -11782,12 +11369,10 @@ body {
   cursor: default;
 }
 
-/* The trigger keeps native styling; just make the open state visible. */
 select[data-aselect][aria-expanded="true"] {
   border-color: rgba(30, 77, 52, 0.45);
 }
 
-/* ─── Touch comfort: extend small controls' hit areas, keep visuals ── */
 .sound-btn::after,
 .save-btn::after,
 .brand-picker-clear::after {
@@ -11811,19 +11396,16 @@ select[data-aselect][aria-expanded="true"] {
   margin-block: -10px;
 }
 
-/* Sell form: anchor for the vehicle-search suggestion dropdown */
 .field--vehicle-search {
   position: relative;
 }
 
-/* Even heading rag in Georgian, which wraps long compound words */
 h1, h2, h3 {
   text-wrap: balance;
 }
 
-/* ─── Home: liquidity proof line + how-it-works sequence ── */
 .hero-proof {
-  order: 3; /* .hero-inner is ordered flex; keep the proof under the search */
+  order: 3;
   margin: 12px auto 0;
   width: min(100%, 1160px);
   color: var(--market-muted);
@@ -11899,7 +11481,6 @@ h1, h2, h3 {
   }
 }
 
-/* ─── Header tools: unmistakable active nav, currency, notifications ── */
 .site-nav a {
   padding: 8px 14px;
   border-radius: 999px;
@@ -11913,7 +11494,7 @@ h1, h2, h3 {
 }
 
 .site-nav a.is-active::after {
-  display: none; /* the pill replaces the old underline */
+  display: none;
 }
 
 .currency-switch {
@@ -11996,7 +11577,7 @@ h1, h2, h3 {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  z-index: 120; /* above the sticky header, below select popups */
+  z-index: 120;
   width: min(340px, calc(100vw - 28px));
   padding: 6px;
   border: 1px solid rgba(20, 26, 20, 0.14);
@@ -12073,8 +11654,6 @@ h1, h2, h3 {
 }
 
 @media (max-width: 680px) {
-  /* Free header space: the add-CTA collapses to its "+" glyph, which is the
-     standard marketplace pattern, so the currency switch stays available. */
   .header-cta span {
     display: none;
   }
@@ -12096,8 +11675,6 @@ h1, h2, h3 {
 }
 
 @media (max-width: 520px) {
-  /* Anchored dropdown would run off the left edge on phones — pin the panel
-     to the viewport just below the header instead. */
   .notify-panel {
     position: fixed;
     top: 66px;
@@ -12109,13 +11686,7 @@ h1, h2, h3 {
   }
 }
 
-/* Demo account entry in the auth modal — quiet text button, not a CTA */
-
-
 @media (max-width: 480px) {
-  /* With currency + bell in the row the wordmark no longer fits — keep the
-     brand tile, drop the word, make the CTA icon-only, and never let the
-     tile get flex-squeezed. */
   .site-header .brand {
     flex: 0 0 auto;
   }
@@ -12134,7 +11705,6 @@ h1, h2, h3 {
   }
 }
 
-/* ─── Filters: count beside the heading, plain action button ── */
 .filters-count {
   display: inline-grid;
   place-items: center;
@@ -12155,7 +11725,6 @@ h1, h2, h3 {
   font-weight: 700;
 }
 
-/* ─── About page ── */
 .about-hero {
   padding: 56px 0 20px;
   background: var(--market-bg);
@@ -12204,8 +11773,6 @@ h1, h2, h3 {
   text-underline-offset: 3px;
 }
 
-/* Keyboard focus must be visible on every form control (accent halo,
-   per the design system's input focus treatment). */
 select[data-aselect]:focus-visible,
 .filters-form select:focus-visible,
 .filters-form input:focus-visible,
@@ -12218,10 +11785,6 @@ select[data-aselect]:focus-visible,
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-
-/* ─── Batch: slider, filter logos, cash-amount, how-it-works icons ── */
-
-/* Bigger, numbered hero cash slider (on the white search panel) */
 .hero-cash-slider {
   display: flex;
   align-items: center;
@@ -12276,15 +11839,12 @@ select[data-aselect]:focus-visible,
   color: var(--graphite);
 }
 
-/* Brand logos in the make filter dropdown */
 .combo-option-label {
   display: inline-flex;
   align-items: center;
   gap: 9px;
   min-width: 0;
 }
-/* Featured marks: one row pinned to the top of the make dropdown. Logos appear
-   here only; every row in the list below is text, these five included. */
 .combo-featured {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -12299,7 +11859,6 @@ select[data-aselect]:focus-visible,
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  /* Tight: the mark should fill the tile, not float in a white field. */
   padding: 3px;
   border: 1px solid rgba(20, 26, 20, 0.12);
   border-radius: 8px;
@@ -12322,7 +11881,6 @@ select[data-aselect]:focus-visible,
   object-fit: contain;
 }
 
-/* Cash-amount filter field + currency tag */
 .filter-cash-amount[hidden] { display: none; }
 .cash-cur-tag {
   display: inline-block;
@@ -12332,7 +11890,6 @@ select[data-aselect]:focus-visible,
   font-weight: 700;
 }
 
-/* How-it-works step icons (replaced the 1/2/3 numbers) */
 .how-icon {
   display: grid;
   place-items: center;
@@ -12344,8 +11901,6 @@ select[data-aselect]:focus-visible,
   color: var(--copper);
 }
 .how-icon svg { width: 22px; height: 22px; }
-
-/* ─── Vehicle detail: breadcrumb, gallery tools, price position, sticky CTA ── */
 
 .crumbs {
   margin: 0 0 14px;
@@ -12385,7 +11940,6 @@ select[data-aselect]:focus-visible,
   font-weight: 700;
 }
 
-/* Floating gallery toolbar */
 .gallery-tools {
   position: absolute;
   top: 12px;
@@ -12438,7 +11992,6 @@ select[data-aselect]:focus-visible,
   outline-offset: 2px;
 }
 
-/* Price position bar */
 .price-pos {
   display: grid;
   gap: 7px;
@@ -12497,7 +12050,6 @@ select[data-aselect]:focus-visible,
   font-weight: 700;
 }
 
-/* Sticky CTA bar — appears once the gallery scrolls away */
 .detail-stickybar {
   position: fixed;
   top: 64px;
@@ -12601,7 +12153,6 @@ select[data-aselect]:focus-visible,
   }
 }
 
-/* Image lightbox */
 .lightbox {
   position: fixed;
   inset: 0;
@@ -12651,12 +12202,6 @@ select[data-aselect]:focus-visible,
   }
 }
 
-/* ─── Label normalization ───────────────────────────────────────────────
-   A tiny uppercase, wide-tracked, muted-gray label was used as default
-   scaffolding across the app. Georgian script has no uppercase, so
-   text-transform did nothing to the words themselves while the tracking
-   loosened them and the muted grey pushed contrast down — noise with no
-   hierarchy gained. Normal case, no tracking, readable ink. */
 .stat-cell span,
 .brand-picker-group,
 .filter-group-head,
@@ -12687,9 +12232,6 @@ select[data-aselect]:focus-visible,
   font-size: 13px;
 }
 
-/* Label stays black as requested, but must not compete with its own value.
-   Hierarchy now comes from weight and size rather than from greying the
-   label out. */
 .stat-cell span {
   font-weight: 600;
 }
@@ -12700,43 +12242,18 @@ select[data-aselect]:focus-visible,
   color: var(--graphite);
 }
 
-/* .detail-panel .stat-cell strong (0,3,0) outranks the bare element rule, so
-   the detail page needs the matching specificity to pick up the value size. */
 .detail-panel .stat-cell strong {
   font-size: 13px;
   font-weight: 800;
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════
-   MOBILE APP SHELL
-   A phone should not get the desktop layout scaled down. Below 768px the
-   site takes on app conventions: a fixed bottom tab bar for the primary
-   destinations, thumb-sized targets, and compact rows instead of the tall
-   desktop cards. Everything here is scoped to the breakpoint, so the
-   desktop layout is untouched.
-   ═══════════════════════════════════════════════════════════════════════ */
-
-/* Tab bar is phone-only; the header nav covers larger screens. */
 .tabbar { display: none; }
 
 @media (max-width: 1023px) {
   :root {
-    /* Height of the bar plus the home-indicator inset, so page content and
-       any sticky element can reserve exactly the right amount of space. */
     --tabbar-h: calc(58px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Solid, not glass. The translucent version let car photos scroll visibly
-     through the bar — the labels sat on whatever was passing underneath, and
-     the bar stopped reading as a fixed surface. An opaque white ground keeps
-     the five destinations legible over any content.
-
-     Historical note on what was here before, kept because the reasoning still
-     applies if anyone reinstates it: the frosted look needed heavy saturation
-     and brightness to read as colour rather than grey, and the hairline on top
-     is the
-     "edge of the pane" that sells it as a physical surface. */
   .tabbar {
     position: fixed;
     left: 0;
@@ -12748,9 +12265,6 @@ select[data-aselect]:focus-visible,
     align-items: center;
     height: var(--tabbar-h);
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    /* Landscape on a notched phone puts the notch at one side; with
-       viewport-fit=cover the bar spans under it, so the end tabs would sit
-       beneath the cutout without these. Zero in portrait and off-iOS. */
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
     background: #ffffff;
@@ -12758,11 +12272,6 @@ select[data-aselect]:focus-visible,
     box-shadow: 0 -8px 24px -18px rgba(15, 20, 15, 0.5);
   }
 
-  /* Paint white from the bar's bottom edge downwards. Kept as a backstop even
-     though iOS clips fixed-layer overhangs at the layout viewport (see the
-     scroll-container rules below, which are the fix that actually works on
-     iPhones) — on Android and in desktop emulation this still covers the
-     home-indicator band. */
   .tabbar::after {
     content: "";
     position: absolute;
@@ -12774,27 +12283,6 @@ select[data-aselect]:focus-visible,
     pointer-events: none;
   }
 
-  /* ── Why the page, not the document, scrolls on phones ──────────────────
-     iOS Safari draws the page canvas all the way under its own bottom
-     toolbar, and in the collapsed-pill state the strip between our bar and
-     the physical bottom shows whatever page content comes next — car photos
-     sliding beneath the chrome. Nothing fixed can cover it: iOS clips
-     fixed-position layers at the layout viewport, which is exactly why the
-     ::after strip above (and a spread box-shadow before it) never showed on a
-     real iPhone while working in every emulator.
-
-     The only thing Safari will show down there apart from content is the
-     DOCUMENT CANVAS. So on touch devices the document stops scrolling
-     entirely: html is clipped and painted white, body becomes the scroll
-     container. Content now scrolls inside body and is clipped at the
-     viewport, and the under-toolbar zone shows the white canvas — which is
-     how myauto.ge gets its clean white band under the tab bar.
-
-     Safety notes, verified against this codebase: the two global scroll
-     listeners in shared.js use capture, so they still fire when body (not
-     window) scrolls; IntersectionObserver with root:null keys on the
-     viewport and is unaffected; sticky headers stick within the body
-     scroller; sell.js's scroll-to-top writes body.scrollTop as well. */
   html {
     overflow: hidden;
     height: 100%;
@@ -12807,9 +12295,6 @@ select[data-aselect]:focus-visible,
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Fixed row heights so every icon sits on one baseline and every label on
-     another. With auto rows the raised primary tab dragged its own label out
-     of line with the other four. */
   .tabbar-item {
     display: grid;
     grid-template-rows: 26px 12px;
@@ -12845,11 +12330,6 @@ select[data-aselect]:focus-visible,
   .tabbar-item.is-active .tabbar-icon svg { stroke-width: 2.3; }
   .tabbar-item:active { background: rgba(30, 77, 52, 0.06); }
 
-  /* The "add listing" tab is the conversion action: a filled disc, the one
-     element in the bar that reads as a button rather than a destination. */
-  /* Raised disc, centred on the icon row rather than nudged with a negative
-     margin: translate keeps it out of layout, so the label below stays on the
-     same baseline as its neighbours. */
   .tabbar-item--primary .tabbar-icon {
     width: 46px;
     height: 46px;
@@ -12857,15 +12337,6 @@ select[data-aselect]:focus-visible,
     background: var(--copper);
     color: #fff;
     transform: translateY(-9px);
-    /* First layer is the ring of bar colour around the disc, so it reads as
-       sitting on top of the bar rather than punched through it. It has to be a
-       box-shadow spread, not a ::before: `transform` above makes this element a
-       stacking context, so a child at z-index:-1 is trapped inside it and
-       paints ABOVE this background instead of behind it — which turned the
-       whole disc into a white blob the moment the ring stopped being
-       translucent. A spread shadow draws strictly outside the border box and
-       cannot cover the fill. Solid, because the disc is raised 9–12px above
-       the bar and the ring's upper half overlaps page content. */
     box-shadow:
       0 0 0 4px #ffffff,
       0 8px 18px -6px rgba(30, 77, 52, 0.55),
@@ -12875,21 +12346,13 @@ select[data-aselect]:focus-visible,
   .tabbar-item--primary { position: relative; }
   .tabbar-item--primary .tabbar-icon { position: relative; }
   .tabbar-item--primary .tabbar-label { color: var(--copper); }
-  /* No press-shrink. "Remove every zoom effect" included this one; the tab
-     still gives feedback through .tabbar-item:active's background tint. */
 
   .tabbar-item--primary .tabbar-icon svg { width: 20px; height: 20px; stroke-width: 2.4; }
   .tabbar-item--primary.is-active .tabbar-icon { background: var(--copper-hover); }
 
-  /* Clear the bar so nothing sits under it. */
   body { padding-bottom: var(--tabbar-h); }
   .site-footer { margin-bottom: 0; }
 
-  /* Sticky page furniture has to sit above the bar, not behind it. These need
-     the shell-scoped selectors: .sell-shell--lite .sell-actions pins itself at
-     bottom:8px with higher specificity, which would park the publish button
-     underneath the tab bar. .detail-stickybar is deliberately absent: it is a
-     top bar (top:64px), and giving it a bottom too stretched it to 682px. */
   .sticky-cta,
   .filters-actions,
   .sell-shell--v3 .sell-actions,
@@ -12898,15 +12361,9 @@ select[data-aselect]:focus-visible,
     bottom: calc(var(--tabbar-h) + 8px);
   }
 
-  /* The header keeps the brand and the account control only: the nav and the
-     "add car" CTA are both in the tab bar now, so repeating them crowds a
-     375px header for nothing. */
   .header-cta { display: none; }
   .site-header .header-inner { gap: 10px; }
 
-  /* Cards: 618px on a 812px screen meant one listing filled the viewport.
-     A horizontal row shows three to four at a glance, which is what a
-     marketplace app does. */
   .car-list.view-list .car-card,
   .car-list.view-grid .car-card {
     grid-template-columns: 132px minmax(0, 1fr);
@@ -12923,13 +12380,8 @@ select[data-aselect]:focus-visible,
 
   .car-card-body { padding: 10px 12px; gap: 5px; justify-content: center; }
 
-  /* Long names ("BENTLEY ARMOURED ARNAGE") wrapped to three lines. The class
-     here is .car-row-title, not .car-card-title, which is why an earlier clamp
-     had no effect. Keep the year on the first line with the name. */
   .car-card .car-row-title {
     display: flex;
-    /* nowrap: with wrap, a long name pushed the year badge onto a third line
-       and the title block grew to 67px. The name truncates instead. */
     flex-wrap: nowrap;
     align-items: flex-start;
     gap: 6px;
@@ -12948,7 +12400,6 @@ select[data-aselect]:focus-visible,
 
   .car-card .car-row-year { flex: 0 0 auto; }
 
-  /* One line of specs, not a wrapping block. */
   .car-card .spec-strip {
     flex-wrap: nowrap;
     overflow: hidden;
@@ -12957,7 +12408,6 @@ select[data-aselect]:focus-visible,
 
   .car-card .spec-chip { white-space: nowrap; }
 
-  /* The desktop card's third column becomes a footer strip under the body. */
   .car-card-aside {
     grid-column: 1 / -1;
     flex-direction: row;
@@ -12969,22 +12419,13 @@ select[data-aselect]:focus-visible,
     border-left: 0;
   }
 
-  /* Secondary detail is noise at this width; the row must stay scannable.
-     The spec strip goes entirely: fuel, gearbox and mileage are things you
-     check once you are interested, and they cost a whole line on every row. */
   .car-card .listing-meta,
   .car-card .spec-strip,
   .car-card .listing-age,
   .car-card-owner { display: none; }
 
-  /* A list row navigates; the offer and save actions live on the detail
-     screen. Repeating two buttons on every row cost ~95px each and pushed
-     the next listing off the fold. */
   .car-card .aside-actions { display: none; }
 
-  /* One line: what they want, and who pays the difference. Those are the two
-     facts a swap listing turns on, so they stay; stacking them cost ~40px on
-     every row for no added information. */
   .car-card-aside {
     flex-direction: row;
     align-items: center;
@@ -12996,15 +12437,11 @@ select[data-aselect]:focus-visible,
   .car-card-aside .aside-wants { flex: 1 1 auto; min-width: 0; }
   .car-card-aside .trade-cash { flex: 0 1 auto; min-width: 0; white-space: nowrap; }
 
-  /* The alternate wants ("mercedes benz", "bmw 528", "+2") were each squeezed
-     to 18px and unreadable. On a phone the row states the primary want; the
-     rest is on the detail screen. */
   .car-card .wants-chips { display: none; }
 
   .car-card .wanted-label { flex: 0 0 auto; }
   .car-card .wanted-label svg { width: 13px; height: 13px; }
 
-  /* One truncated line instead of a 37px-wide column wrapping to 45px. */
   .car-card .wants-primary {
     margin: 0;
     min-width: 0;
@@ -13015,8 +12452,6 @@ select[data-aselect]:focus-visible,
     text-overflow: ellipsis;
   }
 
-  /* Wanted car on one truncated line, so it states the swap without wrapping
-     to three lines the way the desktop stacked layout does. */
   .car-card-aside .aside-wants {
     flex-direction: row;
     align-items: baseline;
@@ -13031,13 +12466,11 @@ select[data-aselect]:focus-visible,
     white-space: nowrap;
   }
 
-  /* The heart sits on the photo; 36px is under the tap floor. */
   .car-card .save-btn {
     width: 44px;
     height: 44px;
   }
 
-  /* Thumb-sized controls. 44px is the floor, not the target. */
   .btn,
   .filters-toggle,
   .view-btn,
@@ -13045,9 +12478,6 @@ select[data-aselect]:focus-visible,
 
   .site-header .currency-switch button { min-height: 36px; min-width: 40px; }
 
-  /* Modals become bottom sheets: full width, rounded top, thumb-reachable
-     actions. A centred dialog on a phone wastes the edges and puts the
-     buttons mid-screen. */
   .modal-overlay { align-items: flex-end; padding: 0; }
 
   .modal-card,
@@ -13059,7 +12489,6 @@ select[data-aselect]:focus-visible,
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Grab handle, the affordance that says "this sheet came from the bottom". */
   .modal-card::before {
     content: "";
     display: block;
@@ -13070,31 +12499,14 @@ select[data-aselect]:focus-visible,
     background: rgba(20, 26, 20, 0.18);
   }
 
-  /* ---- Hero ----
-     Cars were set to 122% of their column for a deliberate bleed. On a 375px
-     phone that column is 147px, so each car ran ~18px past the screen edge and
-     the pair read as cropped rather than staged. Contain them. */
   .hero--garage .hero-car img,
   .hero-car img {
     width: 100%;
     max-width: 100%;
   }
 
-  /* The car container is exactly the image height, so an absolutely-positioned
-     button inside it could only ever sit on the bodywork. Park it just below,
-     centred under its own car. */
   .hero-car { overflow: visible; }
 
-  /* .hero--garage .sound-btn pins top:42% at (0,2,0), so a bare .sound-btn
-     rule loses no matter where it sits in the file. Match the specificity. */
-  /* Specificity ladder on this element is steep: .hero--garage
-     .hero-car-left .sound-btn (0,3,0) inside a 680px query centres it on the
-     bodywork. Match that depth, for both sides, or the button stays put.
-
-     Below the car does not fit: there are only ~22px between the car and the
-     search card, so a 34px button was cut in half by the card. The upper outer
-     corner of each car photo is empty sky, so it is the one spot that is
-     neither on the bodywork nor under the card. */
   .hero--garage .hero-car-left .sound-btn,
   .hero--garage .hero-car-right .sound-btn,
   .hero--garage .sound-btn,
@@ -13112,29 +12524,13 @@ select[data-aselect]:focus-visible,
   .hero--garage .hero-car-right .sound-btn,
   .hero-car-right .sound-btn { left: auto; right: 2px; }
 
-  /* Clearance so the cars sit above the search card instead of being
-     clipped by its top edge. */
   .hero--garage .swap-stage { padding-bottom: 30px; }
 
-  /* Drop the whole block down the page. The cars and the search card were
-     pinned just under the header with the photo squeezed into a sliver above
-     them; this gives the landscape room to read before the content starts. */
   .hero--garage { padding-top: 118px; }
 
   .hero--garage .sound-btn svg,
   .sound-btn svg { width: 15px; height: 15px; }
 
-  /* Room for the buttons now that they hang below the cars. */
-
-  /* The road photo was being washed out to nothing by an overlay running up to
-     0.98 alpha, so the hero read as flat paint. Let it through. */
-  /* The photo is a wide landscape: hazy near-white sky on top, mountains and
-     treeline through the middle, asphalt below. With `cover` on a 403px box the
-     whole height fits, so the only band left visible above the search card was
-     that pale sky, which is almost exactly the page colour. Hence "the
-     background is not loading" when it was loading fine.
-     Scale past the frame and pan to the mountains so the visible strip carries
-     the part of the photo you can actually recognise. */
   .hero--garage .hero-backdrop,
   .hero-backdrop {
     opacity: 1;
@@ -13142,20 +12538,12 @@ select[data-aselect]:focus-visible,
       linear-gradient(180deg, rgba(243, 246, 241, 0) 0%, rgba(243, 246, 241, 0.06) 42%, rgba(243, 246, 241, 0.72) 78%, rgba(243, 246, 241, 0.96) 100%),
       url("assets/hero-road-bg.png");
     background-size: auto 205%, auto 205%;
-    /* 68% puts the visible 176px strip over 35-52% of the photo: the
-       mountain range and treeline. At 34% it showed 17-35%, which is the
-       hazy near-white sky and reads as no image at all. */
     background-position: 50% 68%, 50% 68%;
     background-repeat: no-repeat, no-repeat;
   }
 
-  /* The hero's own bottom fade stacked on top of the backdrop wash, doubling it. */
   .hero--garage::after { height: 22%; }
 
-  /* The cash slider is the hero's one interactive control and on a phone it
-     was a 10px hairline with the value crammed beside it. Give it the full
-     width, a thicker track and a bigger thumb: it is dragged with a thumb,
-     not a mouse. */
   .hero-cash-slider {
     flex-wrap: wrap;
     row-gap: 6px;
@@ -13180,7 +12568,6 @@ select[data-aselect]:focus-visible,
     border-width: 5px;
   }
 
-  /* Labels above the track, value on the right where the eye lands last. */
   .hero-cash-slider .slider-edge { order: 1; font-size: 12px; }
   .hero-cash-slider .slider-edge + .slider-edge { order: 2; }
   .hero-cash-slider .slider-value {
@@ -13192,23 +12579,17 @@ select[data-aselect]:focus-visible,
   }
 }
 
-/* Very small phones: the five-up tab bar still has to fit. */
 @media (max-width: 359px) {
   .tabbar-label { font-size: 9px; }
   .tabbar-icon svg { width: 19px; height: 19px; }
 }
 
-/* Coarse pointers have no hover; leaving hover styling on makes a tapped
-   element keep its hover look until the next tap elsewhere. */
 @media (hover: none) {
   .car-card:hover,
   .brand-chip:hover,
   .browse-pill:hover { transform: none; }
 }
 
-/* ─── Filters panel header: brand green, desktop and mobile ─────────────
-   The panel title was the same ink as every other heading, so the filter
-   drawer opened with nothing signalling what it was. */
 .filters-title {
   color: var(--copper);
 }
@@ -13222,64 +12603,19 @@ select[data-aselect]:focus-visible,
   border-bottom-color: rgba(30, 77, 52, 0.18);
 }
 
-/* The advanced-filters sheet gets the same treatment so the two read as one
-   family. */
 .adv-modal-head strong {
   color: var(--copper);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   PHONE HERO — geometry pass
-   ─────────────────────────────────────────────────────────────────────
-   The garage hero had accumulated ~9 waves of overrides for the same
-   selectors, and the survivors contradicted each other. Measured at 375px
-   before this block:
-
-     · stage row 170px tall + 30px padding, cars only 74px  → 96px of dead
-       space above two cars that looked dropped at random
-     · .swap-center align-self:center centred on the ROW, cars align-items:
-       end sat at its bottom → the swap badge floated 48px above the cars'
-       centreline
-     · .hero--garage .hero-car::before (0,2,0, unmediated) beat the phone
-       rule (0,1,0) → the "ground" shadow rendered bottom:64px + 48px tall,
-       i.e. entirely ABOVE a 74px car
-     · .hero--garage .container used 100%-28px while every other section
-       uses 100%-24px → the whole hero sat 2px off the page gutter
-     · sound buttons pinned top:-4px, hanging off the cars into the void
-     · the cash slider's two polarity labels stacked next to each other on
-       the left instead of marking the ends of the track they describe
-
-   Everything below is one block so the phone hero has a single owner.
-   ═══════════════════════════════════════════════════════════════════════ */
-
 @media (max-width: 680px) {
 
-  /* Gutter parity: header, cards, headings and footer all use 100% - 24px.
-     The hero was the only section on 100% - 28px. */
   .hero--garage .container { width: min(100% - 24px, 1240px); }
 
-  /* ── Stage ────────────────────────────────────────────────────────────
-     One row, height driven by the cars themselves. No fixed row, no
-     bottom padding, nothing to leave a gap the cars don't fill. */
   .hero--garage .swap-stage {
     display: grid;
-    /* The desktop composition this is matched to has the two cars nearly
-       touching with the badge laid over the seam — not a 44px column
-       wedged between them eating width. Dropping the middle column and
-       letting the cars split the whole gutter takes the BMW from 142px to
-       ~175px drawn.
-
-       The columns themselves carry the real length ratio (4936mm 530i :
-       4391mm 718 Spyder), so each car just fills its own column, both
-       outer edges land on the page gutter, and the size difference costs
-       no symmetry anywhere. */
     grid-template-columns: 4936fr 4391fr;
     column-gap: 10px;
     row-gap: 0;
-    /* end, not center. The columns are different widths now, so the two
-       image boxes are different heights, and centring them floats the
-       narrower Porsche box 4.75px above the BMW's ground line. Sharing a
-       bottom edge is what puts both cars on one floor. */
     align-items: end;
     min-height: 0;
     height: auto;
@@ -13308,65 +12644,7 @@ select[data-aselect]:focus-visible,
     height: auto;
   }
 
-  /* ── Matching the two photographs to each other ───────────────────────
-     The source PNGs are not interchangeable, so equal boxes do not give
-     equal cars. Measured from the alpha channel:
-
-       hero-bmw-530i.png       791x396   car spans x 5-769, y 13-387
-       hero-porsche-aligned    1672x837  car spans x 0-1671, y 102-804
-
-     Do NOT measure these with a plain alpha bounding box. The Porsche is
-     a hard-edged cutout (its alpha is binary — identical bounds at every
-     threshold from 16 to 254) and it carries stray opaque pixels at the
-     extreme left and right edges. A bounding box therefore reports its
-     width as a full 1.0 of the frame, when the car body is really 0.971.
-     Scaling to that phantom 1.0 shrank the Porsche ~2.5% too far and it
-     read as the smaller car — the first version of this block did exactly
-     that and looked wrong on the page while measuring as "perfect".
-
-     Measure by column coverage instead: the fraction of a column that is
-     opaque, thresholded so edge strays drop out. At >5% coverage:
-
-       BMW      body spans 0.0076-0.9722 of frame  (width 0.9646)
-       Porsche  body spans 0.0233-0.9946 of frame  (width 0.9713)
-
-     0.9646 / 0.9713 = 0.9931 would draw the two cars the SAME length —
-     and that is wrong. A 530i is 4936mm; a 718 Spyder is 4391mm. Drawn
-     equal, the Porsche reads as an inflated car parked next to the BMW,
-     which is what made the pair look off even when every gap measured
-     perfectly. Scale by the real length ratio on top of the fill-ratio
-     correction:
-
-       4391/4936 x 0.9646/0.9713 = 0.88959 x 0.99310 = 0.88345
-
-     The 4936:4391 grid columns above now carry that length ratio, so the
-     only thing left for the transform is the fill-ratio difference
-     between the two photographs — 0.9646/0.9713 = 0.9931 — plus the drop
-     that puts both cars on one ground line:
-
-     The vertical anchor matters more than it looks. Aligning the bottom
-     of each image's opaque content lines up the SHADOWS, not the cars —
-     and the two shadows are drawn differently. The BMW's fades out to a
-     soft edge 10px below its tyres (alpha bottom 0.9773 vs darkest-pixel
-     bottom 0.9520); the Porsche's stops hard (0.9618 vs 0.9534). Matching
-     shadow edges therefore left the Porsche's wheels ~1.6px high.
-
-     Anchor on the darkest pixels instead (lum<40 — tyre rubber and core
-     shadow, the closest thing to a contact patch either image offers):
-
-       BMW      darkest bottom 0.9520 of frame
-       Porsche  darkest bottom 0.9534 of frame
-
-     Horizontally nothing is needed: once the columns are proportional the
-     Porsche's own right gap lands within 0.04px of the BMW's left gap.
-
-     --porsche-baseline is the one number to touch if it still reads high
-     or low by eye: more negative lifts it, more positive drops it. Every
-     figure here is box-relative, so it holds at every phone width. */
   .hero--garage .swap-stage {
-    /* -0.774% was calibrated against the 4936/4391 proportional columns.
-       Equal columns changed the Porsche's box height, which put its tyre
-       line 0.52px high; +0.589% of its own box height corrects it. */
     --porsche-baseline: -0.185%;
   }
 
@@ -13375,42 +12653,22 @@ select[data-aselect]:focus-visible,
     transform-origin: 50% 100%;
   }
 
-  /* ── Swap badge ───────────────────────────────────────────────────────
-     Its own column again (an earlier wave spanned it 1/-1 as an overlay),
-     centred on the row. Both car boxes are the same height, so the row
-     centre is the cars' centre to within half a pixel. */
   .hero--garage .swap-center {
     grid-row: 1;
     grid-column: 1;
     align-self: center;
-    /* Anchored to the seam between the two columns rather than the page
-       centre: with unequal columns those are different points, and the
-       badge belongs where the two cars meet. justify-self pins its right
-       edge to the seam, the 50% pulls its centre onto it, the +5px is
-       half the column gap. */
     justify-self: end;
     transform: translateX(calc(50% + 5px));
     margin: 0;
     z-index: 4;
   }
 
-  /* 46px on a 375px screen is 12% of the viewport — proportionally about
-     twice the reference. Smaller badge, less of the cars' noses hidden. */
   .hero--garage .swap-icon {
     width: 40px;
     height: 40px;
   }
 
-  /* ── Ground shadow ────────────────────────────────────────────────────
-     Under the wheels, not floating above the roof. The cars' contact
-     point is ~1.5% of the box height off the bottom edge. */
   .hero--garage .hero-car::before {
-    /* Matched to desktop proportionally rather than invented. Desktop is
-       bottom:64px / height:48px on a 242.3px car box = 26.4% / 19.8%, at
-       8% inset and rgba(21,31,24,0.22). Expressed as percentages it lands
-       in the same place on the car at any width. Blur scales with the car
-       (18px x 180/484 car width ratio = 7px) — a fixed 18px blur on a
-       phone-sized car would smear across the whole body. */
     left: 8%;
     right: 8%;
     bottom: 26.4%;
@@ -13420,22 +12678,11 @@ select[data-aselect]:focus-visible,
     filter: blur(7px);
   }
 
-  /* ── Sound buttons ────────────────────────────────────────────────────
-     On the car, at its outer edge, centred on the same axis as the badge
-     — not hanging off the top corner. */
   .hero--garage .hero-car .sound-btn {
     top: auto;
     width: 36px;
     height: 36px;
     transform: none;
-    /* Anchored up from the shared ground line, not centred on each car's
-       own box — those boxes are different heights now, so centring put
-       the two buttons 5px out of level with each other.
-
-       Percentages resolve against each button's own containing block, so
-       the same number would still land in different places. The Porsche's
-       box is 0.88953 of the BMW's height (0.445325Cb / 0.500632Cb), so
-       its percentage is scaled by the reciprocal to land level. */
     bottom: 20%;
   }
 
@@ -13446,38 +12693,10 @@ select[data-aselect]:focus-visible,
   .hero--garage .hero-car-left .sound-btn  { left: 0;    right: auto; }
   .hero--garage .hero-car-right .sound-btn { left: auto; right: 0; }
 
-  /* ── Search card ──────────────────────────────────────────────────────
-     The card carried margin-top:-24px so it tucked into the stage. That
-     only worked because the stage was 200px tall holding 74px of car —
-     the card was overlapping dead space. With the stage sized to the cars
-     the same -24px eats their wheels and the ground shadow instead
-     (elementFromPoint over the BMW's rear wheel returned the search
-     input, not the car). The tuck has nothing left to tuck into, so it
-     becomes an ordinary gap, wide enough to clear the blurred shadow. */
   .hero--garage .garage-search {
-    /* The cars must NOT float. On desktop the search card is pulled up
-       over the bottom of the cars (margin-top:-52px on a 242.3px car box
-       = 21.5% of car height) so their wheels run behind the card and they
-       read as planted on the page. I had removed that pull on phones
-       early on, thinking it was "covering the wheels" — covering the
-       wheels is the entire effect.
-
-       Percentage margins resolve against the containing block's WIDTH, so
-       this has to be expressed in container-width terms:
-
-         car box height = (W - 10px gap) x 0.52922 / 1.99747 = 0.264945
-         overlap        = 0.215 x that                        = 0.056963
-         as % of W (at W=351)                                 = 5.53%
-
-       Same 21.5% bite out of the cars as desktop, at every phone width. */
     margin-top: -5.53%;
   }
 
-  /* ── Search fields ────────────────────────────────────────────────────
-     The inputs were 23px tall inside 46px shells, and the two brand
-     fields are divs, not labels — so only the 23px strip was tappable.
-     Stretching the control to the shell makes the whole field the target.
-     16px also stops iOS zooming the page on focus. */
   .hero--garage .garage-search .search-field {
     min-height: 48px;
   }
@@ -13491,16 +12710,8 @@ select[data-aselect]:focus-visible,
     font-size: 16px;
   }
 
-  /* ── Cash slider ──────────────────────────────────────────────────────
-     "ვითხოვ" and "ვამატებ" name the two ENDS of the track; flex-wrap had
-     parked them side by side on the left with the readout floated away,
-     so neither label pointed at anything. Grid puts each one over the end
-     it describes, the readout between them, the track underneath. */
   .hero--garage .hero-cash-slider {
     display: grid;
-    /* 1fr auto 1fr, not auto 1fr auto: the two labels are different widths
-       ("ვითხოვ" / "ვამატებ"), so auto side columns would push the readout
-       ~1px off the track's centre. Equal fr columns centre it exactly. */
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     column-gap: 8px;
@@ -13526,16 +12737,11 @@ select[data-aselect]:focus-visible,
     margin: 0;
   }
 
-  /* Track on its own row, full width, and no longer 2px wider than the
-     form it sits in. */
   .hero--garage .hero-cash-slider .cash-slider {
     grid-row: 2;
     grid-column: 1 / -1;
     width: 100%;
     margin: 0;
-    /* The 34px thumb was riding a 16px input, so 9px of it top and bottom
-       was outside the hit area. Give the input the thumb's height and move
-       the visible track to the pseudo-element so it stays a hairline. */
     height: 34px;
     background: none;
     border-radius: 0;
@@ -13553,26 +12759,10 @@ select[data-aselect]:focus-visible,
     background: linear-gradient(90deg, rgba(178,58,46,0.28), rgba(30,77,52,0.14) 50%, rgba(46,119,65,0.32));
   }
 
-  /* Centre the thumb on the 14px track it now sits on. */
   .hero--garage .hero-cash-slider .cash-slider::-webkit-slider-thumb {
     margin-top: -10px;
   }
 }
-
-/* ═══════════════════════════════════════════════════════════════════════
-   TAB BAR — the raised "+" disc was sitting on its own label
-   ─────────────────────────────────────────────────────────────────────
-   .tabbar-item is grid-template-rows: 26px 12px, and the primary disc is
-   height:46px. A grid item with a definite height cannot stretch, so it
-   resolved to start-alignment: the 46px disc hung 20px past the bottom of
-   its 26px row, straight into the 12px label row. translateY(-9px) took
-   back 9 of those 20, leaving 7px of disc covering the top of the word
-   "დამატება" — measured, disc bottom 799.5 vs label top 792.5.
-
-   The existing comment claims the disc is "centred on the icon row"; it
-   was not, and that is why the -9px looked like enough. Centre it for
-   real, then raise it clear of the label including its 4px ring.
-   ═══════════════════════════════════════════════════════════════════════ */
 
 @media (max-width: 1023px) {
   .tabbar-item--primary .tabbar-icon {
@@ -13580,42 +12770,10 @@ select[data-aselect]:focus-visible,
     transform: translateY(-12px);
   }
 
-  /* Press-shrink removed here too; the raised offset is kept so the disc does
-     not jump on tap. */
   .tabbar-item--primary:active .tabbar-icon {
     transform: translateY(-12px);
   }
 }
-
-/* ═══════════════════════════════════════════════════════════════════════
-   HERO BACKDROP — one treatment at every width
-   ─────────────────────────────────────────────────────────────────────
-   The backdrop changed character at the 1023px breakpoint, so dragging
-   the devtools responsive handle across it made the hero visibly jump.
-   FOUR properties switched at once:
-
-                      <=1023px                    >1023px
-     opacity          1                           0.78
-     background-size  auto 205%                   cover
-     gradient         0 -> .06@42 -> .72@78 -> .96   .52 -> .74@58 -> .98
-     ::after fade     22% of hero                 48% of hero
-
-   The opacity was the least of it. `auto 205%` keys the photo off the
-   HERO'S HEIGHT, so the 1672x941 source rendered ~1967px wide and a
-   375px viewport saw 19% of its width — a 5.2x magnified centre crop,
-   which is what read as washed out. Desktop's `cover` showed 100%.
-   Worse, keying off hero height meant any layout change silently
-   re-cropped the background.
-
-   Unified on the desktop values, with no media query at all, so the
-   backdrop now changes continuously with the viewport instead of
-   snapping. Note this reverts a deliberate earlier fix: `auto 205%` +
-   68% existed to pan past the pale sky on short heroes. Consistency was
-   the explicit ask, so that pan is gone — with `cover` on a narrow
-   viewport the image is height-driven and has no vertical overflow, so
-   background-position has nothing to pan and the sky band returns at the
-   top. If that reads too empty, the fix is the hero's proportions, not
-   another breakpoint here. */
 
 .hero--garage .hero-backdrop,
 .hero-backdrop {
@@ -13633,43 +12791,12 @@ select[data-aselect]:focus-visible,
   height: 48%;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   HERO: cut the dead space above the cars, make the photo actually show
-   ─────────────────────────────────────────────────────────────────────
-   Two separate causes of empty space, one per size range:
-     <=1023px  .hero--garage { padding-top: 118px }  (line 13081)
-     >1023px   .swap-stage min-height ~350px with the cars bottom-aligned
-               inside it, leaving ~108px reserved above them
-   Both are removed here so the band above the cars is the same modest
-   gap at every width and the stage is sized by the cars themselves.
-
-   And the photo was washed to nothing: opacity 0.78 under a gradient
-   already starting at 0.52 alpha left only 0.78 x 0.48 = 37% of the
-   image coming through, on top of a 48% bottom fade. Opacity back to 1
-   and the overlay starts at 0.10, so the photo reads at ~90% where the
-   mountains are and still fades to page colour under the search card.
-
-   Framing: background-size is keyed to the hero's HEIGHT (205%), which
-   is what makes the vertical crop identical at every width — cover
-   cannot do that, because on a phone it is height-driven, has no
-   vertical overflow, and therefore always shows the pale sky band.
-   The max(...,56.3vw) is the coverage guard cover used to provide:
-   205% of hero height renders the photo 3.64x the hero height wide, so
-   a very wide viewport with a short hero would otherwise not be filled.
-
-   Position 95% puts the visible window over photo rows ~48-97%: treeline
-   at the top of the hero, asphalt under the cars, no sky at all. */
-
 .hero.hero--garage {
   padding-top: 28px;
 }
 
 .hero--garage .swap-stage {
   min-height: 0;
-  /* 30px of bottom padding survived from the base rule above 680px, so the
-     stage floor sat 30px below the cars and the search card's pull was
-     spent on padding instead of on the cars — 47px of margin bought only
-     17px of actual overlap. */
   padding: 0;
 }
 
@@ -13693,17 +12820,6 @@ select[data-aselect]:focus-visible,
   height: 24%;
 }
 
-/* ─── Hero photo: pan up off the asphalt ────────────────────────────────
-   At 95% the visible window sat on photo rows 49-97%, which is mostly
-   road — "just გზა". Moving it to 78% shifts the window to rows 40-89%,
-   so the top half is treeline and distant mountains and the bottom half
-   is asphalt, with the cars straddling the verge.
-
-   The window is 48.8% of the photo tall (hero height x 205%), so the
-   maths is: top row = 0.512 x --hero-photo-y, bottom row = top + 0.488.
-   Lower the number to climb further up the image; 65% is about the limit
-   before the pale sky band (photo rows 0-30%) starts entering frame. */
-
 .hero {
   --hero-photo-y: 78%;
 }
@@ -13713,93 +12829,26 @@ select[data-aselect]:focus-visible,
   background-position: 50% var(--hero-photo-y), 50% var(--hero-photo-y);
 }
 
-/* ─── Stop the header jumping between pages ─────────────────────────────
-   Navigating გაცვლები <-> ჩვენ შესახებ shifted the whole header 7.5px.
-   Nothing page-specific about it: cars.html is long enough to scroll and
-   about.html is not, so one page has a 15px scrollbar and the other does
-   not. Every centred .container then centres inside a viewport that is
-   1385px on one page and 1400px on the other, so everything moves by half
-   the scrollbar width.
-
-   Reserving the gutter permanently makes the layout width identical
-   whether or not the page scrolls. */
 html {
   scrollbar-gutter: stable;
 }
 
-/* ─── Search card overlap above 680px ───────────────────────────────────
-   The card used a flat margin-top:-52px while the car box height changes
-   with the viewport, so the bite it took out of the cars swung wildly:
-
-     994px  -> 22px over a 216.8px car =  10.1%  (cars barely held down)
-     1031px -> 52px over a 226.0px car =  23.0%  (cutting the bumper)
-
-   Phones already use a proportional value (-5.53% of container width) for
-   a steady 21.5%. Same idea here, adjusted for the three-column stage:
-
-     car box height = (W - 88px middle col) / 2 / 1.99747 = (W-M) x 0.25032
-     overlap        = 0.215 x that                        = (W-M) x 0.05382
-     as % of W, across W = 900..1240 with M = 88          = 4.86%..5.00%
-
-   Near enough constant to use one number. */
 @media (min-width: 681px) {
   .hero--garage .garage-search {
     margin-top: -4.95%;
   }
 }
 
-/* ─── Header must not jump between pages ────────────────────────────────
-   The ₾/$ switch is opt-in (only the catalog passes currency:true, since
-   on a page with no prices it would be a control that does nothing). But
-   .header-actions is right-anchored, so adding it pushed everything to
-   its left over by its own width — the nav sat at x=631 on about.html
-   and x=523 on cars.html, a 108px jump when you click between them.
-
-   Pages without the switch now render the same component as a ghost:
-   identical markup, so it reserves a pixel-identical slot at every
-   breakpoint (the real one is 76px base, 88px in the header — a
-   hardcoded placeholder width would have drifted). visibility:hidden
-   keeps it out of the accessibility tree as well as off the screen. */
 .currency-switch--ghost {
   visibility: hidden;
   pointer-events: none;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   MOBILE FILTERS SHEET — the apply button was off the bottom of the screen
-   ─────────────────────────────────────────────────────────────────────
-   Measured at 375x812 with the sheet open:
-
-     .filters         fixed, y 82 -> 731.6   (stops 80px short of bottom)
-     .filters-scroll  y 154 -> 812.5         (658px tall inside a 649px box)
-     .filters-actions y 825.5 -> 902.5       (entirely below the viewport)
-
-   Three faults compounding:
-
-   1. .filters keeps `top: 82px` from the desktop sticky rail while ALSO
-      being a `bottom: 0` fixed bottom-sheet, so the panel never reaches
-      the bottom of the screen.
-   2. Both .filters and .filters-scroll scroll. Two nested scroll
-      containers means the form runs past the panel instead of the inner
-      list scrolling within it.
-   3. .filters-actions is handed `bottom: calc(var(--tabbar-h) + 8px)` at
-      <=1023px but its position is `static`, so that offset does nothing
-      and the footer simply flows off the end of the document.
-
-   Result: you scroll the sheet, the last thing you can reach is
-   "დამატებითი ფილტრები", and the search button is unreachable.
-
-   Fixed as a proper three-part sheet — fixed head, one scrolling body,
-   sticky footer — which is what the advanced-filters modal already does
-   and what this was clearly meant to be. */
-
 @media (max-width: 980px) {
   body.filters-open .filters {
-    /* Anchored to the bottom of the screen, not 82px down from the top. */
     top: auto;
     display: flex;
     flex-direction: column;
-    /* The panel itself must not scroll — .filters-scroll is the scroller. */
     overflow: hidden;
   }
 
@@ -13817,49 +12866,21 @@ html {
     overflow-y: auto;
   }
 
-  /* The footer the search button lives in. Sticky to the panel floor, and
-     `bottom: 0` not `tabbar-h + 8px`: the sheet is z-index 95 over a
-     z-index 90 tab bar, so it already covers it — offsetting by the tab
-     bar height would leave a dead 58px strip under the buttons. */
   body.filters-open .filters-actions {
     position: sticky;
     bottom: 0;
     flex: 0 0 auto;
     z-index: 2;
-    /* One column: the two actions stack, primary first. Side by side, the
-       clear button took a third of the width and read as an equal partner to
-       the action people actually came for. */
     grid-template-columns: 1fr;
     gap: 10px;
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 }
 
-/* ─── "ეძებს" label vs the value under it ───────────────────────────────
-   .wanted-label is a flex row of [icon][ეძებს] with gap:6px, so its text
-   started 21px in (15px icon + 6px gap) while .wants-primary below it sat
-   flush at the block's left edge — the label was indented past the word
-   it labels. Indent the value to the same text column so the icon reads
-   as a gutter marker for the pair and both lines share a left edge. */
 .wanted-label + .wants-primary {
   padding-left: calc(15px + 6px);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   HERO — bring back what the Jul 3 build did better
-   ─────────────────────────────────────────────────────────────────────
-   Comparing the live site against this one at the same width, the older
-   hero won on three counts: it said what the product is, the cars had
-   real presence, and the search panel was a brand surface rather than a
-   white box. Those are ported here onto the corrected geometry — the
-   ground line, true car scale, badge centring and card overlap all stay
-   as fixed.
-
-   The captions are deliberately NOT restored; asked for, not selected. */
-
-/* ── 1. The headline ──────────────────────────────────────────────────
-   .hero--garage .hero-copy was sr-only, so the hero opened with two
-   unlabelled cars and no statement of what the site does. */
 .hero--garage .hero-copy {
   position: static;
   width: auto;
@@ -13899,29 +12920,17 @@ html {
   .hero--garage .hero-copy p  { font-size: 14px; }
 }
 
-/* ── 2. Bigger cars ───────────────────────────────────────────────────
-   The stage is sized by the cars, so widening the stage is what grows
-   them. The proportional 4936fr/4391fr columns and the ground-line
-   transform are untouched, so true relative scale still holds. */
 .hero--garage .swap-stage {
   width: min(100%, 1320px);
   margin-inline: auto;
 }
 
 @media (max-width: 680px) {
-  /* Phones were already near the edge; the gain here comes from the
-     middle gap, not the gutter, so the cars keep the page margin. */
   .hero--garage .swap-stage {
     column-gap: 6px;
   }
 }
 
-/* ── 3. Green panel, copper CTA ───────────────────────────────────────
-   NOTE: --copper is a false friend. DESIGN.md §2 replaced copper with
-   deep green but kept the token name, so `var(--copper)` resolves to
-   #1e4d34. Redefining it would turn every accent on the site orange, so
-   the real copper is scoped to this one button. This is a deliberate
-   departure from the documented green-only accent rule. */
 .hero--garage .garage-search {
   --hero-copper: #b8541f;
   --hero-copper-hover: #a1471a;
@@ -13930,7 +12939,6 @@ html {
   box-shadow: 0 24px 54px -26px rgba(16, 30, 20, 0.62);
 }
 
-/* The fields stay light so they read as inputs against the green. */
 .hero--garage .garage-search .search-field {
   border-color: rgba(255, 255, 255, 0.22);
   background: rgba(255, 255, 255, 0.96);
@@ -13941,10 +12949,6 @@ html {
   color: rgba(255, 255, 255, 0.92);
 }
 
-/* .btn-liquid pins this button green with !important
-   (.garage-search .search-submit.btn-liquid), which is the same
-   specificity as a plain .hero--garage descendant selector — so matching
-   the !important and adding .btn-liquid is what it takes to win. */
 .hero--garage .garage-search .search-submit,
 .hero--garage .garage-search .search-submit.btn-liquid {
   background: var(--hero-copper) !important;
@@ -13957,22 +12961,10 @@ html {
   background: var(--hero-copper-hover) !important;
 }
 
-/* Proof line sits under the panel on the page background, not the green. */
 .hero--garage .hero-proof {
   color: var(--text-secondary, rgba(48, 58, 48, 0.76));
 }
 
-/* ─── Cash slider: extend the phone fix up through tablets ──────────────
-   The polarity labels ("ვითხოვ" / "ვამატებ") name the two ENDS of the
-   track, but flex-wrap parked them side by side on the left with the
-   readout floated away — neither pointed at anything. That was fixed at
-   <=680px only, so every width from 681 to 1023 still showed it. Same
-   grid treatment here.
-
-   Also: the track's red->green gradient was designed for a white panel.
-   On the green search panel its green half vanishes, so the control
-   reads as a floating thumb on nothing. Neutral track, copper thumb to
-   match the CTA. */
 @media (max-width: 1023px) {
   .hero--garage .hero-cash-slider {
     display: grid;
@@ -14012,7 +13004,6 @@ html {
   }
 }
 
-/* Track + thumb legibility on the green panel, every width. */
 .hero--garage .hero-cash-slider .cash-slider::-webkit-slider-runnable-track {
   height: 14px;
   border-radius: 999px;
@@ -14036,15 +13027,6 @@ html {
   border-color: #fff;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   HERO — feedback pass
-   ═══════════════════════════════════════════════════════════════════════ */
-
-/* ── Porsche was reading too small ────────────────────────────────────
-   The columns carried the true length ratio (4936mm 530i : 4391mm 718),
-   which is accurate but made the Porsche look undersized next to the
-   sedan. Equal columns instead, so it fills the same width as the BMW.
-   --hero-car-ratio is the knob: 1 = equal, 0.89 = physically true. */
 .hero--garage .swap-stage {
   --hero-car-ratio: 1;
   grid-template-columns: 1fr calc(1fr * var(--hero-car-ratio));
@@ -14056,17 +13038,11 @@ html {
   }
 }
 
-/* ── Panel: lighter green ─────────────────────────────────────────────── */
 .hero--garage .garage-search {
   background: linear-gradient(180deg, #52846333 0%, #4a7a5b 0%, #427050 100%);
   background: linear-gradient(180deg, #4f8160 0%, #457356 100%);
 }
 
-/* ── Slider: lighter text, visible track ──────────────────────────────
-   The track was set only on ::-webkit-slider-runnable-track, so anywhere
-   that rule lost — or in a browser that ignores it — the bar vanished
-   entirely and left a thumb floating on nothing. The input now carries a
-   visible background itself, so there is always a line. */
 .hero--garage .hero-cash-slider .slider-edge {
   font-weight: 500;
   opacity: 0.92;
@@ -14123,22 +13099,12 @@ html {
   box-shadow: 0 2px 6px rgba(16, 20, 15, 0.35);
 }
 
-/* ─── Search row: two fields, not three columns ─────────────────────────
-   .swap-search-top was `533px 48px 533px` — a column for the ⇄ icon that
-   used to sit between the fields. Removing that icon left the second
-   field to fall into the 48px middle column, where it collapsed to 58px
-   and rendered as a bare magnifier square. It also made the whole panel
-   lopsided, which is what read as "text is not centred". */
 @media (min-width: 681px) {
   .hero--garage .swap-search-top {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-/* ─── Slider track: rounded, not squared ────────────────────────────────
-   Painting the bar as a linear-gradient on the input gives hard square
-   ends — a gradient stop cannot be rounded. Put it back on the track
-   pseudo-element, which takes border-radius properly. */
 .hero--garage .hero-cash-slider .cash-slider {
   background: transparent;
 }
@@ -14159,16 +13125,6 @@ html {
   margin-top: -7px;
 }
 
-/* ─── Footer must reach the bottom of the screen on phones ──────────────
-   body carries padding-bottom: var(--tabbar-h) so content clears the
-   fixed tab bar. That padding sits OUTSIDE the footer, so below the
-   near-black footer (#161a15) there was a 58px band of light page
-   background — visible through the tab bar, which is only 62% opaque.
-   Measured: document 3777px, footer bottom 3719.2px.
-
-   Pull the footer down over that band and pad its own content back up by
-   the same amount. The body padding still reserves the space (pages with
-   no footer keep their clearance), but the strip is now footer-coloured. */
 @media (max-width: 1023px) {
   .site-footer {
     margin-bottom: calc(-1 * var(--tabbar-h, 58px));
@@ -14176,37 +13132,16 @@ html {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   TAP TARGETS AND FIELD SIZING — audit pass
-   ─────────────────────────────────────────────────────────────────────
-   Measured across index and cars at 375px and 1359px. Recurring defects:
-
-     footer links          20px tall   (every page)
-     card title links      19-28px     (every card)
-     hero search inputs    23px tall, 14px font  — fixed on phones only,
-                           so desktop and tablet still had it
-     city select           21px tall, 14px font
-     sort select           13px font
-     currency toggle       34x30
-
-   The padding/negative-margin pairs grow the hit area without moving
-   anything: the box gets bigger, the layout position does not change.
-   Font sizes go to 16px because anything smaller makes iOS zoom the page
-   on focus, which then leaves the user scrolled sideways. */
-
-/* Footer links: 20px -> 44px hit area, same visual position. */
 .site-footer a {
   padding-block: 12px;
   margin-block: -12px;
 }
 
-/* Card titles: same treatment, and they are the primary card action. */
 .card-title-link {
   padding-block: 8px;
   margin-block: -8px;
 }
 
-/* Hero search controls at every width, not just phones. */
 .hero--garage .garage-search .search-field {
   min-height: 48px;
 }
@@ -14220,28 +13155,16 @@ html {
   font-size: 16px;
 }
 
-/* Catalog sort control. */
 #sort-select {
   font-size: 16px;
   min-height: 40px;
 }
 
-/* Currency toggle was 34x30. */
 .currency-switch button {
   min-width: 40px;
   min-height: 36px;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   LISTING CARDS AND FOOTER — readability pass
-   ═══════════════════════════════════════════════════════════════════════ */
-
-/* ── "შესთავაზე გაცვლა" button ────────────────────────────────────────
-   height:48px fixed with padding:0 18px and line-height:21px. Two wrapped
-   lines measure 42px, leaving 3px total clearance — enough to look
-   cramped and to clip outright once a font renders slightly taller.
-   Tighter leading, and min-height so the box can grow instead of
-   trapping the text. */
 .btn-accent,
 .car-row-offer,
 .detail-offer,
@@ -14257,11 +13180,6 @@ html {
   line-height: 1.25;
 }
 
-/* ── "ეძებს <model>" on one line ──────────────────────────────────────
-   This undoes my own earlier fix. The 21px padding-left was added when
-   the label and value were stacked on two lines; on the card they sit in
-   the same flex row, where it read as a 27px hole between "ეძებს" and
-   the model. Measured: label ends at x=94.1, value text started at 121. */
 .wanted-label + .wants-primary {
   padding-left: 0;
 }
@@ -14277,8 +13195,6 @@ html {
   flex: 0 0 auto;
 }
 
-/* "ეძებს" is the label and should outrank the model name it introduces,
-   so it keeps the heavier weight while the value drops to 600. */
 .wanted-label b {
   font-weight: 800;
 }
@@ -14288,17 +13204,10 @@ html {
   font-weight: 600;
 }
 
-/* Landing-page card: label and value are inline in one <p>, so the gap
-   comes from the label's own trailing margin. */
 .listing-wants .wanted-label {
   margin-right: 8px;
 }
 
-/* ── Footer links: bullet separators ──────────────────────────────────
-   The six links ran together as one block of Georgian text with nothing
-   between them. A middot plus real spacing makes each one readable as a
-   separate destination. pointer-events:none so the separator is not part
-   of the click target of the link it follows. */
 .footer-nav {
   display: flex;
   flex-wrap: wrap;
@@ -14315,16 +13224,6 @@ html {
   pointer-events: none;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   LIST-VIEW CARD: pills and save button
-   ═══════════════════════════════════════════════════════════════════════ */
-
-/* ── Right pill: text was being cut off ───────────────────────────────
-   .trade-cash is white-space:nowrap in a 129px box, and "სხვაობა
-   შეთანხმებით" needs 170px — measured scrollWidth 170 vs clientWidth
-   127, so 43px ran off the right edge. Let it wrap onto a second line
-   and grow instead of clipping; tighter leading keeps two lines compact.
-   min-height keeps single-line pills the same height as before. */
 .trade-cash {
   white-space: normal;
   height: auto;
@@ -14334,10 +13233,6 @@ html {
   overflow-wrap: anywhere;
 }
 
-/* ── Left pill: breathing room after "ეძებს" ──────────────────────────
-   6px put the value hard against the label. The extra margin lifts the
-   real separation to 10px without touching the icon-to-word spacing
-   inside the label itself. */
 .aside-wants .wanted-label {
   margin-right: 4px;
 }
@@ -14347,11 +13242,6 @@ html {
   line-height: 1.3;
 }
 
-/* ── Save button: smaller disc, same touch target ─────────────────────
-   44x44 is right for a finger but far too big as a graphic on a small
-   thumbnail — it covered a third of the car. The visible disc drops to
-   30px while ::after restores a 44px hit area, so it is easier to see
-   past and no harder to press. */
 .save-btn {
   width: 30px;
   height: 30px;
@@ -14372,12 +13262,6 @@ html {
   border-radius: 50%;
 }
 
-/* Both of the above lost to more specific rules scoped at <=1023px:
-   `.car-card .save-btn { width:44px }` and
-   `.car-card-aside .trade-cash { white-space:nowrap }`, each 0,2,0
-   against a plain 0,1,0 class selector. Matched here so order decides.
-   The inner <span> inherits nowrap, so it has to be reset as well —
-   resetting only the flex parent leaves the text unwrappable. */
 .car-card .save-btn {
   width: 30px;
   height: 30px;
@@ -14394,13 +13278,6 @@ html {
   flex: 1 1 auto;
 }
 
-/* Correction to the above: the ::after hit-area trick did not hold —
-   elementFromPoint 3px outside the disc still returned the <img>, so the
-   touch target really was 30px, not the 44px I intended. Rebuilt without
-   relying on pseudo-element hit-testing: the BUTTON keeps its full 44px
-   box (so the finger target is unchanged) and the visible disc is drawn
-   on the icon itself. Same look, target verified by hit-test instead of
-   assumed. */
 .car-card .save-btn,
 .save-btn {
   width: 44px;
@@ -14425,23 +13302,6 @@ html {
   box-shadow: 0 1px 4px rgba(16, 20, 15, 0.2);
 }
 
-/* ─── Footer separators only where the row fits on one line ─────────────
-   The bullets were a ::before on each link, so when the row wrapped the
-   separator travelled with the link that followed it and landed at the
-   START of line two — "• წესები". Gluing it to the preceding link
-   instead only moves the problem to a trailing bullet at the end of
-   line one.
-
-   The row needs 677px to sit on one line, so it wraps on every phone.
-   Bullets therefore apply only from 720px up, where no wrap can happen
-   and a dangling separator is impossible. Below that the links get a
-   two-column grid, which separates them by position rather than by
-   punctuation — no bullet needed, nothing to dangle.
-
-   The grid also drops the negative margin from the tap-target fix: with
-   margin-block:-12px the 44px hit areas of stacked rows would overlap
-   and a tap between two links would be ambiguous. Plain padding keeps
-   each row's target its own. */
 .footer-nav a + a::before {
   content: none;
 }
@@ -14472,14 +13332,6 @@ html {
   }
 }
 
-/* Threshold corrected: 720px was measured against the viewport, but the
-   nav shares a flex row with the brand block and only receives
-   (container - ~301px). At an 885px viewport it had 544px against the
-   677px it needs, so it still wrapped and the leading bullet came back.
-   It clears 677px from roughly a 1000px viewport, hence 1024px. Wrapping
-   is disabled in that branch so a bullet can never lead a line, and the
-   negative tap-target margin is dropped there too — wrapped rows made
-   vertically adjacent hit areas overlap. */
 @media (min-width: 1100px) {
   .footer-nav {
     flex-wrap: nowrap;
@@ -14491,11 +13343,6 @@ html {
   }
 }
 
-/* The separator was display:inline-block, which makes it participate in
-   line-box sizing: links carrying one measured 59px tall against 39.5px
-   for the first link, leaving the row 9.75px out of alignment. Plain
-   inline still honours horizontal margins but cannot inflate the line
-   box, so every link keeps the same height and baseline. */
 @media (min-width: 1100px) {
   .footer-nav a + a::before {
     display: inline;
@@ -14504,16 +13351,6 @@ html {
   }
 }
 
-/* Real cause of the 19.5px height difference: .footer-nav a is
-   display:block sized by flex, so the separator plus its 20px of margin
-   pushed the content past the assigned width and the LABEL wrapped
-   inside the link — two 19.5px lines plus padding, 59px against 39.5px.
-   Not a line-box or vertical-align problem at all.
-
-   nowrap keeps each link on one line and flex:0 0 auto lets it size to
-   its content. Threshold also moved 1024 -> 1100: at a 1024px window the
-   nav had 684px against the 677px it needs, a 7px margin that any font
-   or label change would erase. */
 @media (min-width: 1100px) {
   .footer-nav a {
     white-space: nowrap;
@@ -14521,16 +13358,6 @@ html {
   }
 }
 
-/* ─── Chip rails: let the flick run ─────────────────────────────────────
-   scroll-snap-type: x proximity with scroll-snap-align: start on every
-   chip made the rail grab and reposition mid-swipe, which is what read
-   as janky on a phone. Snap earns its place on a full-width carousel
-   where each slide is a destination; on a rail of small, variable-width
-   chips there is nothing meaningful to snap to and it just fights the
-   gesture. It also fights the desktop drag-to-scroll.
-
-   overscroll-behavior-x stops a horizontal flick that reaches the end
-   from chaining into the page and triggering a back-navigation. */
 .browse-pills {
   scroll-snap-type: none;
   overscroll-behavior-x: contain;
@@ -14540,20 +13367,6 @@ html {
   scroll-snap-align: none;
 }
 
-/* ─── Card titles were being sliced, not clamped ────────────────────────
-   .car-card .card-title-link sets -webkit-line-clamp: 2 with
-   display: -webkit-box — but it is also `flex: 1 1 auto`, i.e. a flex
-   item, and flex items get their display blockified. Chrome computes it
-   to flow-root, the clamp is discarded, and the bare `overflow: hidden`
-   cuts the third line off mid-stroke with no ellipsis. Measured on seven
-   cards: scrollHeight 72 against clientHeight 54.
-
-   Fixing the clamp itself would need the anchor to stop being a flex
-   item, which is what sizes the title against the year badge beside it.
-   Cheaper and more robust: stop constraining the height at all. Two
-   lines was never enough for real names — "Toyota Camry LE 4dr Sedan
-   Automatic" needs three — and letting the title wrap costs a few pixels
-   of card height instead of hiding what the listing is called. */
 .car-card .card-title-link,
 .card-title-link {
   display: block;
@@ -14566,41 +13379,10 @@ html {
   align-items: flex-start;
 }
 
-/* ─── Hero subtitle centring ────────────────────────────────────────────
-   Regression I introduced restoring the headline: the original
-   `.hero-copy p` carried `margin: 14px auto 0`, and that `auto` was what
-   centred the paragraph box inside .hero-copy. Overriding it with
-   `margin: 0` left a 610px box flush against the left of an 820px block
-   — (820-610)/2 = 105px off centre, exactly what was measured.
-
-   text-align: center still centred the text inside its own box, so it
-   read as subtly wrong rather than obviously broken, and the heading
-   beside it stayed perfectly centred. */
 .hero--garage .hero-copy p {
   margin-inline: auto;
 }
 
-/* ── iOS focus zoom ───────────────────────────────────────────────────────
-   Safari on iOS zooms the whole page in when a focused control's text is
-   under 16px, and it does not zoom back out on blur. That is what read as
-   the site "zooming in" on a phone: tap the number field and the layout is
-   left magnified, clipped at the right edge, for the rest of the session.
-
-   Twelve rules across this file size controls between 12px and 14.5px, several
-   at specificity 0,2,1 (`.sell-section .field input`, `.garage-search
-   .search-field select`, `.adv-range select`, …), so a plain `input { }`
-   override loses. Each :not() below contributes its argument's specificity,
-   giving 0,2,2 — enough to win without !important — and sitting last in the
-   file also wins on source order. All three selectors need the pair: `body
-   select` alone is 0,0,2 and lost to `.adv-range select`.
-
-   The type checks read as "every form control except checkboxes and radios",
-   which is the actual intent; on select and textarea they are vacuously true
-   and there only to carry the weight.
-
-   Touch pointers only, so the denser desktop sizing is untouched. Do NOT
-   "fix" this with maximum-scale=1 on the viewport instead: that takes
-   pinch-zoom away from everyone, including people who need it to read. */
 @media (hover: none) and (pointer: coarse) {
   body input:not([type="checkbox"]):not([type="radio"]),
   body select:not([type="checkbox"]):not([type="radio"]),
@@ -14609,11 +13391,6 @@ html {
   }
 }
 
-/* ── Hero picker search box (touch) ───────────────────────────────────────
-   Shown only on touch, inside the picker panels. There the field itself is
-   readOnly (see bindBrandPicker / bindHavePicker) so tapping it opens the
-   panel of brand tiles without raising the keyboard — the keyboard is
-   opt-in, by tapping this box. */
 .brand-picker-search {
   display: flex;
   align-items: center;
@@ -14646,12 +13423,6 @@ html {
   outline: 0;
 }
 
-
-
-/* ── Combo unlock row (touch) ─────────────────────────────────────────────
-   First row of a locked filter dropdown. The field is readOnly on touch so
-   opening it shows options keyboard-down; this row is the explicit "I want
-   to type" affordance, mirroring the hero pickers' ძებნა box. */
 .combo-unlock {
   display: flex;
   align-items: center;
@@ -14685,8 +13456,6 @@ html {
   transform: rotate(45deg);
 }
 
-/* Wrapper that lets the make→model panel anchor to its own field inside the
-   sell form's .field-control rows. */
 .mm-picker {
   position: relative;
   display: flex;
@@ -14705,21 +13474,11 @@ html {
   font-size: 13px;
 }
 
-/* ── Mobile: vehicle sticky bar removed, sell actions pinned ─────────────── */
 @media (max-width: 1023px) {
-  /* The floating "make an offer" bar duplicated what the phone screen
-     already shows — the title is right under it and the same CTA is one
-     scroll away — while eating a header's worth of space. Desktop keeps it:
-     there the gallery genuinely scrolls the CTA far away. */
   .detail-stickybar {
     display: none;
   }
 
-  /* position:sticky stopped pinning this bar once body became the page's
-     scroll container (the iOS keyboard-zone fix), so it just scrolled with
-     the form. fixed is anchored to the viewport and immune to scroller
-     changes. The form gets matching clearance so its last fields can scroll
-     up from behind the bar. */
   .sell-shell--lite .sell-actions {
     position: fixed;
     left: 12px;
@@ -14733,13 +13492,6 @@ html {
   }
 }
 
-/* ── Catalog filter panel, desktop ────────────────────────────────────────
-   The sidebar floated as loose fields over the page background — no edge, an
-   exposed scrollbar, faint labels — and read as filler rather than a control
-   panel. This gives it the same card language as the rest of the site: one
-   white surface with a real border, a delimited header, small-caps section
-   labels, and fields on the ivory ground used everywhere else. Desktop only;
-   the phone filter drawer has its own layout. */
 @media (min-width: 1024px) {
   .catalog .filters {
     border: 1px solid var(--border);
@@ -14845,17 +13597,6 @@ html {
   }
 }
 
-/* ── Footer separators, one mechanism at every width ──────────────────────
-   Bullets used to be a ::before on `a + a`, which only worked above 1100px:
-   below that the nav became a two-column grid with no separators at all,
-   because a leading bullet can dangle at the start of a wrapped line.
-
-   Attaching the bullet to the PRECEDING link with ::after removes that
-   failure mode entirely — the separator lives inside the link's own box, so
-   a wrapped line can never begin with one. That makes the grid unnecessary,
-   so the nav is a wrapped inline row at every size, and the accumulated
-   threshold rules above collapse into this block. :not(:last-child) keeps
-   the trailing bullet from appearing after the final link. */
 .footer-nav {
   display: flex;
   flex-wrap: wrap;
@@ -14893,15 +13634,6 @@ html {
   }
 }
 
-/* ─── Filter panel, rebuilt to the flat mockup ──────────────────────────
-   One surface instead of a panel plus a modal. Price, year and mileage sat
-   behind a "დამატებითი ფილტრები" button, which on a marketplace are the
-   first three things anyone reaches for. */
-
-/* Header: title left, a labelled reset right. The reset was a 36px icon disc
-   with its text hidden at font-size 0 — a control whose meaning you had to
-   guess. It says what it does now, so it is no longer a matching pair with
-   the close button and does not want the disc. */
 .filters-head {
   display: flex;
   align-items: center;
@@ -14950,8 +13682,6 @@ html {
   opacity: 1;
 }
 
-/* Hairline rules between groups. Dashed so they read as a soft pause rather
-   than a hard division — there is one surface here, not four cards. */
 .filter-rule {
   height: 0;
   margin: 4px 0;
@@ -14966,8 +13696,6 @@ html {
   color: var(--graphite);
 }
 
-/* From / to pair. The caption lives inside the box: stacked above, two ranges
-   would cost four extra label lines and the panel stops fitting on a phone. */
 .range-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -15014,8 +13742,6 @@ html {
   border-color: var(--copper);
 }
 
-/* Unit sits on the right of the box, and the field reserves room for it so a
-   long value never slides underneath. */
 .range-unit {
   position: absolute;
   inset-inline-end: 13px;
@@ -15028,7 +13754,6 @@ html {
 
 .range-box:has(.range-unit) input { padding-inline-end: 46px; }
 
-/* The select carries its own chevron, so it gets the arrow instead of a unit. */
 .range-box--select::after {
   content: "";
   position: absolute;
@@ -15043,13 +13768,10 @@ html {
 
 .range-box--select select { padding-inline-end: 34px; }
 
-/* Number spinners add nothing here and steal width from the value. */
 .range-box input::-webkit-outer-spin-button,
 .range-box input::-webkit-inner-spin-button { appearance: none; margin: 0; }
 .range-box input[type="number"] { -moz-appearance: textfield; }
 
-/* Chips: the selected one is a filled disc of brand green, the rest are quiet
-   outlines. Taller than before so they clear the 44px touch minimum. */
 .adv-chips { gap: 8px; }
 
 .adv-chip {
@@ -15066,8 +13788,6 @@ html {
   color: #fff;
 }
 
-/* Actions stack: the primary action is the wide one and sits first, with the
-   destructive-ish clear underneath rather than competing beside it. */
 .filters-actions {
   grid-template-columns: 1fr;
   gap: 10px;
@@ -15095,29 +13815,17 @@ html {
   stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
 }
 
-/* The × that clears a chosen make or model was a 22px target — half the 44px
-   minimum, and it sits right beside the text you are trying to edit, so
-   missing it and hitting the field was as likely as hitting it. The glyph is
-   unchanged; only the reachable area grows. The negative inline margin keeps
-   the wider button from pushing the input's text leftwards. */
 .combo-clear {
   width: 44px;
   height: 44px;
   margin-inline-end: -8px;
 }
 
-/* ─── Filter panel corrections ──────────────────────────────────────────
-   The combo fields were painting two backgrounds: .combo-control in one
-   near-white and the <input> inside it in --warm-ivory, a shade darker. The
-   darker rectangle read as "the field", so the clear × — which sits in the
-   control, beside the input — looked stranded outside it. One fill only: the
-   control is the field, the input is transparent inside it. */
 .filters-form .combo-control input:not([type="checkbox"]),
 .filters-form .filter-search input:not([type="checkbox"]) {
   background: transparent;
 }
 
-/* The control is the visible box, so it carries the shape and the focus ring. */
 .filters-form .combo-control {
   border-radius: 12px;
   background: var(--warm-ivory);
@@ -15127,8 +13835,6 @@ html {
   border-color: var(--copper);
 }
 
-/* Checkbox rows overflowed the scroller by 4px, which was enough to give the
-   whole panel a horizontal scrollbar. */
 .filter-check {
   display: flex;
   align-items: center;
@@ -15142,18 +13848,8 @@ html {
   overflow-wrap: anywhere;
 }
 
-/* Nothing in the panel scrolls sideways. overflow-x: auto turned a 4px
-   rounding overflow into a visible scrollbar under every filter. */
 .filters-scroll { overflow-x: hidden; }
 
-/* Desktop sidebar: no scrollbar of its own. It was capped at the viewport
-   height with the field list scrolling inside, which put a second scrollbar
-   next to the page's own and meant the filters and the results scrolled
-   independently. Now the column is as tall as its contents and moves with the
-   page; `sticky` still holds it in view while there is room for it.
-
-   The drawer keeps its inner scroll — a bottom sheet at 80dvh has nowhere
-   else to put thirteen groups — so this is scoped to the sidebar layout. */
 @media (min-width: 981px) {
   .filters {
     max-height: none;
@@ -15164,16 +13860,11 @@ html {
     max-height: none;
   }
 
-  /* Both axes together: a `hidden` on one axis forces a `visible` on the
-     other to compute as `auto`, which quietly reinstated the scrollbar this
-     block exists to remove. */
   .filters-scroll {
     overflow: visible;
     min-height: 0;
   }
 
-  /* With nothing clipping it, the action bar has no floor to stick to; it
-     simply ends the column. */
   .filters-actions {
     position: static;
   }

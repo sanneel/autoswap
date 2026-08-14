@@ -16,7 +16,7 @@ with trigram indexes (fast `ILIKE`/contains search) and public-read RLS.
 
 Requires **Node 18+** (built-in `fetch`). No `npm install` needed.
 
-The **service-role key** is required to write — it is a secret. **Never commit it
+The **service-role key** is required to write - it is a secret. **Never commit it
 or expose it in the browser.** Only the anon key goes in `front/supabase-config.js`.
 
 PowerShell (Windows):
@@ -35,8 +35,8 @@ SUPABASE_SERVICE_ROLE_KEY="eyJhbGci..." \
 node scripts/ingest-car-catalog.mjs
 ```
 
-It upserts (idempotent) — re-run anytime to refresh. Expect a few hundred makes
-and several thousand models; the run takes ~1–2 minutes.
+It upserts (idempotent) - re-run anytime to refresh. Expect a few hundred makes
+and several thousand models; the run takes ~1-2 minutes.
 
 ### Blocklisted makes
 

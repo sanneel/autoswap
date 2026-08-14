@@ -28,8 +28,6 @@ function readFrontendUrl() {
   }
 }
 
-// DRY_RUN parses and maps the CSV without touching the network, so the data
-// pipeline can be checked before any credentials exist.
 const DRY_RUN = process.env.DRY_RUN === '1' || process.argv.includes('--dry-run');
 const PLACEHOLDER_URL = /^https?:\/\/(dummy|example|placeholder|project|your-project)\./i;
 

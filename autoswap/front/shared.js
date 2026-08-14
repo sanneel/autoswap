@@ -1,10 +1,3 @@
-/* ===================================================================
-   AutoSwap, shared module (window.AutoSwap)
-   Used by both the landing (app.js) and the cars product page (cars.js).
-   Holds: assets, icons, Header/Footer markup, label maps + mappers,
-   the Supabase read path, and a feed-shaped demo dataset.
-   No framework, plain script, exposed on window.AutoSwap.
-=================================================================== */
 (function () {
   const assets = {
     road: 'assets/hero-road-bg.png',
@@ -59,16 +52,11 @@
     upload: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15a4 4 0 0 1 .9-7.9A6 6 0 0 1 17.6 6.8 4.5 4.5 0 0 1 18.5 15.7"></path><path d="M12 12v8"></path><path d="m8.5 15 3.5-3 3.5 3"></path></svg>',
     doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"></path><path d="M14 3v5h5"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>',
     clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>',
-    // Delivery-channel icons for the OTP picker. WhatsApp is the real mark in
-    // its own green: a generic bubble for both would make the two options look
-    // interchangeable, when picking the wrong one is what leaves someone
-    // watching an app the code will never arrive in.
     sms: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 1 1 17 0z"></path></svg>',
     whatsapp: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#25D366" stroke="none" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>',
     google: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" stroke="none" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" stroke="none" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" stroke="none" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" stroke="none" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"/></svg>',
   };
 
-  // ---- Display label maps -------------------------------------------------
   const FUEL_LABELS = {
     petrol: 'ბენზინი',
     diesel: 'დიზელი',
@@ -104,13 +92,6 @@
     return labelFor(FUEL_LABELS, value);
   }
 
-  // Get brand logo image URL from the car-logos-dataset (387 brands via jsdelivr CDN).
-  // Converts "Mercedes-Benz" → "mercedes-benz.png" → CDN URL.
-  // Fallback: returns the make name as text if logo unavailable.
-  // Local asset path for a make's logo, and the single place that knows which
-  // file extension each brand ships as. Previously pointed at a jsDelivr CDN
-  // that the CSP does not allow in img-src and that nothing called; the real
-  // logos have always been served from assets/logos.
   const LOGO_EXT = { bmw: 'svg' };
 
   function logoSlug(make) {
@@ -126,8 +107,6 @@
     return `assets/logos/${slug}.${LOGO_EXT[slug] || 'png'}`;
   }
 
-  // Cash sentence with an explicit subject ("ის" = the listing owner) so the
-  // reader never has to compute who pays whom.
   function formatCash(mode, amount) {
     const money = `${(Number(amount) || 0).toLocaleString('en-US')} ₾`;
     switch (mode) {
@@ -142,7 +121,6 @@
     }
   }
 
-  // Listing freshness ("დღეს", "გუშინ", "N დღის წინ") from created_at.
   function daysSince(iso) {
     if (!iso) return null;
     const then = new Date(iso).getTime();
@@ -162,13 +140,10 @@
     return String(make || '').toLowerCase().includes('bmw') ? assets.bmw : assets.audi;
   }
 
-  // Supabase/PostgREST errors arrive in English. Users see Georgian; the raw
-  // message still goes to the console for debugging.
   function georgianError(err) {
     const raw = String(err?.message || err || '');
     const m = raw.toLowerCase();
 
-    // Schema drift: a column the code writes is missing from the database.
     const missingCol = /could not find the '([^']+)' column/i.exec(raw);
     if (missingCol) {
       return `ბაზა არ არის განახლებული (აკლია ველი „${missingCol[1]}“). გაუშვი supabase/schema.sql.`;
@@ -185,8 +160,6 @@
     return raw || 'უცნობი შეცდომა.';
   }
 
-  // "Equal swap" and "by agreement" carry no figure, so the amount input is
-  // hidden for them rather than sitting there showing a meaningless 0.
   function bindOfferAmount(form) {
     const mode = form?.querySelector('[name="cashMode"]');
     const field = form?.querySelector('[data-offer-amount]');
@@ -201,9 +174,6 @@
     update();
   }
 
-  // Offers are stored in GEL. The user may enter the figure in dollars, so it
-  // is converted here rather than silently saving a USD number as if it were
-  // lari.
   function offerAmountInGel(form) {
     const raw = Number(form?.querySelector('[name="amount"]')?.value) || 0;
     if (raw <= 0) return 0;
@@ -211,22 +181,16 @@
     return currency === 'USD' ? Math.round(raw * getUsdRate()) : Math.round(raw);
   }
 
-  // Every .combo-list is position:fixed so it can escape a scrolling or
-  // overflow-hidden ancestor. Fixed means the coordinates must be computed, and
-  // an unpositioned list falls back to its static spot, which sat over the label
-  // above the input. Shared so every page with a dropdown positions it the same
-  // way instead of each re-implementing it.
   const COMBO_LIST_MAX_H = 264;
 
   function placeComboList(list, anchor) {
     if (!list || !anchor || list.hidden) return;
     const r = anchor.getBoundingClientRect();
-    if (!r.width && !r.height) return; // anchor hidden; nothing to align to
+    if (!r.width && !r.height) return;
     const gap = 4;
     const margin = 8;
     const spaceBelow = window.innerHeight - r.bottom - gap - margin;
     const spaceAbove = r.top - gap - margin;
-    // Prefer downward; flip up only when below is cramped and above has more.
     const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
     const avail = Math.max(120, Math.min(COMBO_LIST_MAX_H, openUp ? spaceAbove : spaceBelow));
     list.style.left = `${Math.round(r.left)}px`;
@@ -241,10 +205,6 @@
     }
   }
 
-  // Repositions any open list against its own anchor: the .combo-control when
-  // there is one (catalog filters), otherwise the input it belongs to. Never an
-  // ancestor that contains the list, whose rect would grow to include it and
-  // walk the list down the page on every reposition.
   function repositionComboLists() {
     document.querySelectorAll('.combo-list').forEach((list) => {
       if (list.hidden) return;
@@ -257,9 +217,6 @@
   window.addEventListener('scroll', repositionComboLists, true);
   window.addEventListener('resize', repositionComboLists);
 
-  // Neutral "no photo" tile. Deliberately not a stock car photo: substituting a
-  // real BMW shot for a listing whose photo failed would misrepresent the car.
-  // Inline data URI so it needs no request and cannot itself fail.
   const PHOTO_PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,'
     + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
 <rect width="400" height="300" fill="#eceee9"/>
@@ -268,10 +225,6 @@
 <path d="M96 176v30h208v-30"/><circle cx="140" cy="206" r="15"/><circle cx="260" cy="206" r="15"/>
 </g></svg>`);
 
-  // Photos are third-party URLs: buckets get locked down and links rot. Without
-  // this a failed image left the browser's broken-image glyph in the card.
-  // `error` does not bubble, so the listener has to run in the capture phase,
-  // and it is wired in JS because the CSP forbids inline onerror handlers.
   function bindImageFallbacks() {
     document.addEventListener('error', (event) => {
       const img = event.target;
@@ -285,11 +238,6 @@
   }
   bindImageFallbacks();
 
-  // Maps a public_vehicle_feed row to a uniform
-  // card object carrying BOTH display strings and raw values for filtering.
-  // Bare "any car" labels carry zero swap intent, strip them so such
-  // listings fall into the open-to-offers category instead of faking a want.
-  // Qualified wants like "ნებისმიერი SUV" are real intent and stay.
   function isAnyCarLabel(label) {
     const text = String(label || '').toLowerCase().trim();
     return !text
@@ -335,8 +283,6 @@
 
       city: row.city || '',
 
-      // Structured wants. Listings with no targets are honestly categorized
-      // as "open to offers", they must never pretend to want "any car".
       wantsList: labels,
       openToOffers: labels.length === 0,
       wants: labels.length ? labels.join(' / ') : 'ღიაა შემოთავაზებებისთვის',
@@ -345,8 +291,6 @@
       cashMode: row.cash_mode || 'none',
       cashAmount: Number(row.cash_amount) || 0,
 
-      // Owner trust aggregates. Supplied by the demo feed today; the
-      // public_vehicle_feed view gains these via a profiles join (no raw PII).
       ownerName: row.owner_name || '',
       ownerVerified: !!row.owner_phone_verified,
       ownerSwaps: Number(row.owner_completed_swaps) || 0,
@@ -359,8 +303,6 @@
     };
   }
 
-  // ---- "My car" context (the viewer's half of the trade) -------------------
-  // Stored locally for now; becomes the signed-in user's garage later.
   const MY_CAR_KEY = 'autoswap_my_car';
 
   function getMyCar() {
@@ -376,14 +318,14 @@
   function setMyCar(car) {
     try {
       window.localStorage.setItem(MY_CAR_KEY, JSON.stringify(car));
-    } catch (_err) { /* private mode, context just won't persist */ }
+    } catch (_err) {  }
     document.dispatchEvent(new CustomEvent('autoswap:mycar'));
   }
 
   function clearMyCar() {
     try {
       window.localStorage.removeItem(MY_CAR_KEY);
-    } catch (_err) { /* ignore */ }
+    } catch (_err) {  }
     document.dispatchEvent(new CustomEvent('autoswap:mycar'));
   }
 
@@ -391,29 +333,23 @@
     return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
   }
 
-  // Does a desired-vehicle label ("BMW 5 Series", "Camry") cover this car?
-  // Pragmatic series-level matching; the server-side matcher is the authority.
   function wantCoversCar(want, make, model) {
     const w = normMatchText(want);
     if (!w) return false;
     const mk = normMatchText(make);
     const md = normMatchText(model);
-    if (mk && w === mk) return true;                       // wants the whole make
+    if (mk && w === mk) return true;
     if (md && (w.includes(md) || (md.length >= 3 && md.includes(w)))) return true;
     if (mk && w.startsWith(mk)) {
       const rest = w.slice(mk.length);
       if (!rest) return true;
       if (!md) return true;
       if (md && (md.includes(rest) || rest.includes(md))) return true;
-      if (md && rest[0] && md[0] === rest[0]) return true; // "5series" ≈ "530i"
+      if (md && rest[0] && md[0] === rest[0]) return true;
     }
     return false;
   }
 
-  // 'mutual' , they want your car AND you want theirs.
-  // 'reverse', they want your car.
-  // ''       , no compatibility signal.
-  // Open-to-offers listings never claim to want your car.
   function matchLevel(car, myCar) {
     if (!myCar || !myCar.make || !Array.isArray(car.wantsList) || !car.wantsList.length) return '';
     const theyWantMine = car.wantsList.some((w) => wantCoversCar(w, myCar.make, myCar.model));
@@ -422,17 +358,9 @@
     return iWantTheirs ? 'mutual' : 'reverse';
   }
 
-  // ---- Shared chrome ------------------------------------------------------
   function Header(opts) {
     const options = opts || {};
-    // No default: pages without a matching nav item (landing, login, …)
-    // render the nav with nothing highlighted.
     const active = options.active || '';
-    // options.currency: the ₾/$ switch is opt-in and only the catalog passes it.
-    // It converts prices in a list of results; on pages with no prices to
-    // convert it was a control that appeared to do nothing.
-    // "Add your car" moved from the nav into the CTA, it is the conversion
-    // action, not a navigation item.
     const nav = [
       { id: 'listings', label: 'გაცვლები', href: '/cars' },
       { id: 'about', label: 'ჩვენ შესახებ', href: '/about' },
@@ -476,10 +404,6 @@
     `;
   }
 
-  // Phone-only bottom navigation. On a phone the desktop header collapses to a
-  // logo and the primary destinations become unreachable without scrolling to
-  // the footer; a fixed tab bar is what a native app would do and what a thumb
-  // can reach. Hidden at >=768px, where the header nav is visible.
   const TAB_ITEMS = [
     { id: 'home', label: 'მთავარი', href: '/', icon: 'car' },
     { id: 'listings', label: 'გაცვლები', href: '/cars', icon: 'search' },
@@ -529,7 +453,6 @@
     `;
   }
 
-  // ---- Supabase read path -------------------------------------------------
   function decodeJwtPayload(token) {
     try {
       const payload = String(token || '').split('.')[1];
@@ -559,10 +482,6 @@
     }
   }
 
-  // The committed supabase-config.js ships placeholder values so the site runs
-  // without secrets. Pointing a client at them makes every request fail and log
-  // an error, which buries real problems. Detect it and run in demo mode with a
-  // single explanatory line instead.
   function isPlaceholderConfig(url, key) {
     if (/^(dummy|your-|example|placeholder|project)[-.]/i.test(key)) return true;
     try {
@@ -600,10 +519,6 @@
 
   const sbClient = createClient();
 
-  // ---- Tiny TTL cache (sessionStorage) -------------------------------------
-  // The frontend is a static site talking straight to Supabase, there is no
-  // server runtime to host Redis, so hot read paths (catalog, feed) are cached
-  // per-tab instead. Writers call cacheBust() to invalidate.
   const CACHE_PREFIX = 'as:cache:';
 
   function cacheGet(key) {
@@ -627,7 +542,7 @@
         CACHE_PREFIX + key,
         JSON.stringify({ v: value, exp: Date.now() + ttlMs }),
       );
-    } catch (_err) { /* quota/private mode, just skip caching */ }
+    } catch (_err) {  }
   }
 
   function cacheBust(prefix) {
@@ -638,10 +553,9 @@
         if (key && key.startsWith(CACHE_PREFIX + prefix)) doomed.push(key);
       }
       doomed.forEach((key) => window.sessionStorage.removeItem(key));
-    } catch (_err) { /* ignore */ }
+    } catch (_err) {  }
   }
 
-  // ---- Toasts ---------------------------------------------------------------
   function toast(message, kind = 'info') {
     let host = document.querySelector('.toast-host');
     if (!host) {
@@ -658,15 +572,6 @@
     setTimeout(() => node.remove(), 4000);
   }
 
-  // ---- Auth state (one source of truth) --------------------------------------
-  // Sign-in paths sharing this state: phone OTP (header modal + login.html)
-  // and Google OAuth. Email registration is intentionally removed, the
-  // phone number is the primary identity; OAuth users are required to attach
-  // a number afterwards (openPhoneRequiredModal). Supabase Auth issues the
-  // OTP code, stores only its hash, expires it, rate-limits requests, and
-  // returns JWT access + refresh tokens that supabase-js rotates for us. The
-  // phone flow additionally has a clearly-labelled local demo fallback
-  // (authUser.demo === true) which can browse but cannot write.
   let authUser = null;
   const authListeners = new Set();
 
@@ -678,7 +583,7 @@
   function notifyAuth() {
     renderAuthSlot();
     authListeners.forEach((cb) => {
-      try { cb(authUser); } catch (_err) { /* listener error is its problem */ }
+      try { cb(authUser); } catch (_err) {  }
     });
     document.dispatchEvent(new CustomEvent('autoswap:auth'));
   }
@@ -693,8 +598,6 @@
     return authUser;
   }
 
-  // Resolves once the initial session lookup has finished. Returns the
-  // Supabase user (never the local demo user, gated pages need a real JWT).
   const authReady = (async () => {
     if (!sbClient) {
       authUser = demoAuthUser();
@@ -704,7 +607,7 @@
     let session = null;
     try {
       ({ data: { session } } = await sbClient.auth.getSession());
-    } catch (_err) { /* treat as signed out */ }
+    } catch (_err) {  }
     authUser = (session && session.user) || demoAuthUser();
     notifyAuth();
     sbClient.auth.onAuthStateChange((_event, nextSession) => {
@@ -714,15 +617,12 @@
         return;
       }
       authUser = next;
-      savedIdsPromise = null; // saved set is per-user
+      savedIdsPromise = null;
       notifyAuth();
     });
     return session ? session.user : null;
   })();
 
-  // Google OAuth, redirects away and back; Supabase restores the
-  // session on return. Configure the provider in the Supabase dashboard
-  // (Authentication → Providers) and allow the site URL as a redirect.
   async function signInWithProvider(provider) {
     if (!sbClient) return { error: 'დემო რეჟიმი, Google-ით შესვლა მოითხოვს Supabase-ის კონფიგურაციას.' };
     const { error } = await sbClient.auth.signInWithOAuth({
@@ -736,28 +636,16 @@
     if (sbClient) await sbClient.auth.signOut();
   }
 
-  // ---- Password sign-in ----------------------------------------------------
-  // A phone-first account has no real address, so verify-otp gives it a shadow
-  // one derived from the number (see SHADOW_EMAIL_DOMAIN there). The derivation
-  // is deterministic, which is what lets the browser sign in with a password
-  // directly — no server round-trip, no endpoint to rate-limit ourselves.
-  //
-  // Keep this in step with back/verify-otp/index.ts: shadowEmail().
   const SHADOW_EMAIL_DOMAIN = 'phone.autoswap.ge';
 
   function shadowEmailForPhone(phone) {
     return `p${String(phone || '').replace(/\D/g, '')}@${SHADOW_EMAIL_DOMAIN}`;
   }
 
-  // A shadow address is plumbing, not something the user ever typed — anywhere
-  // an account's email is shown, this decides whether there is really one.
   function isShadowEmail(email) {
     return String(email || '').endsWith(`@${SHADOW_EMAIL_DOMAIN}`);
   }
 
-  // → { user } | { error }. The error text is deliberately the same whether the
-  // number is unknown or the password is wrong: distinguishing them turns the
-  // login form into a "does this number have an account" oracle.
   async function signInWithPassword(phone, password) {
     if (!sbClient) return { error: 'დემო რეჟიმი, პაროლით შესვლა მოითხოვს Supabase-ის კონფიგურაციას.' };
     const { data, error } = await sbClient.auth.signInWithPassword({
@@ -773,10 +661,6 @@
     return { user: data.user };
   }
 
-  // Sets the password on the CURRENT session, so it is only reachable straight
-  // after a verified code — registration or a reset. The metadata flag is how
-  // the UI knows an account can be signed into with a password at all;
-  // Supabase exposes no "has password" field.
   async function setPassword(password) {
     if (!sbClient) return { error: 'დემო რეჟიმი.' };
     const { data, error } = await sbClient.auth.updateUser({
@@ -793,14 +677,6 @@
     return Boolean(user && user.user_metadata && user.user_metadata.has_password);
   }
 
-  // Confirms the signed-in user actually knows their current password before it
-  // can be changed, so a session left open on a shared phone is not by itself
-  // enough to lock the owner out. Signs in against the account's own address
-  // rather than re-deriving one from a number, which also covers a Google
-  // account that later added a password.
-  //
-  // A failed attempt leaves the existing session alone; a successful one just
-  // reissues it for the same user.
   async function verifyCurrentPassword(password) {
     if (!sbClient) return { error: 'დემო რეჟიმი.' };
     const email = authUser && authUser.email;
@@ -813,9 +689,6 @@
     return { error: 'ამჟამინდელი პაროლი არასწორია.' };
   }
 
-  // Shared rule so registration, reset and the account page cannot drift apart.
-  // The two checks are exposed individually as well, because the field below
-  // ticks them off live while the user types.
   const PASSWORD_RULES = [
     { id: 'len', label: 'მინიმუმ 8 სიმბოლო', ok: (v) => v.length >= 8 },
     { id: 'mix', label: 'ასო და ციფრი', ok: (v) => /[a-zA-Z]/.test(v) && /\d/.test(v) },
@@ -830,16 +703,6 @@
       : 'პაროლი უნდა შეიცავდეს ასოსა და ციფრს.';
   }
 
-  // ---- Password field ------------------------------------------------------
-  // One field with a reveal toggle, not a password plus a confirm box. Typing a
-  // masked password twice on a phone keyboard is the most-abandoned step in the
-  // whole flow, and confirmation only exists to catch a typo — being able to
-  // actually look at what you typed catches it better. The downside if someone
-  // still gets it wrong is one code away: they reset it.
-  //
-  // `rules` draws the live checklist. Leave it off for a field that is being
-  // recalled rather than chosen (sign-in, "current password"), where a list of
-  // requirements reads as an accusation.
   function passwordFieldHTML(options) {
     const opts = options || {};
     const name = opts.name || 'password';
@@ -863,19 +726,12 @@
     `;
   }
 
-  // A password form with no username field is one a password manager will not
-  // offer to save, and a change form with no username is one it will not offer
-  // to UPDATE — leaving the phone still autofilling the old password after a
-  // change. Browsers want the account identifier present even when there is
-  // nothing for the user to fill in, so it ships off-screen rather than
-  // display:none, which several managers skip over.
   function usernameFieldHTML(value) {
     if (!value) return '';
     return `<input class="pw-username" type="text" name="username" autocomplete="username"
                    value="${escapeAttr(value)}" readonly tabindex="-1" aria-hidden="true">`;
   }
 
-  // Call once after the markup lands. Safe to re-run; binding is idempotent.
   function bindPasswordFields(root) {
     const scope = root || document;
     scope.querySelectorAll('[data-pw-field]').forEach((field) => {
@@ -888,15 +744,13 @@
       if (toggle) {
         toggle.addEventListener('click', () => {
           const show = input.type === 'password';
-          // Swapping `type` drops the caret and, on iOS, the keyboard with it.
-          // Restoring both keeps the reveal from costing the user their place.
           const at = input.selectionStart;
           input.type = show ? 'text' : 'password';
           toggle.setAttribute('aria-pressed', String(show));
           toggle.setAttribute('aria-label', show ? 'პაროლის დამალვა' : 'პაროლის ჩვენება');
           toggle.innerHTML = show ? icons.eyeOff : icons.eye;
           input.focus();
-          try { input.setSelectionRange(at, at); } catch { /* not all engines allow it */ }
+          try { input.setSelectionRange(at, at); } catch {  }
         });
       }
 
@@ -946,10 +800,6 @@
     });
   }
 
-  // Keep the header auth slot + saved-button state correct across the
-  // innerHTML re-renders every page does. One observer instead of asking
-  // each page to call back in. renderAuthSlot is idempotent (writes only on
-  // state change), otherwise this would loop on its own mutations.
   const rerenderObserver = new MutationObserver(() => {
     renderAuthSlot();
     hydrateSavedButtons();
@@ -964,8 +814,6 @@
     });
   });
 
-  // Returns mapped listings on success (possibly empty), or null when Supabase
-  // is not configured / the request failed, null means "keep the demo data".
   async function fetchFeed(limit = 48) {
     if (!sbClient) return null;
 
@@ -988,12 +836,10 @@
     return (data || []).map(mapFeedRow);
   }
 
-  // Listing writes call this so browsing pages refetch fresh data.
   function bustListingCaches() {
     cacheBust('feed:');
   }
 
-  // ---- Vehicle by id (detail page); demo data is found in the page itself ----
   async function fetchVehicleById(id) {
     if (!sbClient || !id) return null;
     const { data, error } = await sbClient
@@ -1005,8 +851,6 @@
     return mapFeedRow(data);
   }
 
-  // This vehicle's own photos only, gallery thumbnails must never borrow
-  // images from other listings or shared assets.
   async function fetchVehiclePhotos(vehicleId) {
     if (!sbClient || !vehicleId) return [];
     const { data, error } = await sbClient
@@ -1018,10 +862,6 @@
     return data.map((row) => row.url).filter(Boolean);
   }
 
-  // ---- Car catalog (makes / models) search --------------------------------
-  // Backed by public.car_makes / public.car_models (ingested from vPIC). When
-  // Supabase is not configured, falls back to a compact popular-brand list so
-  // the searchable picker still works in demo mode. Search is "contains".
   const FALLBACK_SOURCE = {
     'BMW': ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', '6 Series', '7 Series', '8 Series', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'Z4', 'i3', 'i4', 'i7', 'iX', 'M2', 'M3', 'M4', 'M5'],
     'Audi': ['A1', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q2', 'Q3', 'Q5', 'Q7', 'Q8', 'TT', 'R8', 'e-tron', 'RS6', 'RS7', 'S4', 'S6'],
@@ -1071,8 +911,6 @@
     console.warn(`AutoSwap: ${kind} catalog query failed; using bundled fallback.`, error.message || error);
   }
 
-  // Catalog reads are cached for 10 minutes per (term, make), RLS already
-  // filters out deactivated makes/models server-side.
   const CATALOG_TTL = 10 * 60 * 1000;
 
   async function searchMakes(term = '', limit = 40) {
@@ -1111,7 +949,6 @@
     return containsFilter(scoped, term, limit);
   }
 
-  // ---- Offer modal (structured trade proposal, not a DM) ----
   const closeIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6 6 18"></path></svg>';
 
   function trapFocus(event, container) {
@@ -1159,8 +996,6 @@
     return { overlay, close };
   }
 
-  // Quick "my car" capture, the viewer's half of the trade. Local-only for
-  // now; the full listing flow on sell.html replaces this after auth lands.
   function openMyCarModal() {
     const myCar = getMyCar() || {};
     const wantsValue = Array.isArray(myCar.wants) ? myCar.wants.join(', ') : '';
@@ -1235,7 +1070,6 @@
     return `<p class="offer-owner-line">${bits}</p>`;
   }
 
-  // ---- Real offers (signed-in, live listing) --------------------------------
   function openLoginGateModal(message) {
     const next = encodeURIComponent(window.location.pathname.split('/').pop() + window.location.search);
     const { overlay } = buildModal(`
@@ -1255,7 +1089,6 @@
   async function openRealOfferModal(car) {
     const title = `${car.make || ''} ${car.model || ''}`.trim() || 'ავტომობილი';
 
-    // Resolve the target's owner (feed rows carry it; detail deep-links may not).
     let ownerId = car.ownerId || '';
     if (!ownerId) {
       const { data } = await sbClient.from('vehicles').select('owner_id').eq('id', car.id).maybeSingle();
@@ -1388,8 +1221,6 @@
   }
 
   function openOfferModal(car) {
-    // Live listing: real offer when signed in, login gate when not.
-    // The local demo user has no JWT, so RLS would reject the insert, gate it.
     if (sbClient && car && isUuid(car.id)) {
       if (!authUser || authUser.demo) {
         openLoginGateModal('შეთავაზების გასაგზავნად შედი ერთჯერადი კოდით, ისე, რომ მფლობელმა იცოდეს ვინ სთავაზობს.');
@@ -1402,8 +1233,6 @@
     const title = `${car && car.make ? car.make : ''} ${car && car.model ? car.model : ''}`.trim() || 'ავტომობილი';
     const myCar = getMyCar();
 
-    // No car = no trade. An offer is half a deal, never let users send
-    // an empty one; convert the moment into adding their car instead.
     if (!myCar) {
       buildModal(`
         <div class="modal-body">
@@ -1486,12 +1315,6 @@
     });
   }
 
-  // ---- Auth: phone OTP login / registration -------------------------------
-  // Real path: Supabase phone OTP (signInWithOtp + verifyOtp). When Supabase
-  // or its SMS provider is not configured, falls back to a clearly-labelled
-  // local demo flow (fixed code), same convention as the offer modal.
-  // State lives in the shared authUser above; email OTP (login.html) and this
-  // modal both feed it.
   const DEMO_USER_KEY = 'autoswap.demoUser';
   const DEMO_OTP_CODE = '1234';
 
@@ -1504,7 +1327,6 @@
     }
   }
 
-  // "+995555993535" → "+995 555 99 35 35" for the header chip.
   function formatPhoneDisplay(phone) {
     const digits = String(phone || '').replace(/\D/g, '');
     const m = digits.match(/^995(5\d{2})(\d{2})(\d{2})(\d{2})$/);
@@ -1522,11 +1344,7 @@
     if (!authUser) {
       return '<button class="btn btn-light header-login" type="button" data-auth-open>შესვლა</button>';
     }
-    // Real sessions link to the account hub; the local demo user has no
-    // server-side rows to show there.
     const display = authDisplayName(authUser);
-    // Uppercase only Latin initials, Georgian script has no everyday
-    // uppercase, and Mtavruli forms look off in an avatar.
     const first = display.trim().charAt(0);
     const initial = /[a-z]/.test(first) ? first.toUpperCase() : first;
     const chip = `
@@ -1542,22 +1360,17 @@
   }
 
   function renderAuthSlot() {
-    // Idempotent: runs from a MutationObserver, so writing on every call
-    // would re-trigger the observer forever. The display name is part of the
-    // state key so saving a name re-renders the chip.
     const state = authUser ? `in:${authUser.demo ? 'demo' : authUser.id}:${authDisplayName(authUser)}` : 'out';
     document.querySelectorAll('#header-auth').forEach((slot) => {
       if (slot.dataset.authState === state) return;
       slot.dataset.authState = state;
       slot.innerHTML = authSlotHTML();
     });
-    // Notifications are meaningless before login, hide the bell for guests.
     document.querySelectorAll('.notify-wrap').forEach((wrap) => {
       wrap.hidden = !authUser;
     });
   }
 
-  // Georgian mobile numbers: 5XX XX XX XX, with or without the +995 prefix.
   function normalizePhone(raw) {
     const digits = String(raw || '').replace(/\D/g, '');
     if (/^9955\d{8}$/.test(digits)) return `+${digits}`;
@@ -1565,17 +1378,7 @@
     return null;
   }
 
-  // ---- Delivery channel: SMS or WhatsApp ----------------------------------
-  // verify.ge delivers a code over either, and the trade-off belongs to the
-  // user: SMS needs no data connection, WhatsApp arrives in a named thread
-  // rather than from a generic shortcode. The pick is remembered, because
-  // whichever one works for a person tends to keep working.
-  //
-  // Note WhatsApp cannot autofill — WebOTP is an SMS-only mechanism — so the
-  // code screen stops promising it when WhatsApp is the chosen channel.
   const CHANNEL_KEY = 'autoswap.otpChannel';
-  // WhatsApp first: it is the default, and the default reads as the default
-  // when it leads. SMS stays one tap away for anyone without WhatsApp.
   const CHANNELS = ['whatsapp', 'sms'];
   const CHANNEL_LABEL = { sms: 'SMS', whatsapp: 'WhatsApp' };
   const DEFAULT_CHANNEL = 'whatsapp';
@@ -1590,7 +1393,7 @@
   }
 
   function rememberChannel(channel) {
-    try { localStorage.setItem(CHANNEL_KEY, channel); } catch (_err) { /* private mode */ }
+    try { localStorage.setItem(CHANNEL_KEY, channel); } catch (_err) {  }
   }
 
   function channelPickerHTML() {
@@ -1607,9 +1410,6 @@
     `;
   }
 
-  // Wires a picker rendered by channelPickerHTML. Returns a getter rather than
-  // a value, because the caller reads the channel at submit time, not render
-  // time. Falls back to the stored preference when no picker is present.
   function bindChannelPicker(root) {
     const group = root && root.querySelector('.otp-channel');
     if (!group) return () => preferredChannel();
@@ -1629,10 +1429,6 @@
     };
   }
 
-  // ---- Edge Function transport --------------------------------------------
-  // → { data } | { error } with the network/404 cases already turned into
-  // Georgian. `auth: true` sends the signed-in user's token instead of the
-  // anon key, which the attach-a-number flow needs.
   async function callAuthFn(name, body, options) {
     const base = String(window.AUTO_SWAP_SUPABASE_URL || '').trim().replace(/\/$/, '');
     const anonKey = String(window.AUTO_SWAP_SUPABASE_ANON_KEY || '').trim();
@@ -1652,28 +1448,13 @@
       return { error: 'კავშირი ვერ შედგა, შეამოწმე ინტერნეტი და სცადე თავიდან.' };
     }
     let data = {};
-    try { data = await res.json(); } catch (_err) { /* status check still fires */ }
-    // A 404 carrying our own error body is the function replying, not the
-    // function missing — read the body before deciding. Treating every 404 as
-    // "not deployed" is what replaced a real provider message with a generic
-    // "try later", and hid why sends were failing.
+    try { data = await res.json(); } catch (_err) {  }
     if (res.status === 404 && !data.error) {
-      // Genuinely absent. Say so rather than silently falling back to a path
-      // that skips rate limiting.
       return { error: 'სერვისი დროებით მიუწვდომელია. სცადე მოგვიანებით.' };
     }
     return { res, data };
   }
 
-  // → { demo } | { demo, requestId, channel } | { legacy } | { error }.
-  // The account is auto-created on first login, one flow for everyone.
-  // Routes through the `request-otp` Edge Function so the server-side rate
-  // limiter (per-IP burst, per-phone bombing, distributed velocity) is the
-  // authority, a check in this client could just be skipped.
-  //
-  // A `requestId` coming back means the verify.ge path is live and the code
-  // must be exchanged through `verify-otp`; without one this is still the
-  // legacy Supabase flow that verifies client-side.
   async function requestOtp(phone, channel, purpose) {
     if (!sbClient) return { demo: true };
     const wantsAttach = purpose === 'attach';
@@ -1685,15 +1466,9 @@
     if (error) return { error };
     if (res.status === 429 || data.blocked) {
       const wait = Number(data.retry_after) || 60;
-      // Reuse the existing "code could not be sent" wrapper; owner owns copy.
       return { error: `კოდი ვერ გაიგზავნა: ${data.error || 'too many requests'} (${wait}s)` };
     }
     if (!res.ok) {
-      // The provider's own code and HTTP status never reach the user-facing
-      // string, and they are what actually identify a send failure — an
-      // entitlement problem and an out-of-credit problem read identically
-      // otherwise. Logged so a failure can be diagnosed from the console
-      // without another round of guessing.
       console.error('request-otp failed', {
         status: res.status,
         provider_status: data.provider_status,
@@ -1711,16 +1486,10 @@
       demo: false,
       requestId: data.request_id || null,
       channel: delivered,
-      // Asking for WhatsApp does not guarantee it — an account without the
-      // entitlement gets SMS instead. The code screen says so rather than
-      // leaving the user watching the wrong app.
       fellBack: asked === 'whatsapp' && delivered !== 'whatsapp',
     };
   }
 
-  // Turns a verified code into a session. On the verify.ge path the browser
-  // cannot do this itself — verify.ge checks the code, Supabase never learns
-  // the number was proven, so `verify-otp` is the only issuer.
   async function exchangeOtp(requestId, code, needsAuth) {
     const { res, data, error } = await callAuthFn(
       'verify-otp',
@@ -1732,11 +1501,9 @@
     return { data };
   }
 
-  // → { user } on success (header updates via auth listener), { error } on failure.
   async function confirmOtp(phone, code, isDemo, requestId) {
     if (isDemo) {
       if (code !== DEMO_OTP_CODE) return { error: `არასწორი კოდი, დემო რეჟიმში კოდია ${DEMO_OTP_CODE}.` };
-      // A returning demo user keeps the name they already gave.
       const existing = getDemoUser();
       const demoUser = { name: (existing && existing.phone === phone && existing.name) || '', phone };
       localStorage.setItem(DEMO_USER_KEY, JSON.stringify(demoUser));
@@ -1747,10 +1514,6 @@
     if (requestId) {
       const { data, error } = await exchangeOtp(requestId, code);
       if (error) return { error: `კოდი ვერ დადასტურდა: ${error}` };
-      // The server proves the number and hands back a single-use token hash;
-      // redeeming it here is what actually creates the session, so the tokens
-      // are minted by Supabase in this browser rather than shipped over the
-      // wire from the function.
       const { data: applied, error: sessionError } = await sbClient.auth.verifyOtp({
         token_hash: data.token_hash,
         type: 'magiclink',
@@ -1762,7 +1525,6 @@
     return error ? { error: `კოდი ვერ დადასტურდა: ${georgianError(error)}` } : { user: data.user };
   }
 
-  // ---- Display name (asked once, after the number is verified) -------------
   function needsName(user) {
     if (!user) return false;
     if (user.demo) return !user.name;
@@ -1829,10 +1591,6 @@
     sbClient?.auth.signOut().catch((err) => console.error('AutoSwap: signOut failed', err.message));
   }
 
-  // ---- Required phone for OAuth accounts ----------------------------------
-  // True when the session came from an OAuth provider rather than the phone
-  // OTP flow. Supabase reports this on app_metadata.provider, and mirrors it
-  // in identities[] once an account has more than one sign-in method linked.
   function signedInWithOAuth(user) {
     const provider = user && user.app_metadata && user.app_metadata.provider;
     if (provider && provider !== 'phone') return true;
@@ -1841,33 +1599,12 @@
       && identities.some((identity) => identity.provider && identity.provider !== 'phone');
   }
 
-  // Phone is a SECOND factor now, not the marketplace identity. A Google
-  // account already arrives with a verified email, which is enough to own
-  // listings — nothing in the schema or the RLS policies gates writes on
-  // phone_verified, so the old required-phone modal was a self-imposed wall
-  // in front of the cheapest signup path, and every prompt it produced cost
-  // an SMS. Users can still add a number from the account page, and doing so
-  // still lights the owner_phone_verified trust badge on their listings.
   function needsPhone(user) {
     if (!user || user.demo) return false;
     if (signedInWithOAuth(user)) return false;
     return !user.phone && !(user.user_metadata && user.user_metadata.phone);
   }
 
-  // WebOTP. autocomplete="one-time-code" already gives iOS a suggestion the
-  // user has to tap; this fills the field outright on Chrome for Android and
-  // submits, so the code never has to be read or typed. Silently absent
-  // everywhere else, which is the intended degradation.
-  //
-  // Requires the SMS body to end with an origin-bound line the browser can
-  // match, otherwise the promise simply never resolves:
-  //     @autoswap.ge #123456
-  // Also requires a secure context, hence the isSecureContext guard — on
-  // plain http the call throws rather than no-oping.
-  //
-  // Returns an abort function: the request must be cancelled when the form
-  // goes away, or a pending get() outlives the modal and fills a field that
-  // is no longer on the page.
   function autofillOtpFromSms(input, onFilled) {
     const noop = () => {};
     if (!input || !('OTPCredential' in window) || !window.isSecureContext) return noop;
@@ -1886,12 +1623,8 @@
         input.dispatchEvent(new Event('input', { bubbles: true }));
         if (typeof onFilled === 'function') onFilled(code);
       })
-      .catch(() => { /* aborted, denied, or unsupported — the user types it */ });
-    // Abort as soon as the field leaves the page. The modal is torn down with
-    // overlay.remove() and dispatches no close event, so there is nothing to
-    // listen for — watching the DOM is what actually catches it. Without this
-    // a pending read keeps the browser's SMS prompt alive over a closed modal.
-    const stop = () => { try { controller.abort(); } catch (_err) { /* already gone */ } };
+      .catch(() => {  });
+    const stop = () => { try { controller.abort(); } catch (_err) {  } };
     if (typeof MutationObserver === 'function') {
       const observer = new MutationObserver(() => {
         if (input.isConnected) return;
@@ -1903,14 +1636,10 @@
     return stop;
   }
 
-  // Attaching a number to an existing (usually OAuth) account. Same two paths
-  // as login: verify.ge issues a requestId the server exchanges, or the legacy
-  // Supabase phone_change flow when no verify.ge key is configured.
   async function requestPhoneAttach(phone, channel) {
     const result = await requestOtp(phone, channel, 'attach');
     if (result.error) return { error: `ნომერი ვერ დაემატა: ${result.error}` };
     if (!result.legacy) return result;
-    // Legacy: Supabase sends the code itself and verifies it client-side.
     const { error } = await sbClient.auth.updateUser({ phone });
     if (!error) return { demo: false };
     const message = String(error.message || '');
@@ -1925,12 +1654,8 @@
       return error ? { error: `ნომერი ვერ შეინახა: ${georgianError(error)}` } : {};
     }
     if (requestId) {
-      // The caller's own token has to ride along: the server refuses to write a
-      // number onto an account other than the one the request was issued to.
       const { error } = await exchangeOtp(requestId, code, true);
       if (error) return { error: `კოდი ვერ დადასტურდა: ${error}` };
-      // The number now lives on the auth user; refresh so the header and the
-      // trust badge see it without a reload.
       const { data: refreshed } = await sbClient.auth.refreshSession();
       if (refreshed && refreshed.user) {
         authUser = refreshed.user;
@@ -2008,16 +1733,10 @@
       `;
       const otpInput = step.querySelector('.otp-input');
       otpInput.focus();
-      // Always armed, whatever channel was reported. verify.ge's own status
-      // endpoint says WHATSAPP for messages that arrive as SMS, so gating this
-      // on the reported channel disabled autofill exactly when it would have
-      // worked. On a genuine WhatsApp delivery the read simply never resolves,
-      // which costs nothing. Cancelled on close so it cannot outlive the modal.
       autofillOtpFromSms(otpInput, () => {
         const liveForm = step.querySelector('form');
         if (liveForm) liveForm.requestSubmit();
       });
-      // Single-use requestId: see the note on the login modal's verify guard.
       let attaching = false;
       step.querySelector('#phone-req-otp').addEventListener('submit', async (otpEvent) => {
         otpEvent.preventDefault();
@@ -2048,9 +1767,6 @@
     });
   }
 
-  // One nudge per page load: an OAuth account without a number gets the
-  // required-phone modal until it attaches one; a verified account without
-  // a name gets the name popup (dismissable, re-asked next session).
   const NAME_LATER_KEY = 'autoswap.nameLater';
 
   function maybeRequireProfile() {
@@ -2074,11 +1790,6 @@
     `;
   }
 
-  // Password-first, matching /login. The modal deliberately carries only the
-  // returning-user path: registering and resetting both need a code step, and
-  // running a multi-screen flow inside a popover that any stray click closes
-  // is a good way to lose someone halfway through proving their number. Those
-  // two link out to the full page instead.
   function authFormHTML() {
     return `
       ${authProvidersHTML()}
@@ -2126,7 +1837,6 @@
             btn.disabled = false;
             showError(error);
           }
-          // On success the browser navigates away to the provider.
         });
       });
 
@@ -2156,7 +1866,6 @@
       });
     }
 
-    // Asked once, right after the number is verified, never before.
     function bindNameStep() {
       step.innerHTML = `
         <p class="auth-sub">ნომერი დადასტურდა, როგორ მოგმართოთ?</p>
@@ -2202,7 +1911,6 @@
     return { overlay, close };
   }
 
-  // ---- Global delegated listeners (bound once per page load) ----
   document.addEventListener('click', (event) => {
     const offerBtn = event.target.closest('[data-offer]');
     if (offerBtn) {
@@ -2212,7 +1920,7 @@
   });
   async function toggleSaved(listingId, btn) {
     const wasSaved = btn.classList.contains('is-saved');
-    btn.classList.toggle('is-saved'); // optimistic
+    btn.classList.toggle('is-saved');
     const saved = await fetchSavedIds();
 
     const revert = (message) => {
@@ -2251,17 +1959,13 @@
       toggleSaved(listingId, saveBtn);
       return;
     }
-    saveBtn.classList.toggle('is-saved'); // demo listings stay local
+    saveBtn.classList.toggle('is-saved');
   });
   document.addEventListener('click', (event) => {
     if (event.target.closest('[data-auth-open]')) openAuthModal();
     if (event.target.closest('[data-logout]')) logout();
   });
 
-  // ---- Display currency (GEL ⇄ USD) ---------------------------------------
-  // Prices are stored and rendered in GEL; the header toggle converts every
-  // visible "N ₾" amount to USD using the National Bank of Georgia rate
-  // (cached 12h, bundled fallback offline). Filters keep GEL semantics.
   const CURRENCY_KEY = 'autoswap.currency';
   const USD_RATE_CACHE_KEY = 'autoswap.usdRate';
   const USD_RATE_TTL = 12 * 60 * 60 * 1000;
@@ -2271,7 +1975,7 @@
   let currency = 'GEL';
   try {
     currency = localStorage.getItem(CURRENCY_KEY) === 'USD' ? 'USD' : 'GEL';
-  } catch (_err) { /* private mode */ }
+  } catch (_err) {  }
   let gelPerUsd = FALLBACK_GEL_PER_USD;
 
   async function loadUsdRate() {
@@ -2281,7 +1985,7 @@
         gelPerUsd = cached.rate;
         return;
       }
-    } catch (_err) { /* ignore bad cache */ }
+    } catch (_err) {  }
     try {
       const res = await fetch('https://nbg.gov.ge/gw/api/ct/monetarypolicy/currencies/en/json?currencies=USD');
       const data = await res.json();
@@ -2289,10 +1993,10 @@
       const quantity = Number(data?.[0]?.currencies?.[0]?.quantity) || 1;
       if (rate > 0) {
         gelPerUsd = rate / quantity;
-        try { localStorage.setItem(USD_RATE_CACHE_KEY, JSON.stringify({ rate: gelPerUsd, ts: Date.now() })); } catch (_err) { /* private mode */ }
-        if (currency === 'USD') applyCurrency(document.body); // re-render with the live rate
+        try { localStorage.setItem(USD_RATE_CACHE_KEY, JSON.stringify({ rate: gelPerUsd, ts: Date.now() })); } catch (_err) {  }
+        if (currency === 'USD') applyCurrency(document.body);
       }
-    } catch (_err) { /* offline, fallback rate stays */ }
+    } catch (_err) {  }
   }
 
   function gelToUsdText(match, amount) {
@@ -2305,9 +2009,6 @@
     if (currency === 'USD') {
       const source = node.__gelText != null ? node.__gelText : node.nodeValue;
       if (!/₾/.test(source)) return;
-      // MONEY_RE is /g, so .test() advances lastIndex and the next node starts
-      // mid-string — that silently skipped most prices on the page. Reset
-      // before testing, not after.
       MONEY_RE.lastIndex = 0;
       if (!MONEY_RE.test(source)) return;
       MONEY_RE.lastIndex = 0;
@@ -2347,10 +2048,6 @@
     if (typeof cb === 'function') currencySubs.push(cb);
   }
 
-  // Inline flip rendered next to a price, so the currency can be switched
-  // without scrolling back to the header toggle. The label is a lone symbol
-  // with no digits, so the money text-walker in applyCurrency leaves it alone;
-  // syncFlipLabels keeps it pointing at the *target* currency.
   function priceCurrencyToggle() {
     const target = currency === 'USD' ? '₾' : '$';
     return `<button type="button" class="cur-flip" data-currency-flip aria-label="ვალუტის შეცვლა" title="ვალუტის შეცვლა">${target}</button>`;
@@ -2366,18 +2063,12 @@
   function setCurrency(next) {
     if (next !== 'GEL' && next !== 'USD') return;
     currency = next;
-    try { localStorage.setItem(CURRENCY_KEY, next); } catch (_err) { /* private mode */ }
-    // Subscribers re-render markup from the GEL source data (cars.js reruns
-    // the filters, which rebuilds every card). Converting before that ran meant
-    // the rewrite was immediately overwritten and prices never changed, so the
-    // conversion has to be the last thing that touches the DOM.
-    currencySubs.forEach((cb) => { try { cb(currency, gelPerUsd); } catch (_err) { /* ignore */ } });
+    try { localStorage.setItem(CURRENCY_KEY, next); } catch (_err) {  }
+    currencySubs.forEach((cb) => { try { cb(currency, gelPerUsd); } catch (_err) {  } });
     applyCurrency(document.body);
     syncFlipLabels();
   }
 
-  // Delegated so it works on re-rendered markup. stopPropagation keeps the
-  // flip from triggering the surrounding card's navigation.
   document.addEventListener('click', (event) => {
     const flip = event.target.closest('[data-currency-flip]');
     if (!flip) return;
@@ -2388,9 +2079,6 @@
 
   loadUsdRate();
 
-  // ---- Notifications (demand matches for "my car") -------------------------
-  // Derived, not push: who in the current feed is looking for the visitor's
-  // car. Badge counts matches the visitor hasn't opened the panel on yet.
   const NOTIFY_SEEN_KEY = 'autoswap.notifySeen';
   let notifyMatches = [];
 
@@ -2407,9 +2095,6 @@
     if (!authUser || !myCar) {
       notifyMatches = [];
     } else {
-      // No feed, no matches. There is no stand-in dataset to fall back on any
-      // more, and inventing matches out of demo rows would put fake cars behind
-      // a notification badge.
       const feed = await fetchFeed().catch(() => null);
       notifyMatches = (feed || []).filter((car) => matchLevel(car, myCar)).slice(0, 8);
     }
@@ -2455,8 +2140,7 @@
     btn.setAttribute('aria-expanded', String(open));
     if (open) {
       renderNotifyPanel();
-      // opening marks everything as seen
-      try { localStorage.setItem(NOTIFY_SEEN_KEY, JSON.stringify(notifyMatches.map((car) => String(car.id)))); } catch (_err) { /* private mode */ }
+      try { localStorage.setItem(NOTIFY_SEEN_KEY, JSON.stringify(notifyMatches.map((car) => String(car.id)))); } catch (_err) {  }
       document.querySelectorAll('[data-notify-badge]').forEach((badge) => { badge.hidden = true; });
     }
   }
@@ -2487,12 +2171,6 @@
 
   document.addEventListener('autoswap:mycar', refreshNotifications);
 
-  // ---- Styled select popup -------------------------------------------------
-  // The native <select> stays in the DOM as the visible trigger (so every
-  // context keeps its field styling, form serialization, and semantics), but
-  // on fine-pointer devices its OS popup is replaced with a brand-styled
-  // fixed-position panel. Touch devices keep the native picker, which is
-  // better UX on phones. One shared controller; only one panel at a time.
   const ASELECT_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.6 4.5L19 7"></path></svg>';
   const aselect = { select: null, panel: null, activeIndex: -1 };
 
@@ -2601,7 +2279,7 @@
       aselectCommit(aselect.activeIndex);
     } else if (key === 'Escape') {
       event.preventDefault();
-      event.stopPropagation(); // close only the popup, not a host modal
+      event.stopPropagation();
       aselectClose();
     } else if (key === 'Tab') {
       aselectClose();
@@ -2633,10 +2311,6 @@
     aselectClose();
   });
 
-  // Pages render into #app with innerHTML and modals mount later, a single
-  // debounced observer keeps selects enhanced, money converted, and the
-  // notification badge alive without per-page wiring. (Text conversion emits
-  // characterData mutations only, so watching childList cannot loop.)
   enhanceSelects();
   let domSyncQueued = false;
   const domObserver = new MutationObserver(() => {
@@ -2656,20 +2330,8 @@
   });
   domObserver.observe(document.body, { childList: true, subtree: true });
 
-  // ---- Make → model panel picker ------------------------------------------
-  // One picker for every "which car" field: the sell form's მარკა და მოდელი
-  // and სასურველი მანქანა use it, and it mirrors the hero pickers' behaviour
-  // so the site has a single selection idiom. Featured logo tiles at rest,
-  // contains-match makes while typing, drill-in to the make's models, and on
-  // touch the field is readOnly with the panel's ძებნა box as the opt-in
-  // typing surface — a tap shows options, never a keyboard.
   const MM_FEATURED = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Porsche'];
 
-  // Some makes store the brand inside the model name — the catalog has
-  // "Mazda 3" under Mazda and "Hummer" under Hummer — so composing
-  // `${make} ${model}` produced "Mazda Mazda 3". Strip a leading make prefix
-  // before the two are joined. Compared on letters and digits only, so
-  // "Mercedes-Benz" still matches a model written "Mercedes Benz ...".
   function stripMakePrefix(make, model) {
     const m = String(model || '').trim();
     const mk = String(make || '').trim();
@@ -2678,7 +2340,6 @@
     const nmk = norm(mk);
     const nm = norm(m);
     if (!nmk || !nm.startsWith(nmk)) return m;
-    // The model IS the make (Hummer): there is no model part to keep.
     if (nm === nmk) return '';
     let consumed = 0;
     let i = 0;
@@ -2689,43 +2350,32 @@
     return m.slice(i).replace(/^[\s\-–]+/, '').trim();
   }
 
-  // Which family a model belongs to, or '' when it belongs to none.
-  //
-  // The catalog lists models flat, so BMW opened as 103 bare numbers and
-  // Mercedes as 300+ — a wall you cannot scan. Nearly every European range is
-  // already encoded in the name: the leading letters or the first digit of a
-  // three-digit number ARE the series. BMW groups 103/103 this way and
-  // Mercedes 306/323.
   function modelFamily(make, model) {
     const m = String(model || '').trim();
     const mk = String(make || '').toLowerCase();
     if (!m) return '';
     if (mk === 'bmw') {
-      if (/^i/i.test(m)) return 'i Series';               // i3, i8, iX, iX3
+      if (/^i/i.test(m)) return 'i Series';
       if (/^xm$/i.test(m) || /^m\s*\d/i.test(m)) return 'M Series';
       if (/^x\s*\d/i.test(m)) return 'X Series';
       if (/^z\s*\d/i.test(m)) return 'Z Series';
-      const digit = m.match(/^(\d)\d{2}/);                // 320 → 3 Series
+      const digit = m.match(/^(\d)\d{2}/);
       return digit ? `${digit[1]} Series` : '';
     }
     if (mk.startsWith('mercedes')) {
       if (/^amg/i.test(m)) return 'AMG';
-      const eq = m.match(/^(EQ[A-Z])/i);                  // EQA, EQB, EQS
+      const eq = m.match(/^(EQ[A-Z])/i);
       if (eq) return eq[1].toUpperCase();
     }
-    // Generic: the letters before the number are the family. Covers Mercedes
-    // (C 200 → C-Class, GLE 350 → GLE), Audi (A4 → A, RS6 → RS), Volvo, Lexus.
     const letters = m.match(/^([A-Za-z]{1,3})[\s-]*\d/);
     if (letters) {
       const tag = letters[1].toUpperCase();
       return (mk.startsWith('mercedes') && tag.length === 1) ? `${tag}-Class` : tag;
     }
-    // Mercedes' pre-letter era (190, 300 SE) is a family of its own.
     if (/^\d/.test(m) && mk.startsWith('mercedes')) return 'კლასიკური';
     return '';
   }
 
-  // Numeric series first in numeric order, then letters, then the catch-all.
   function compareFamilies(a, b) {
     if (a === b) return 0;
     if (a === 'კლასიკური') return 1;
@@ -2738,10 +2388,6 @@
     return a.localeCompare(b);
   }
 
-  // Grouping only pays off on a long list that mostly groups. Toyota's models
-  // are names (Corolla, Prius), so 141 of 148 land nowhere — that list is
-  // better left flat than split into five near-empty headings plus a huge
-  // "other".
   const MM_GROUP_MIN_MODELS = 12;
   const MM_GROUP_MIN_COVERAGE = 0.6;
 
@@ -2774,8 +2420,6 @@
       </div>`;
   }
 
-  // Years offered on the desired-vehicle picker, newest first. Tapped from the
-  // same list the make and model come from — no typing anywhere in the flow.
   function pickerYears() {
     const now = new Date().getFullYear();
     const years = [];
@@ -2799,8 +2443,8 @@
     }
 
     let stage = 'make';
-    let curMake = null; // { id, name }
-    let curModel = '';  // held while the year stage is open
+    let curMake = null;
+    let curModel = '';
     let seq = 0;
     let timer = null;
     let makesCache = null;
@@ -2811,8 +2455,6 @@
       input.setAttribute('aria-expanded', String(open));
     };
 
-    // The active query. On touch it lives in the panel box; on desktop it is
-    // the field itself, minus the already-chosen make during the model stage.
     const term = () => {
       if (touch && search) return search.value.trim();
       const raw = input.value.trim();
@@ -2845,8 +2487,6 @@
       const q = term().toLowerCase();
       let html = '';
       if (stage === 'year') {
-        // Ahead of the others: this stage needs no query at all, and falling
-        // through to the model branch would fire a pointless model lookup.
         const chosen = `${curMake.name}${curModel ? ` ${curModel}` : ''}`;
         list.innerHTML = row(`← ${chosen}`, 'data-mm-back="1"')
           + row('ნებისმიერი წელი', 'data-mm-year=""')
@@ -2856,18 +2496,12 @@
       if (stage === 'make') {
         const makes = await loadMakes();
         if (stamp !== seq) return;
-        // No browsing cap: the list is scrollable and hiding the tail made
-        // whole brands (everything after ~"H" alphabetically) unreachable
-        // without typing. 300 is a sanity ceiling, not a page size.
         const rows = (q ? makes.filter((m) => m.name.toLowerCase().includes(q)) : makes).slice(0, 300);
         html = (q ? '' : tiles())
           + rows.map((m) => row(m.name, `data-mm-make="${escapeAttr(m.name)}" data-mm-make-id="${escapeAttr(m.id ?? '')}"`)).join('');
       } else {
-        // 300, because 60 truncated real ranges — BMW alone has 103 models.
         const raw = curMake.id ? await searchModels(term(), curMake.id, 300).catch(() => []) : [];
         if (stamp !== seq) return;
-        // cleanName is what the user sees and what gets stored; the brand is
-        // dropped here so "Mazda 3" never renders as "Mazda Mazda 3".
         const models = raw
           .map((m) => ({ ...m, cleanName: stripMakePrefix(curMake.name, m.name) }))
           .filter((m) => m.cleanName);
@@ -2903,10 +2537,6 @@
       if (search) search.value = '';
     };
 
-    // A year stage sits between choosing a model and committing, but only where
-    // the caller asked for one. Your own car already has a dedicated year field
-    // in the sell form, and the catalog filter has its own year range — the
-    // wanted car was the one place with nowhere to say it.
     const enterYearStage = (model) => {
       stage = 'year';
       curModel = model || '';
@@ -2932,7 +2562,6 @@
         const hit = makes.find((m) => m.name.toLowerCase() === name.toLowerCase());
         makeId = hit ? hit.id : '';
       }
-      // A make we cannot list models for is still a valid pick on its own.
       if (!makeId) {
         finish(name, '');
         return;
@@ -2951,7 +2580,6 @@
 
     input.addEventListener('input', () => {
       setOpen(true);
-      // Erasing back past the chosen make abandons the drill-in.
       if (stage === 'model' && curMake
         && !input.value.trim().toLowerCase().startsWith(curMake.name.toLowerCase())) {
         reset();
@@ -2967,13 +2595,10 @@
     input.addEventListener('keydown', onEscape);
     search?.addEventListener('keydown', onEscape);
 
-    // mousedown so the pick wins the race against any blur.
     list.addEventListener('mousedown', (event) => {
       const back = event.target.closest('[data-mm-back]');
       if (back) {
         event.preventDefault();
-        // One step back, not all the way out: from the years to the model list
-        // you just came from, and only from there to the makes.
         if (stage === 'year') {
           stage = 'model';
           curModel = '';

@@ -1,27 +1,27 @@
-# AutoSwap — Supabase setup
+# AutoSwap - Supabase setup
 
 Run these SQL files in the Supabase SQL editor **in order** (all idempotent;
-re-running upgrades an existing deployment in place — new columns are added
+re-running upgrades an existing deployment in place - new columns are added
 with `add column if not exists`):
 
-1. `schema.sql` — tables, indexes, core triggers (profile creation,
+1. `schema.sql` - tables, indexes, core triggers (profile creation,
    `updated_at`), the `public_vehicle_feed` view, and Realtime publication.
    Vehicles carry the v2 listing fields: `estimated_value`, `engine_size`,
    `power_hp`, `color`, `latitude`/`longitude`.
-2. `functions.sql` — mutual matching (`vehicle_matches_desire`,
+2. `functions.sql` - mutual matching (`vehicle_matches_desire`,
    `find_mutual_matches_for_vehicle`), the atomic `accept_offer` (locks both
    vehicles, marks them `completed`, auto-declines competing open offers,
    bumps swap counters), `cancel_offer`, and notification triggers.
-3. `policies.sql` — Row Level Security for every table. Clients can only
+3. `policies.sql` - Row Level Security for every table. Clients can only
    *cancel* their own outgoing offers; every other offer transition goes
    through a `SECURITY DEFINER` RPC.
-4. `storage.sql` — the public `vehicle-photos` bucket and owner-only
+4. `storage.sql` - the public `vehicle-photos` bucket and owner-only
    upload/delete policies.
-5. `car_catalog.sql` — public-read `car_makes` and `car_models` tables with
+5. `car_catalog.sql` - public-read `car_makes` and `car_models` tables with
    trigram indexes, `is_active` curation flags (deactivated rows are hidden
    by RLS) and the service-role-only `set_car_make_active` /
    `set_car_model_active` admin helpers.
-6. `seed.sql` — **local dev only**. Inserts two users and the canonical
+6. `seed.sql` - **local dev only**. Inserts two users and the canonical
    mutual-match test (Audi A7 ⇄ BMW 550i). Expects 1 match suggestion, 2
    notifications, 0 auto-created offers.
 
@@ -30,7 +30,7 @@ with `add column if not exists`):
 `tests/offer-flow.test.sql` is a rollback-safe integration test for the offer
 lifecycle (accept transaction, competing-offer auto-decline, double-accept
 rejection, sender-only cancel). Run it against a **local** database that has
-files 1–3 applied:
+files 1-3 applied:
 
 ```bash
 psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/offer-flow.test.sql
@@ -64,7 +64,7 @@ All offer functions forward the caller's JWT to a `SECURITY DEFINER` RPC:
 
 ## Auth providers
 
-Enable the **Email** provider in Supabase Auth — the app signs users in with a
+Enable the **Email** provider in Supabase Auth - the app signs users in with a
 6-digit email OTP (`front/login.html`). Recommended dashboard settings:
 
 - Email OTP expiry: **300 seconds** (5 minutes).

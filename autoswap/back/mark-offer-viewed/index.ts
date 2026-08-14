@@ -1,12 +1,3 @@
-// =============================================================
-// Edge Function: mark-offer-viewed
-// The receiver marks a pending offer as viewed. Delegates to
-// public.mark_offer_viewed(offer_id): sets status=viewed + viewed_at, logs an
-// offer_event, and notifies the sender. No-op if already past pending.
-//
-// Request:  POST { "offer_id": "<uuid>" }   (Authorization: Bearer <jwt>)
-// Response: 200 { "viewed": <bool> } | 4xx/5xx { "error": "..." }
-// =============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 

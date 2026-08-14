@@ -49,12 +49,6 @@ for (const bp of BREAKPOINTS) {
       page.on('console', msg => {
         if (msg.type() !== 'error') return;
         const text = msg.text();
-        // "Failed to load resource" lines carry no URL, so a Supabase 429
-        // under parallel load is indistinguishable from a broken local asset
-        // and was flipping random tests red. The response listener below
-        // replaces them: same-origin failures still fail, with the URL named;
-        // third-party flakes no longer decide the run. CSP violations and
-        // script errors don't match this prefix and still land here.
         if (/^Failed to load resource/.test(text)) return;
         consoleErrors.push(text);
       });
@@ -73,13 +67,6 @@ for (const bp of BREAKPOINTS) {
     test('global navigation and footer links resolve', async ({ page }) => {
       await gotoAndWait(page, ROUTES.carsTbilisi);
 
-      // `მთავარი`, `პროფილი` and `დამატება` live only in the tab bar, which is
-      // phone-and-tablet only — the desktop header carries the nav instead. So
-      // those are asserted below 1024px and skipped above it, rather than
-      // pretending a hidden element should be visible.
-      // `მთავარი` also matches the brand link's aria-label ("AutoSwap მთავარი
-      // გვერდი"), and `ჩვენ შესახებ` appears in header and footer — exact/first
-      // keeps both out of strict-mode violations.
       if (bp.width < 1024) {
         await expect(page.getByRole('link', { name: 'მთავარი', exact: true })).toBeVisible();
         await expect(page.getByRole('link', { name: /დამატება|განცხადების დამატება/i }).first()).toBeVisible();
@@ -100,7 +87,6 @@ for (const bp of BREAKPOINTS) {
 
       await expect(page.getByRole('heading', { name: /ავტომობილები გაცვლისთვის/i })).toBeVisible();
       await expect(page.getByText(/აქტიური განცხადება/i).first()).toBeVisible();
-      // Header CTA and catalog topbar CTA share this label.
       await expect(page.getByRole('link', { name: /დაამატე მანქანა/i }).first()).toBeVisible();
       await expect(page.getByRole('combobox', { name: /დალაგება/i })).toBeVisible();
       await expect(page.getByRole('link', { name: /Toyota/i }).first()).toBeVisible();
@@ -114,10 +100,6 @@ for (const bp of BREAKPOINTS) {
       await assertNoPageErrors(page, pageErrors);
     });
 
-    // The quick-filter chip strip these two used to drive was removed; make,
-    // category and cash are now reached through the filter panel and through
-    // the URL. The capability is unchanged, so the coverage moves rather than
-    // disappearing — dropping it outright would leave filtering untested.
     test('listing filters by make from the URL', async ({ page }) => {
       await gotoAndWait(page, `${ROUTES.cars}?make=Toyota`);
       await expect(page).toHaveURL(/make=Toyota/);
@@ -191,8 +173,6 @@ for (const bp of BREAKPOINTS) {
     test('static content pages load', async ({ page }) => {
       for (const path of [ROUTES.about, ROUTES.terms, ROUTES.privacy]) {
         await gotoAndWait(page, path);
-        // 'main, body' is two elements on these pages, which strict mode
-        // rejects; body already covers the assertion.
         await expect(page.locator('body')).toContainText(/AutoSwap|ავტო|გაცვლ/i);
       }
 
@@ -210,9 +190,6 @@ for (const bp of BREAKPOINTS) {
     });
 
     test('account and offers pages are reachable', async ({ page }) => {
-      // Both are gated: a signed-out browser is sent to /login?next=… . That
-      // redirect IS the correct behaviour, so assert either destination rather
-      // than pretending the account page renders without a session.
       await gotoAndWait(page, ROUTES.account);
       await expect(page).toHaveURL(/\/account|\/login\?next=/);
       await expect(page.locator('body')).toContainText(/პროფილი|account|შეთავაზებ|შესვლა/i);
@@ -257,8 +234,6 @@ for (const bp of BREAKPOINTS) {
 
     test('regression: save CTAs render on cards', async ({ page }) => {
       await gotoAndWait(page, ROUTES.carsTbilisi);
-      // The save control is an icon-only button — the word lives in its
-      // aria-label ("<car> შენახვა"), so getByText finds nothing.
       const saveButtons = page.getByRole('button', { name: /შენახვა/i });
       await expect(saveButtons.first()).toBeVisible();
       await expect(saveButtons).toHaveCount(12);

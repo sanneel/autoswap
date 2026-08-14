@@ -1,17 +1,3 @@
-/* AutoSwap, login / registration page.
-
-   Sign-in is password-first: a Georgian number plus a password, or Google.
-   A one-time code is no longer part of signing in — it appears only where a
-   number genuinely has to be proven, which is registration and password reset.
-   That was a deliberate change: a code on every login is a round trip through
-   another app for something the user does constantly, and it put an SMS cost
-   on each visit rather than one per account.
-
-   Accounts are phone-first, so verify-otp gives each one a shadow address
-   derived from the number; shared.js signs in against that, which is why the
-   password path needs no endpoint of its own.
-
-   ?next=<page> sends the user back where they came from. */
 const {
   Header, Footer, icons, sb, toast, escapeAttr, authReady,
   signInWithProvider, signInWithPassword, setPassword, passwordProblem,
@@ -22,7 +8,6 @@ const {
 
 const RESEND_COOLDOWN_S = 60;
 
-// Only same-directory pages are valid redirect targets.
 function nextTarget() {
   const raw = new URLSearchParams(window.location.search).get('next') || '';
   if (!raw || raw.includes('//') || raw.includes('..') || !/^[\w.-]+\.html(\?[^#]*)?(#[\w/-]*)?$/.test(raw)) {
@@ -62,9 +47,6 @@ function phoneField(phone) {
   `;
 }
 
-// Always rendered, shown only when there is something to say. Filling it in
-// place is what lets an error arrive without re-rendering the step — which on a
-// phone would close the keyboard and discard everything already typed.
 function err(message) {
   return `<p class="auth-error" role="alert"${message ? '' : ' hidden'}>${escapeAttr(message || '')}</p>`;
 }
@@ -76,7 +58,6 @@ function showError(message) {
   node.hidden = !message;
 }
 
-/* ---- 1. Sign in (default) ---------------------------------------------- */
 function SignInStep(phone, error) {
   return Shell(`
     <span class="auth-icon">${icons.swap}</span>
@@ -96,7 +77,6 @@ function SignInStep(phone, error) {
   `);
 }
 
-/* ---- 2. Register: number → code → password ----------------------------- */
 function RegisterStep(phone, error) {
   return Shell(`
     <span class="auth-icon">${icons.swap}</span>
@@ -118,7 +98,6 @@ function RegisterStep(phone, error) {
   `);
 }
 
-/* ---- 3. Forgot: number → code → new password -------------------------- */
 function ForgotStep(phone, error) {
   return Shell(`
     <span class="auth-icon">${icons.check}</span>
@@ -139,7 +118,6 @@ function ForgotStep(phone, error) {
   `);
 }
 
-/* ---- 4. Code ---------------------------------------------------------- */
 function CodeStep(phone, isDemo, error) {
   return Shell(`
     <span class="auth-icon">${icons.check}</span>
@@ -163,10 +141,6 @@ function CodeStep(phone, isDemo, error) {
   `);
 }
 
-/* ---- 5. Set password (after a verified code) -------------------------- */
-// One field, no confirm box — see passwordFieldHTML() in shared.js for why.
-// The requirements are a live checklist inside the field rather than a note
-// underneath, so the user finds out while typing instead of on submit.
 function PasswordStep(error) {
   return Shell(`
     <span class="auth-icon">${icons.check}</span>
@@ -184,15 +158,10 @@ function PasswordStep(error) {
 let currentPhone = '';
 let currentIsDemo = false;
 let resendTimer = null;
-// verify.ge binds the code to a requestId; the server exchanges that for the
-// session. Null means the legacy Supabase path, which verifies client-side.
 let currentRequestId = null;
 let currentChannel = 'whatsapp';
-// True when WhatsApp was asked for but the provider delivered SMS instead.
 let currentFellBack = false;
 let readChannel = () => currentChannel;
-// 'register' | 'forgot' — which flow the code step is serving. Both end at the
-// same password screen; only the wording differs.
 let mode = 'register';
 
 function friendlyError(message) {
@@ -206,10 +175,6 @@ function friendlyError(message) {
   return msg || 'რაღაც შეცდომა მოხდა, სცადე თავიდან.';
 }
 
-// Writes the whole label each tick instead of reaching for a #resend-count span
-// inside it. Once the countdown ended the span was gone, so a second call —
-// which is exactly what a failed resend now does — found nothing and bailed
-// out, leaving the button disabled for good.
 function startResendCooldown() {
   const btn = document.querySelector('#resend-btn');
   if (!btn) return;
@@ -238,16 +203,10 @@ function bindProviders(rerender) {
         btn.disabled = false;
         rerender(friendlyError(error));
       }
-      // On success the browser navigates away to the provider.
     });
   });
 }
 
-// Focusing the first field on load is free on a desktop and costly on a phone:
-// the keyboard comes up over the Google button and the register/reset links, so
-// the first thing a new user sees is the one path they may not want. Mid-flow
-// steps (code, password) still focus unconditionally — there the screen holds a
-// single field and the keyboard is the next thing needed anyway.
 function focusOnRoomyScreens(el) {
   if (el && window.matchMedia('(min-width: 768px)').matches) el.focus();
 }
@@ -259,7 +218,6 @@ function readPhone(form) {
 
 const BAD_PHONE = 'შეიყვანე ქართული მობილურის ნომერი ფორმატით 5XX XX XX XX.';
 
-/* ---- Sign in ---------------------------------------------------------- */
 function renderSignIn(error) {
   document.querySelector('#app').innerHTML = SignInStep(currentPhone, error);
   bindProviders(renderSignIn);
@@ -290,8 +248,6 @@ function renderSignIn(error) {
     submit.disabled = true;
     const result = await signInWithPassword(phone, password);
     if (result.error) {
-      // A wrong password is the common case here, and re-rendering would send
-      // the keyboard back to the phone field the user had already got right.
       submit.disabled = false;
       showError(result.error);
       form.querySelector('[name="password"]').select();
@@ -303,7 +259,6 @@ function renderSignIn(error) {
   focusOnRoomyScreens(form.querySelector('[name="phone"]'));
 }
 
-/* ---- Register / forgot: both send a code ------------------------------ */
 function bindCodeRequestForm(formId, rerender) {
   const form = document.querySelector(`#${formId}`);
   readChannel = bindChannelPicker(form);
@@ -350,24 +305,17 @@ function renderSignInFresh() {
   renderSignIn();
 }
 
-/* ---- Code ------------------------------------------------------------- */
 function renderCodeStep(error) {
   document.querySelector('#app').innerHTML = CodeStep(currentPhone, currentIsDemo, error);
   startResendCooldown();
 
   const form = document.querySelector('#code-form');
-  // Autofill's requestSubmit() and the user's own tap can both fire; the
-  // requestId is single-use, so the loser would flash an error over a
-  // verification that actually succeeded.
   let verifying = false;
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (verifying) return;
     const input = form.querySelector('[name="code"]');
     const submit = form.querySelector('[type="submit"]');
-    // Inline, not a re-render: re-rendering restarts the resend cooldown, so a
-    // mistyped digit used to cost the user a fresh minute before they could ask
-    // for another code.
     const code = String(new FormData(form).get('code') || '').trim();
     if (!/^\d{4,6}$/.test(code)) {
       showError('შეიყვანე კოდი.');
@@ -385,8 +333,6 @@ function renderCodeStep(error) {
       input.select();
       return;
     }
-    // The code proved the number and produced a session. The demo account has
-    // no server-side user to carry a password, so it stops here.
     if (currentIsDemo) {
       toast('დემო ანგარიშით შეხვედი, ტესტირებისთვის');
       window.location.replace('/cars');
@@ -400,14 +346,11 @@ function renderCodeStep(error) {
     event.currentTarget.disabled = true;
     const result = await requestPhoneOtp(currentPhone, currentChannel);
     if (result.error) {
-      // No new code went out, so the button must not stay dead — put the
-      // cooldown back rather than re-rendering the step around the message.
       showError(friendlyError(result.error));
       startResendCooldown();
       return;
     }
     currentIsDemo = !!result.demo;
-    // A resend mints a fresh code under a new requestId; the old one is dead.
     currentRequestId = result.requestId || null;
     currentChannel = result.channel || currentChannel;
     currentFellBack = !!result.fellBack;
@@ -422,15 +365,9 @@ function renderCodeStep(error) {
 
   const codeInput = form.querySelector('[name="code"]');
   codeInput.focus();
-  // Fills straight from the SMS on Chrome for Android and submits, so the code
-  // never has to be read across apps. Not gated on the channel: verify.ge
-  // reports WHATSAPP for messages that actually arrive as SMS, so the guard was
-  // switching autofill off precisely when it could have worked. A genuine
-  // WhatsApp delivery just leaves the request unresolved, which is harmless.
   autofillOtpFromSms(codeInput, () => form.requestSubmit());
 }
 
-/* ---- Set password ----------------------------------------------------- */
 function renderPasswordStep(error) {
   document.querySelector('#app').innerHTML = PasswordStep(error);
   const form = document.querySelector('#password-form');
@@ -438,9 +375,6 @@ function renderPasswordStep(error) {
   const input = form.querySelector('[name="password"]');
   const submit = form.querySelector('[type="submit"]');
 
-  // Errors are written into the step, never rendered over it: this screen is
-  // reached with a single-use code already spent, so losing the typed password
-  // to a re-render would cost the user another code.
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const password = String(new FormData(form).get('password') || '');
@@ -470,8 +404,6 @@ async function init() {
     window.location.replace(nextTarget());
     return;
   }
-  // ?register sends first-time users straight to the code step's entry form,
-  // so a "create an account" link elsewhere does not land on sign-in.
   if (new URLSearchParams(window.location.search).has('register')) {
     mode = 'register';
     renderRegister();

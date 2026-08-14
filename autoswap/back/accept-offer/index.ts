@@ -1,14 +1,3 @@
-// =============================================================
-// Edge Function: accept-offer
-// Atomically accepts an offer the caller received, creating the
-// conversation and notifying the sender. Delegates to the SECURITY DEFINER
-// public.accept_offer(offer_id) RPC, which enforces ownership + pending state.
-//
-// The caller's JWT is forwarded so auth.uid() resolves inside the RPC.
-//
-// Request:  POST { "offer_id": "<uuid>" }   (Authorization: Bearer <jwt>)
-// Response: 200 { "conversation_id": "<uuid>" }  | 4xx/5xx { "error": "..." }
-// =============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 

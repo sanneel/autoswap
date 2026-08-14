@@ -1,19 +1,3 @@
-// =============================================================
-// Edge Function: counter-offer
-// The receiver of an offer counters it. Delegates to
-// public.counter_offer(original_offer_id, offered_vehicle_id, cash_mode,
-// cash_amount, message): marks the original 'countered', creates a new linked
-// offer (parent_offer_id), logs an offer_event, and notifies the sender.
-//
-// Request:  POST {
-//   "original_offer_id": "<uuid>",
-//   "offered_vehicle_id": "<uuid>" | null,   // optional: a different owned car
-//   "cash_mode": "add_money|ask_money|none|flexible",
-//   "cash_amount": <int>,
-//   "message": "<text>"
-// }
-// Response: 200 { "counter_offer_id": "<uuid>" } | 4xx/5xx { "error": "..." }
-// =============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 

@@ -1,4 +1,4 @@
-# AutoSwap Web — Supabase wiring
+# AutoSwap Web - Supabase wiring
 
 This static frontend (`front/`) reads live listings from Supabase directly in the
 browser, with a built-in demo fallback so the page always renders.
@@ -67,9 +67,9 @@ contains search suggestions.
 `public.otp_rate_check(ip, phone)`. The `request-otp` Edge Function calls it
 before every SMS send, applying:
 
-- **per-IP burst** — > 2 sends from one IP in 60s → block that IP 5 min;
-- **per-phone bombing** — > 3 codes to one number in 10 min → block it 15 min;
-- **distributed velocity** — ≥ 4 distinct IPs in 30s → 3-min global cooldown.
+- **per-IP burst** - > 2 sends from one IP in 60s → block that IP 5 min;
+- **per-phone bombing** - > 3 codes to one number in 10 min → block it 15 min;
+- **distributed velocity** - ≥ 4 distinct IPs in 30s → 3-min global cooldown.
 
 Deploy the function and keep Supabase's built-in auth rate limits on:
 
@@ -92,7 +92,7 @@ share the same `otp_rate_check`, so the policy stays in one place.
 ## 5. OTP delivery via verify.ge (SMS + WhatsApp)
 
 The login code is delivered by [verify.ge](https://verify.ge), over SMS or
-WhatsApp — the user picks on the login form and the choice is remembered.
+WhatsApp - the user picks on the login form and the choice is remembered.
 
 ### Why this replaces Supabase's own OTP
 
@@ -106,7 +106,7 @@ Two consequences worth knowing before changing any of this:
   *Supabase* generated and expects you to deliver that exact string.
 - **WebOTP autofill does not work on this provider.** `autofillOtpFromSms`
   needs the SMS to end with `@autoswap.ge #123456`, and nothing in the API can
-  put it there — it would have to be set account-side by verify.ge. The code
+  put it there - it would have to be set account-side by verify.ge. The code
   screen therefore skips WebOTP entirely on the WhatsApp channel, where it
   could never apply (WebOTP reads the SMS inbox only).
 
@@ -125,7 +125,7 @@ Set on the Edge Function secrets (Dashboard → Edge Functions → Secrets, or
 | `SHADOW_EMAIL_DOMAIN` | no | defaults to `phone.autoswap.ge` (see below) |
 
 **Authentication → Providers → Email** must stay enabled. Phone does *not* need
-to be — and cannot be: Supabase refuses to enable its phone provider without
+to be - and cannot be: Supabase refuses to enable its phone provider without
 Twilio Account SID, Auth Token, and Message Service SID, which is precisely what
 moving to verify.ge avoids.
 
@@ -147,7 +147,7 @@ supabase functions deploy request-otp && supabase functions deploy verify-otp
 
 1. `request-otp` rate-checks, calls verify.ge, and records the returned
    `requestId` against the phone in `public.otp_requests`.
-2. The browser gets only the `requestId` — never the code.
+2. The browser gets only the `requestId` - never the code.
 3. `verify-otp` reads the phone **back from that row**, asks verify.ge to check
    the code, burns the row, then finds-or-creates the user and returns a
    single-use `token_hash`, which the browser redeems via
@@ -165,8 +165,8 @@ Not answerable from their public docs, and each one affects this integration:
 
 - WhatsApp per-message price and which tiers include it (the pricing page
   lists SMS only, though `OtpChannel.WHATSAPP` is live in their SDK).
-- Whether `GET /otp/{requestId}` — which their SDK documents as a *public*
-  endpoint returning the live `otpCode` — is disabled for production keys. If
+- Whether `GET /otp/{requestId}` - which their SDK documents as a *public*
+  endpoint returning the live `otpCode` - is disabled for production keys. If
   it is not, anyone holding a `requestId` can read the code.
 - Whether the SMS body can be given the `@autoswap.ge #CODE` suffix
   account-side, which is the only way autofill comes back.
@@ -177,6 +177,6 @@ Not answerable from their public docs, and each one affects this integration:
 
 - Photos resolve from `cover_photo_url`; listings without a photo fall back to a
   bundled image.
-- The **save** and **შესთავაზე გაცვლა** (offer) buttons are visual for now —
+- The **save** and **შესთავაზე გაცვლა** (offer) buttons are visual for now -
   wiring them needs Supabase Auth + the offer flow (already built in the backend
   RPCs / Edge Functions).

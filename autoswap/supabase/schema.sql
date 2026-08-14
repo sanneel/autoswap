@@ -1,26 +1,5 @@
--- =============================================================
--- AutoSwap — Database schema (tables, indexes, core triggers, feed view)
--- Georgian car exchange marketplace · Supabase Postgres
---
--- Run order:
---   1. schema.sql     (this file)
---   2. functions.sql  (matching + offer RPCs + notification triggers)
---   3. policies.sql   (Row Level Security)
---   4. storage.sql    (vehicle-photos bucket + storage policies)
---   5. seed.sql       (local test data / mutual-match demo)
---
--- Cash model: a vehicle's swap terms live in swap_preferences
--- (cash_mode + positive cash_amount). Offers carry their own cash_mode/amount
--- from the SENDER's perspective. There is no signed cash column anywhere.
---
--- This file is idempotent: safe to re-run.
--- =============================================================
-
 create extension if not exists "pgcrypto";
 
--- =============================================================
--- 1. profiles  (1:1 with auth.users)
--- =============================================================
 create table if not exists public.profiles (
   id                       uuid primary key references auth.users(id) on delete cascade,
   display_name             text,
@@ -71,9 +50,6 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- =============================================================
--- 2. vehicles  (listings)
--- =============================================================
 create table if not exists public.vehicles (
   id           uuid primary key default gen_random_uuid(),
   owner_id     uuid not null references public.profiles(id) on delete cascade,
@@ -90,8 +66,8 @@ create table if not exists public.vehicles (
   condition    text,
   description  text,
 
-  estimated_value int,             -- owner's value estimate in GEL (filters/sorting)
-  engine_size     numeric(3,1),    -- litres, e.g. 2.0
+  estimated_value int,
+  engine_size     numeric(3,1),
   power_hp        int,
   color           text,
   latitude        double precision,
@@ -108,12 +84,10 @@ create table if not exists public.vehicles (
   paused_at    timestamptz,
   archived_at  timestamptz,
 
-  -- Active listings must carry the required city + condition; drafts may omit.
   constraint vehicles_active_requirements
     check (status <> 'active' or (city is not null and condition is not null))
 );
 
--- Additive upgrade for deployments created before the v2 listing fields.
 alter table public.vehicles add column if not exists estimated_value int;
 alter table public.vehicles add column if not exists engine_size     numeric(3,1);
 alter table public.vehicles add column if not exists power_hp        int;
@@ -144,10 +118,6 @@ create index if not exists vehicles_value_idx         on public.vehicles (estima
 create index if not exists vehicles_fuel_idx          on public.vehicles (lower(coalesce(fuel_type, '')));
 create index if not exists vehicles_transmission_idx  on public.vehicles (lower(coalesce(transmission, '')));
 
--- =============================================================
--- 3. vehicle_photos  (max 6 per vehicle, position 0 = cover)
---    Storage path: vehicles/{vehicle_id}/{photo_id}.jpg
--- =============================================================
 create table if not exists public.vehicle_photos (
   id         uuid primary key default gen_random_uuid(),
   vehicle_id uuid not null references public.vehicles(id) on delete cascade,
@@ -159,9 +129,6 @@ create table if not exists public.vehicle_photos (
 
 create index if not exists vehicle_photos_vehicle_idx on public.vehicle_photos (vehicle_id, position);
 
--- =============================================================
--- 4. swap_preferences  (1:1 with a vehicle — cash terms + notes)
--- =============================================================
 create table if not exists public.swap_preferences (
   id          uuid primary key default gen_random_uuid(),
   vehicle_id  uuid not null unique references public.vehicles(id) on delete cascade,
@@ -175,10 +142,6 @@ create table if not exists public.swap_preferences (
 
 create index if not exists swap_preferences_vehicle_idx on public.swap_preferences (vehicle_id);
 
--- =============================================================
--- 5. desired_vehicles  ("I want that car")
---    label required; structured fields used for matching when present.
--- =============================================================
 create table if not exists public.desired_vehicles (
   id              uuid primary key default gen_random_uuid(),
   vehicle_id      uuid not null references public.vehicles(id) on delete cascade,
@@ -200,9 +163,6 @@ create index if not exists desired_vehicles_make_model_idx
 create index if not exists desired_vehicles_category_idx on public.desired_vehicles (lower(coalesce(desired_category, '')));
 create index if not exists desired_vehicles_year_idx     on public.desired_vehicles (min_year, max_year);
 
--- =============================================================
--- 6. offers  (user-generated swap proposals; supports counters)
--- =============================================================
 create table if not exists public.offers (
   id                 uuid primary key default gen_random_uuid(),
 
@@ -212,7 +172,6 @@ create table if not exists public.offers (
   from_user_id       uuid not null references public.profiles(id) on delete cascade,
   to_user_id         uuid not null references public.profiles(id) on delete cascade,
 
-  -- From the SENDER's perspective.
   cash_mode          text not null default 'none'
     check (cash_mode in ('add_money', 'ask_money', 'none', 'flexible')),
   cash_amount        int not null default 0 check (cash_amount >= 0),
@@ -239,14 +198,10 @@ create index if not exists offers_to_user_idx    on public.offers (to_user_id, c
 create index if not exists offers_status_idx     on public.offers (status);
 create index if not exists offers_parent_idx     on public.offers (parent_offer_id);
 
--- Prevent duplicate *pending* offers for the same (offered, target) pair.
 create unique index if not exists offers_unique_pending_idx
   on public.offers (offered_vehicle_id, target_vehicle_id)
   where status = 'pending';
 
--- =============================================================
--- 7. offer_events  (negotiation history)
--- =============================================================
 create table if not exists public.offer_events (
   id         uuid primary key default gen_random_uuid(),
   offer_id   uuid not null references public.offers(id) on delete cascade,
@@ -260,9 +215,6 @@ create table if not exists public.offer_events (
 
 create index if not exists offer_events_offer_idx on public.offer_events (offer_id, created_at);
 
--- =============================================================
--- 8. saved_listings
--- =============================================================
 create table if not exists public.saved_listings (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references public.profiles(id) on delete cascade,
@@ -274,10 +226,6 @@ create table if not exists public.saved_listings (
 create index if not exists saved_listings_user_idx    on public.saved_listings (user_id, created_at desc);
 create index if not exists saved_listings_vehicle_idx on public.saved_listings (vehicle_id);
 
--- =============================================================
--- 9. match_suggestions  (system-generated "you two may want to swap")
---    Pairs stored in canonical order vehicle_a_id < vehicle_b_id.
--- =============================================================
 create table if not exists public.match_suggestions (
   id           uuid primary key default gen_random_uuid(),
   vehicle_a_id uuid not null references public.vehicles(id) on delete cascade,
@@ -304,9 +252,6 @@ create index if not exists match_vehicle_a_idx on public.match_suggestions (vehi
 create index if not exists match_vehicle_b_idx on public.match_suggestions (vehicle_b_id);
 create index if not exists match_status_idx    on public.match_suggestions (status);
 
--- =============================================================
--- 10. notifications
--- =============================================================
 create table if not exists public.notifications (
   id                      uuid primary key default gen_random_uuid(),
   user_id                 uuid not null references public.profiles(id) on delete cascade,
@@ -329,9 +274,6 @@ create table if not exists public.notifications (
 create index if not exists notifications_user_idx   on public.notifications (user_id, created_at desc);
 create index if not exists notifications_unread_idx on public.notifications (user_id) where read_at is null;
 
--- =============================================================
--- 11. conversations  (one accepted offer -> one conversation)
--- =============================================================
 create table if not exists public.conversations (
   id         uuid primary key default gen_random_uuid(),
   offer_id   uuid not null unique references public.offers(id) on delete cascade,
@@ -344,9 +286,6 @@ create table if not exists public.conversations (
 create index if not exists conversations_user_a_idx on public.conversations (user_a, created_at desc);
 create index if not exists conversations_user_b_idx on public.conversations (user_b, created_at desc);
 
--- =============================================================
--- 12. messages
--- =============================================================
 create table if not exists public.messages (
   id              uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references public.conversations(id) on delete cascade,
@@ -358,9 +297,6 @@ create table if not exists public.messages (
 
 create index if not exists messages_conversation_idx on public.messages (conversation_id, created_at);
 
--- =============================================================
--- 13. reports
--- =============================================================
 create table if not exists public.reports (
   id               uuid primary key default gen_random_uuid(),
   reporter_id      uuid not null references public.profiles(id) on delete cascade,
@@ -377,9 +313,6 @@ create table if not exists public.reports (
 create index if not exists reports_reporter_idx on public.reports (reporter_id, created_at desc);
 create index if not exists reports_vehicle_idx  on public.reports (vehicle_id);
 
--- =============================================================
--- 14. listing_moderation_flags
--- =============================================================
 create table if not exists public.listing_moderation_flags (
   id          uuid primary key default gen_random_uuid(),
   vehicle_id  uuid not null references public.vehicles(id) on delete cascade,
@@ -394,9 +327,6 @@ create table if not exists public.listing_moderation_flags (
 create index if not exists moderation_flags_vehicle_idx on public.listing_moderation_flags (vehicle_id);
 create index if not exists moderation_flags_open_idx     on public.listing_moderation_flags (vehicle_id) where resolved_at is null;
 
--- =============================================================
--- 15. listing_boosts_future  (future monetization — architecture only)
--- =============================================================
 create table if not exists public.listing_boosts_future (
   id            uuid primary key default gen_random_uuid(),
   vehicle_id    uuid references public.vehicles(id) on delete cascade,
@@ -411,9 +341,6 @@ create table if not exists public.listing_boosts_future (
 create index if not exists listing_boosts_active_idx
   on public.listing_boosts_future (vehicle_id, boosted_until desc);
 
--- =============================================================
--- updated_at helper
--- =============================================================
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -440,15 +367,6 @@ drop trigger if exists offers_set_updated_at on public.offers;
 create trigger offers_set_updated_at before update on public.offers
   for each row execute function public.set_updated_at();
 
--- =============================================================
--- public_vehicle_feed  (guest-readable feed)
---   security_invoker = false (definer): runs with the view owner's rights so
---   it can read owner trust aggregates from profiles even though callers can
---   no longer read other users' profile rows directly (profiles_select is now
---   own-row only). The WHERE clause restricts output to active listings, and
---   the select list is curated — the raw phone number never appears here.
---   Sort: boosted listings first (future), then newest active.
--- =============================================================
 create or replace view public.public_vehicle_feed
 with (security_invoker = false)
 as
@@ -471,14 +389,10 @@ as
     coalesce(sp.cash_amount, 0)    as cash_amount,
     (boost.boosted_until is not null and boost.boosted_until > now()) as is_boosted,
     boost.boosted_until,
-    -- Owner trust aggregates for the catalog trust strip (no raw PII —
-    -- the phone itself never leaves profiles).
     p.display_name          as owner_name,
     p.phone_verified        as owner_phone_verified,
     p.completed_swaps_count as owner_completed_swaps,
     (p.last_active_at is not null and p.last_active_at > now() - interval '24 hours') as owner_active_today,
-    -- v2 columns appended last: CREATE OR REPLACE VIEW only allows adding
-    -- columns at the end of the select list.
     v.estimated_value,
     v.description
   from public.vehicles v
@@ -505,9 +419,6 @@ as
 
 grant select on public.public_vehicle_feed to anon, authenticated;
 
--- =============================================================
--- Realtime: stream messages, conversations and notifications.
--- =============================================================
 do $$ begin alter publication supabase_realtime add table public.messages;
 exception when duplicate_object then null; end $$;
 do $$ begin alter publication supabase_realtime add table public.conversations;

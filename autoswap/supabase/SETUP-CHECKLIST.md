@@ -16,13 +16,13 @@ look like frontend bugs but are not:
 Each file is idempotent (`if not exists` / `create or replace`), so running one
 twice is harmless.
 
-1. `supabase/schema.sql` — adds the 6 missing `vehicles` columns and the
+1. `supabase/schema.sql` - adds the 6 missing `vehicles` columns and the
    `matches` table
-2. `supabase/functions.sql` — all 18 RPCs and triggers, including the offer
+2. `supabase/functions.sql` - all 18 RPCs and triggers, including the offer
    actions
-3. `supabase/policies.sql` — row-level security
-4. `supabase/storage.sql` — the listing-photos bucket
-5. `supabase/otp_rate_limit.sql` — only if you want phone/SMS login
+3. `supabase/policies.sql` - row-level security
+4. `supabase/storage.sql` - the listing-photos bucket
+5. `supabase/otp_rate_limit.sql` - only if you want phone/SMS login
 
 Then reload the API schema cache, or PostgREST keeps reporting the old shape:
 

@@ -1,16 +1,3 @@
-// =============================================================
-// Edge Function: telegram-notify
-// Database-Webhook target for INSERT on public.notifications. Looks up the
-// recipient's linked Telegram chat and forwards the notification text.
-//
-// Configure a Supabase Database Webhook:
-//   Table: public.notifications · Event: INSERT · Type: Supabase Edge Function
-//   Function: telegram-notify
-// (Add an Authorization header with the service-role key or a shared secret.)
-//
-// Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, TELEGRAM_BOT_TOKEN,
-//      NOTIFY_WEBHOOK_SECRET (optional shared secret checked against Authorization)
-// =============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 
 const TG_API = `https://api.telegram.org/bot${Deno.env.get("TELEGRAM_BOT_TOKEN")}`;
@@ -48,7 +35,6 @@ Deno.serve(async (req) => {
     .eq("id", record.user_id)
     .maybeSingle();
 
-  // No linked chat -> nothing to deliver (in-app notification still stored).
   if (!profile?.telegram_chat_id) return new Response("ok");
 
   const title = record.title ?? "AutoSwap";

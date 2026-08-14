@@ -2,40 +2,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-/* ===================================================================
-   ingest-car-catalog.mjs — load car makes + models into Supabase.
-
-   Source : NHTSA vPIC API (free, no key).
-   Target : public.car_makes / public.car_models (see supabase/car_catalog.sql).
-   Auth   : Supabase service-role key (server-side only — NEVER commit it).
-
-   Run:
-     SUPABASE_URL="https://xxxx.supabase.co" \
-     SUPABASE_SERVICE_ROLE_KEY="eyJhbGci..." \
-     node scripts/ingest-car-catalog.mjs
-
-   On Windows PowerShell:
-     $env:SUPABASE_URL="https://xxxx.supabase.co"
-     $env:SUPABASE_SERVICE_ROLE_KEY="eyJhbGci..."
-     node scripts/ingest-car-catalog.mjs
-
-   Idempotent: upserts, so re-running refreshes without duplicating.
-   Requires Node 18+ (built-in fetch).
-
-   !! NOT THE LIVE CATALOG SOURCE ANYMORE !!
-   The production catalog was replaced with the myauto.ge make/model list,
-   which is what Georgian sellers actually recognise. This script still pulls
-   NHTSA vPIC — a US registry with different makes, different model naming and
-   none of the series structure the picker groups on. Running it upserts over
-   car_makes / car_models and would quietly replace the live catalog with US
-   data. Kept because the fetch/dedupe pipeline is still useful, but it now
-   refuses to run without INGEST_CONFIRM_OVERWRITE=1 so it cannot be triggered
-   by muscle memory or by `npm run ingest:catalog` in a hurry.
-=================================================================== */
 
 import { slugify, normalizeMakeName, dedupeMakes, dedupeModels } from './lib/catalog-utils.mjs';
 
-// See the header: this source is no longer what production runs on.
 if (process.env.INGEST_CONFIRM_OVERWRITE !== '1' && !process.argv.includes('--dry-run')) {
   console.error([
     'ingest-car-catalog: refusing to run.',
@@ -55,8 +24,8 @@ const modelsURL = (makeId) => `${VPIC}/GetModelsForMakeId/${makeId}?format=json`
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const FETCH_CONCURRENCY = 6;   // polite parallelism against vPIC
-const UPSERT_CHUNK = 500;      // rows per PostgREST request
+const FETCH_CONCURRENCY = 6;
+const UPSERT_CHUNK = 500;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const BLOCKLIST_PATH = path.join(SCRIPT_DIR, 'car-make-blocklist.json');
 
@@ -92,7 +61,6 @@ async function fetchJSON(url, attempt = 1) {
   }
 }
 
-// Upsert rows into a Supabase table via PostgREST (merge-duplicates).
 async function upsert(table, rows, onConflict) {
   for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
     const chunk = rows.slice(i, i + UPSERT_CHUNK);
@@ -114,7 +82,6 @@ async function upsert(table, rows, onConflict) {
   }
 }
 
-// Small concurrency pool over an array of async tasks.
 async function pool(items, size, worker) {
   const results = [];
   let cursor = 0;

@@ -1,9 +1,3 @@
--- Remove unwanted catalog makes and their models.
---
--- Run this whole file in Supabase SQL Editor.
--- It creates a temporary list, previews matches, previews misses, then deletes.
--- Deleting a make also deletes its models because car_models.make_id cascades.
-
 drop table if exists unwanted_car_makes;
 
 create temporary table unwanted_car_makes (
@@ -76,7 +70,6 @@ insert into unwanted_car_makes (name) values
   ('KARMA'),
   ('KEPLER MOTORS');
 
--- Preview: makes that will be removed.
 select
   m.id,
   m.name,
@@ -88,7 +81,6 @@ left join public.car_models models on models.make_id = m.id
 group by m.id, m.name
 order by m.name;
 
--- Preview: cleanup names that did not match anything.
 select u.name as not_found
 from unwanted_car_makes u
 left join public.car_makes m
@@ -96,7 +88,6 @@ left join public.car_makes m
 where m.id is null
 order by u.name;
 
--- Delete matching makes. Models delete automatically by cascade.
 delete from public.car_makes m
 using unwanted_car_makes u
 where regexp_replace(upper(trim(m.name)), '\.$', '') = u.name

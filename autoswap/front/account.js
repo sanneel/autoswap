@@ -1,4 +1,3 @@
-
 const {
   Header, Footer, icons, sb, toast, escapeAttr, isUuid,
   authReady, getAuthUser, signOut, freshnessLabel, bustListingCaches,
@@ -93,8 +92,6 @@ function statusBadge(map, status) {
   return `<span class="status-badge status-badge--${escapeAttr(status)}">${map[status] || status}</span>`;
 }
 
-
-
 async function renderGarage(body) {
   const { data, error } = await sb
     .from('vehicles')
@@ -174,8 +171,6 @@ async function renderGarage(body) {
   });
 }
 
-
-
 const OFFER_EMBED = `
   id, status, cash_mode, cash_amount, message, created_at,
   from_user_id, to_user_id,
@@ -240,7 +235,6 @@ async function renderOffers(body, direction) {
     <div class="account-list">${data.map((o) => offerCard(o, direction)).join('')}</div>
   `;
 
-  
   if (direction === 'received') {
     data.filter((o) => o.status === 'pending')
       .forEach((o) => sb.rpc('mark_offer_viewed', { offer_id_input: o.id }).then(() => {}));
@@ -278,8 +272,6 @@ async function renderOffers(body, direction) {
     renderOffers(body, direction);
   });
 }
-
-
 
 async function renderFavorites(body) {
   const { data, error } = await sb
@@ -336,8 +328,6 @@ async function renderFavorites(body) {
     renderFavorites(body);
   });
 }
-
-
 
 function leaveThread() {
   if (activeThreadChannel) {
@@ -441,7 +431,6 @@ async function renderThread(body, conversationId) {
   const thread = body.querySelector('#msg-thread');
   thread.scrollTop = thread.scrollHeight;
 
-  
   sb.from('messages')
     .update({ read_at: new Date().toISOString() })
     .eq('conversation_id', conversationId)
@@ -449,7 +438,6 @@ async function renderThread(body, conversationId) {
     .is('read_at', null)
     .then(() => {});
 
-  
   activeThreadChannel = sb
     .channel(`thread-${conversationId}`)
     .on('postgres_changes', {
@@ -491,12 +479,6 @@ async function renderThread(body, conversationId) {
   });
 }
 
-
-
-// Telegram notifications: shown only when a bot username is configured in
-// supabase-config.js (window.AUTO_SWAP_TELEGRAM_BOT). Connecting writes a
-// one-time link code to the user's own profile, then opens the bot deep link;
-// the telegram-bot Edge Function stores the chat id and clears the code.
 function telegramBotName() {
   return typeof window !== 'undefined' ? (window.AUTO_SWAP_TELEGRAM_BOT || '') : '';
 }
@@ -530,18 +512,7 @@ function bindTelegramConnect(body, profile) {
   });
 }
 
-// ---- Password card -------------------------------------------------------
-// Two shapes, because "change my password" and "I have never had one" are
-// different jobs. An account that already has a password must prove it first;
-// an account that does not (a Google sign-in, or anyone from before passwords
-// existed) sets one straight from the open session. That second path is the
-// whole reason this card exists — the alternative was signing out and going
-// through the reset flow to get a password for the first time.
 function passwordCardHTML(existing, username) {
-  // Password sign-in resolves an account through the shadow address derived
-  // from its number, so it only works for phone-first accounts. A Google
-  // account has its own address and would never be found by that lookup —
-  // offering it a password field would hand out a password that cannot be used.
   if (!isShadowEmail(me.email)) {
     return `
       <section class="pw-card" id="password-card-note">
@@ -609,8 +580,6 @@ function bindPasswordCard(root) {
       fail(result.error, next);
       return;
     }
-    // `me` was captured at init, so refresh it before re-rendering — otherwise
-    // a first-time setup would redraw the same "you have no password" card.
     me = getAuthUser() || me;
     renderTab();
     toast('პაროლი შენახულია');
@@ -629,10 +598,6 @@ async function renderProfile(body) {
     return;
   }
 
-  // The number this account signs in with, in the E.164 form the sign-in form
-  // normalizes to — a password manager keys its saved entry on this, so it has
-  // to be the same string in both places or the change lands on a new entry
-  // and the old password keeps autofilling.
   const authPhone = me.phone || (me.user_metadata && me.user_metadata.phone) || profile.phone || '';
 
   body.innerHTML = `
@@ -653,9 +618,6 @@ async function renderProfile(body) {
       </form>
       <aside class="profile-aside">
         ${
-          // A phone-first account's "email" is the shadow address the auth layer
-          // needs; showing p995…@phone.autoswap.ge to its owner would read as a
-          // mistake. Those accounts are identified by their number instead.
           isShadowEmail(me.email)
             ? `<p><strong>ნომერი:</strong> ${escapeAttr(authPhone || '-')}</p>`
             : `<p><strong>ელფოსტა:</strong> ${escapeAttr(me.email || '-')}</p>`
@@ -693,8 +655,6 @@ async function renderProfile(body) {
     window.location.replace('/');
   });
 }
-
-
 
 async function renderTab() {
   document.querySelector('#app').innerHTML = Shell(loadingHTML());

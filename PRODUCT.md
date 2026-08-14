@@ -14,7 +14,7 @@ AutoSwap is a car-exchange marketplace: list your car, state what you want in re
 
 ## Brand Personality
 
-Premium, calm, precise. The feel of a high-end car configurator crossed with Apple product pages: frosted glass surfaces, soft depth, generous space, one warm accent. The cars are the heroes — the UI is the showroom glass around them. Confidence without shouting.
+Premium, calm, precise. The feel of a high-end car configurator crossed with Apple product pages: frosted glass surfaces, soft depth, generous space, one warm accent. The cars are the heroes - the UI is the showroom glass around them. Confidence without shouting.
 
 ## Anti-references
 
@@ -25,8 +25,8 @@ Premium, calm, precise. The feel of a high-end car configurator crossed with App
 ## Design Principles
 
 1. **Cars are the content, glass is the frame.** Photography and vehicle imagery get maximum contrast and space; chrome (nav, panels, filters) stays translucent and quiet.
-2. **One accent, spent on action.** The warm copper accent is reserved for CTAs and key interactive moments — never for decoration. (The copper CTA buttons are an explicit keep from the previous design.)
-3. **Depth over borders.** Hierarchy comes from layered translucency, blur, and soft shadow — not from 1px borders and filled boxes.
+2. **One accent, spent on action.** The warm copper accent is reserved for CTAs and key interactive moments - never for decoration. (The copper CTA buttons are an explicit keep from the previous design.)
+3. **Depth over borders.** Hierarchy comes from layered translucency, blur, and soft shadow - not from 1px borders and filled boxes.
 4. **Show the swap.** The two-car "I have / I want" pairing is the signature brand moment; every page should echo the exchange metaphor.
 5. **Georgian-first typography.** Type must render beautifully in Georgian script; display and body faces are chosen for ka coverage, not just Latin looks.
 

@@ -1,7 +1,5 @@
-
 const { assets, icons, Header, Footer, escapeAttr, getCurrency, getUsdRate, onCurrencyChange, getLogoUrl } = window.AutoSwap;
 
-// Hero cash slider range depends on the display currency.
 function heroSliderCfg() {
   return getCurrency() === 'USD'
     ? { max: 10000, step: 500, sym: '$' }
@@ -15,12 +13,8 @@ function formatSliderDiff(raw) {
   if (value < 0) return `ვითხოვ ${sym}${amount}`;
   return 'თანხის გარეშე';
 }
-// Short alias, every user-controlled string rendered into innerHTML goes
-// through this. Escapes & < > " so listing data can't inject markup.
 const esc = escapeAttr;
 
-// Real brand logos (self-hosted from the MIT-licensed car-logos-dataset,
-// under assets/logos/<slug>.png). BRAND_SLUGS maps a make name to its file.
 const BRAND_SLUGS = {
   BMW: 'bmw', 'Mercedes-Benz': 'mercedes-benz', Audi: 'audi', Toyota: 'toyota',
   Volkswagen: 'volkswagen', Hyundai: 'hyundai', Lexus: 'lexus', Kia: 'kia',
@@ -30,9 +24,6 @@ const BRAND_SLUGS = {
   Renault: 'renault', Peugeot: 'peugeot',
 };
 
-// Only these five carry a logo. Everything else is text, with no placeholder
-// glyph: a generic car icon next to "Alfa Romeo" says nothing the word does not
-// already say, and repeating it down the list turns real marks into decoration.
 const FEATURED_BRANDS = ['BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Porsche'];
 const FEATURED_BRAND_SET = new Set(FEATURED_BRANDS);
 
@@ -45,8 +36,6 @@ function brandLogo(make) {
   return `<img class="brand-logo-img" src="${esc(getLogoUrl(make))}" alt="${esc(make)}" loading="lazy" width="34" height="34">`;
 }
 
-// Featured row pinned to the top of the picker: the five marks as tiles, so the
-// common picks are one click away and the list below can stay pure text.
 function featuredBrandTiles() {
   return `
     <div class="brand-featured" role="group" aria-label="პოპულარული მარკები">
@@ -57,9 +46,6 @@ function featuredBrandTiles() {
     </div>`;
 }
 
-// Every row is text, the featured five included. Their logos appear once, in
-// the row of tiles above; repeating them beside list entries made five brands
-// look promoted over the rest and turned the list into a logo gallery.
 function brandPickerOptionHTML(item, index) {
   return `
     <button class="brand-picker-option is-textonly" type="button" role="option" aria-selected="false" data-index="${index}">
@@ -111,8 +97,6 @@ function normalizeBrandText(value) {
     .trim();
 }
 
-// Constant for the page's lifetime, but it sat in a default-parameter
-// expression that re-ran on every keystroke of the picker. Compute once.
 let heroBrandNamesCache = null;
 function heroBrandNames() {
   if (!heroBrandNamesCache) {
@@ -182,17 +166,9 @@ function brandMatchesTerm(make, term) {
   return key.includes(query) || labelKey.includes(query);
 }
 
-// Suggestion rows for the searchable picker: makes first, then models as
-// "Make Model" (myauto-style). Everything is contains-matched, so "530"
-// finds "BMW 530i" and "bmw 5" narrows to the 5-series models.
 async function brandPanelItems(term) {
   const query = String(term || '').trim();
   if (!query) {
-    // At rest the panel is the browse surface, so it has to carry the whole
-    // catalog — the old hardcoded list stopped at ~17 brands and everything
-    // else was unreachable without typing. The curated names still lead (they
-    // carry the display casing and the popular order); catalog-only names
-    // follow alphabetically. Falls back to the curated list offline.
     const fullCatalog = await heroMakes();
     const restBy = new Map();
     for (const name of [...heroBrandNames(), ...fullCatalog.map((m) => m.name)]) {
@@ -204,12 +180,6 @@ async function brandPanelItems(term) {
     return restNames.map((make) => ({ group: 'make', make, label: displayBrand(make) }));
   }
   const catalog = await heroMakes();
-  // Set dedupes by exact string, so the local list's "Audi" and the
-  // catalog's "AUDI" both survived and the picker listed every brand
-  // twice. Key on the normalized name instead — normalizeBrandText
-  // lowercases and strips punctuation, so "Mercedes-Benz" and
-  // "MERCEDES-BENZ" collapse too. Local names come first and win, since
-  // they carry the display casing.
   const byBrand = new Map();
   for (const name of [...heroBrandNames(), ...catalog.map((m) => m.name)]) {
     if (!name) continue;
@@ -332,9 +302,6 @@ const legacyListings = [
   },
 ];
 
-// Empty until the feed answers. This used to hold four placeholder cars, so
-// the home page painted invented listings and then swapped them for real ones
-// a moment later — the visible stutter on load.
 let activeListings = [];
 let feedLoaded = false;
 
@@ -361,7 +328,6 @@ function Hero() {
             </div>
           </article>
 
-
           <article class="hero-car hero-car-right">
             <img src="${assets.porsche}" alt="Porsche 718 Spyder" width="1672" height="837" decoding="async" fetchpriority="high" data-fallback="${assets.audi}">
             <div class="hero-car-caption">
@@ -382,8 +348,6 @@ function Hero() {
   `;
 }
 
-// Live marketplace numbers under the search bar, real counts only, no
-// vanity metrics. Recomputed when the Supabase feed arrives.
 function heroProofText(cars) {
   const active = cars.length;
   if (!active) return '';
@@ -457,14 +421,9 @@ function SearchBar() {
 
 const CASH_ICONS = { add: icons.trendUp, ask: icons.trendDown, flexible: icons.swap, none: icons.equals };
 
-
-
 const LANDING_CARD_COUNT = 4;
 const landingCards = (cars) => cars.slice(0, LANDING_CARD_COUNT).map(ListingCard).join('');
 
-// Hero search typeahead: contains-match against the car catalog
-// (Supabase car_makes/car_models with ilike, bundled fallback offline).
-// Typing "bmw 530" offers "BMW 530i", "BMW 530d", ...
 let heroMakesPromise = null;
 function heroMakes() {
   if (!heroMakesPromise) {
@@ -492,7 +451,6 @@ async function vehicleSuggestions(term) {
     return rows.map((m) => ({ make: make.name, label: `${make.name} ${m.name}` }));
   }
 
-  // No make hit: the term itself may be a model ("530", "camry").
   const byId = new Map(makes.map((m) => [String(m.id), m.name]));
   const models = await window.AutoSwap.searchModels(query, null, 20).catch(() => []);
   return models
@@ -517,7 +475,7 @@ function bindHeroSuggest(input, listId) {
     const stamp = ++seq;
     timer = setTimeout(async () => {
       const items = await heroSuggestions(input.value);
-      if (stamp !== seq) return; // a newer keystroke won
+      if (stamp !== seq) return;
       list.innerHTML = items
         .map((label) => `<option value="${window.AutoSwap.escapeAttr(label)}"></option>`)
         .join('');
@@ -537,9 +495,6 @@ function bindHavePicker(form) {
   const search = picker.querySelector('[data-have-search]');
   if (!input || !makeInput || !modelInput || !panel || !list) return;
 
-  // Same touch arrangement as the brand picker: readOnly keeps the keyboard
-  // down when the field is tapped (the tap still focuses it, so the panel
-  // still opens), and the panel's ძებნა box is the opt-in typing surface.
   const touch = typeof window.matchMedia === 'function'
     && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
   if (touch && search && searchRow) {
@@ -570,8 +525,6 @@ function bindHavePicker(form) {
     panel.classList.toggle('is-empty', !items.length);
     const hasBoth = items.some((it) => it.group === 'make') && items.some((it) => it.group === 'model');
     let lastGroup = '';
-    // Featured tiles show only at rest. Once the user is typing, the filtered
-    // results are the answer and a fixed row of five is just in the way.
     const featured = input.value.trim() ? '' : featuredBrandTiles();
     list.innerHTML = featured + items.map((item, index) => {
       const header = hasBoth && item.group !== lastGroup
@@ -599,7 +552,6 @@ function bindHavePicker(form) {
     input.value = item.label;
     if (search) search.value = item.label;
     setSelected({ make: item.make, model: stripResolvedMake(item.label, item.make) });
-    // Same drill-in as the brand picker: make → show its models, stay open.
     if (item.group === 'make' && !alreadyChosen) {
       if (!touch) input.focus();
       refresh();
@@ -633,8 +585,6 @@ function bindHavePicker(form) {
     if (!input.value.trim()) setSelected(null);
   });
 
-  // Panel box writes through to the field so refresh() and every other
-  // input.value reader stays untouched.
   search?.addEventListener('input', () => {
     input.value = search.value;
     input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -669,15 +619,12 @@ function bindHavePicker(form) {
   });
 
   list.addEventListener('mousedown', (event) => {
-    // A featured tile behaves exactly as if the make had been typed: it fills
-    // the field and re-runs the search, so the model list follows immediately.
     const tile = event.target.closest('[data-featured-make]');
     if (tile) {
       event.preventDefault();
       input.value = tile.dataset.featuredMake;
       if (search) search.value = input.value;
       input.dispatchEvent(new Event('input', { bubbles: true }));
-      // Refocusing on touch would raise the keyboard this panel avoids.
       if (!touch) input.focus();
       return;
     }
@@ -703,11 +650,6 @@ function bindBrandPicker(form) {
   const search = picker.querySelector('[data-brand-search]');
   if (!input || !hidden || !panel || !list) return;
 
-  // Touch gets the tile-first behaviour: tapping the field opens the panel of
-  // brand logos with the keyboard down, and typing only starts if the user
-  // taps the search box inside. readOnly is what suppresses the keyboard —
-  // the field still focuses, so the panel still opens. Pointer devices keep
-  // typing directly in the field, where a keyboard costs nothing.
   const touch = typeof window.matchMedia === 'function'
     && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
   if (touch && search && searchRow) {
@@ -738,8 +680,6 @@ function bindBrandPicker(form) {
     panel.classList.toggle('is-empty', !items.length);
     const hasBoth = items.some((it) => it.group === 'make') && items.some((it) => it.group === 'model');
     let lastGroup = '';
-    // Featured tiles show only at rest. Once the user is typing, the filtered
-    // results are the answer and a fixed row of five is just in the way.
     const featured = input.value.trim() ? '' : featuredBrandTiles();
     list.innerHTML = featured + items.map((item, index) => {
       const header = hasBoth && item.group !== lastGroup
@@ -761,14 +701,12 @@ function bindBrandPicker(form) {
   const choose = (index) => {
     const item = items[Number(index)];
     if (!item) return;
-    seq += 1; // invalidate any in-flight refresh
+    seq += 1;
     window.clearTimeout(timer);
     const alreadyChosen = input.value.trim().toLowerCase() === item.label.toLowerCase();
     input.value = item.label;
     if (search) search.value = item.label;
     setSelected(item.make);
-    // myauto-style drill-in: picking a make keeps the panel open and lists
-    // that make's models; picking it a second time confirms and closes.
     if (item.group === 'make' && !alreadyChosen) {
       if (!touch) input.focus();
       refresh();
@@ -804,10 +742,6 @@ function bindBrandPicker(form) {
 
   input.addEventListener('input', onQueryChanged);
 
-  // The panel's own box drives the same query as the field. It writes through
-  // to `input` rather than holding separate state, so every existing read of
-  // input.value — refresh(), the tiles-at-rest check in renderPanel() — keeps
-  // working untouched.
   search?.addEventListener('input', () => {
     input.value = search.value;
     onQueryChanged();
@@ -844,18 +778,13 @@ function bindBrandPicker(form) {
     if (event.key === 'Escape') setOpen(false);
   });
 
-  // mousedown (not click) so the option wins the race against input blur
   list.addEventListener('mousedown', (event) => {
-    // A featured tile behaves exactly as if the make had been typed: it fills
-    // the field and re-runs the search, so the model list follows immediately.
     const tile = event.target.closest('[data-featured-make]');
     if (tile) {
       event.preventDefault();
       input.value = tile.dataset.featuredMake;
       if (search) search.value = input.value;
       input.dispatchEvent(new Event('input', { bubbles: true }));
-      // Refocusing would summon the keyboard on touch, which is the whole
-      // thing this panel exists to avoid. Pointer devices keep the caret.
       if (!touch) input.focus();
       return;
     }
@@ -878,8 +807,6 @@ function bindBrandPicker(form) {
     if (!picker.contains(event.target)) setOpen(false);
   });
 }
-
-
 
 const TITLE_MAX_CHARS = 26;
 function trimTitle(title) {
@@ -946,8 +873,6 @@ function FeaturedSwap(car) {
 }
 
 function LandingListings(cars) {
-  // Loading and empty are different answers. Before the feed replies this has
-  // to hold space, not claim there is nothing here.
   if (!feedLoaded) {
     return `<div class="listing-grid listing-grid--trio">${
       Array.from({ length: 3 }, () => '<div class="skeleton-row"></div>').join('')
@@ -981,9 +906,6 @@ function ListingsSection(cars = activeListings) {
   `;
 }
 
-// The one thing a first-time visitor must leave with: how a swap actually
-// works. A real 3-step sequence (list → match → agree), so the numbers carry
-// information, this is not decorative section scaffolding.
 function HowItWorks() {
   return `
     <section class="how-strip" aria-labelledby="how-title">
@@ -1032,7 +954,6 @@ function ClosingStrip() {
 
 function BrowseStrip() {
   const countByMake = (make) => activeListings.filter((car) => car.make === make).length;
-  // Brands shown as logos; only render a make that actually has listings.
   const brands = [
     { make: 'BMW' },
     { make: 'Mercedes-Benz', label: 'Mercedes' },
@@ -1096,9 +1017,6 @@ function bindDragRails(root = document) {
     rail.addEventListener('pointermove', (event) => {
       if (!active) return;
       const delta = event.clientX - startX;
-      // Capture the pointer only once a real drag starts. Capturing on
-      // pointerdown retargets the eventual click to the rail itself, which
-      // silently kills every chip/link click inside it.
       if (!moved && Math.abs(delta) > 6) {
         moved = true;
         rail.classList.add('is-dragging');
@@ -1136,7 +1054,6 @@ function bindDragRails(root = document) {
     });
   });
 
-  // Scroll arrows are dead controls when everything already fits, hide them.
   const syncRailArrows = () => {
     root.querySelectorAll('[data-drag-scroll]').forEach((rail) => {
       rail.parentElement?.classList.toggle('rail-no-overflow', rail.scrollWidth <= rail.clientWidth + 1);
@@ -1156,7 +1073,6 @@ function bindInteractions() {
   });
   if (slider && sliderValue) sliderValue.textContent = formatSliderDiff(slider.value);
 
-  // Re-scale the slider range + label when the header currency toggles.
   if (typeof onCurrencyChange === 'function') {
     onCurrencyChange(() => {
       if (!slider) return;
@@ -1172,8 +1088,6 @@ function bindInteractions() {
   bindHavePicker(form);
   bindBrandPicker(form);
 
-  // Image fallback wired in JS (not an inline onerror handler) so the strict
-  // CSP can keep script-src free of 'unsafe-inline'.
   document.querySelectorAll('img[data-fallback]').forEach((img) => {
     img.addEventListener('error', function onError() {
       img.removeEventListener('error', onError);
@@ -1181,7 +1095,6 @@ function bindInteractions() {
     });
   });
 
-  
   let revAudio = null;
   let activeRevBtn = null;
 
@@ -1208,8 +1121,6 @@ function bindInteractions() {
     });
   });
 
-  
-  
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -1235,14 +1146,12 @@ function bindInteractions() {
     if (have) params.set('have', have);
     if (myCar && !resolvedMake && !query) params.set('onlyMatches', '1');
     if (city) params.set('city', city);
-    // Slider is from the searcher's perspective: "I add" → the owner asks
-    // for money (cash=ask); "I receive" → the owner adds (cash=add).
     if (diff > 0) params.set('cash', 'ask');
     else if (diff < 0) params.set('cash', 'add');
     const qs = params.toString();
     window.location.href = qs ? `/cars?${qs}` : '/cars';
   });
-  
+
   bindDragRails();
 }
 

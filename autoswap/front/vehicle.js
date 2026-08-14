@@ -1,16 +1,12 @@
-
 const {
   Header, Footer, icons, fetchVehicleById, fetchVehiclePhotos, escapeAttr,
   fetchFeed, priceCurrencyToggle, toast,
 } = window.AutoSwap;
-// Escapes & < > ", every user-controlled listing string goes through this
-// before being placed into innerHTML.
 const esc = escapeAttr;
 
 function getId() {
   return new URLSearchParams(window.location.search).get('id') || '';
 }
-
 
 function carCash(car) {
   switch (car.cashType) {
@@ -29,8 +25,6 @@ function descriptionFor(car) {
   if (car.description) return car.description;
   return 'მფლობელმა დამატებითი ინფო არ მიუთითა.';
 }
-
-
 
 function Gallery(car, photos) {
   const sources = (photos && photos.length ? photos : [car.image]).filter(Boolean);
@@ -84,9 +78,6 @@ function Breadcrumb(car) {
     </nav>`;
 }
 
-// Where this listing's value sits among comparable listings currently on the
-// site. Same category only, and suppressed below a real sample — a "price
-// position" derived from two other cars would be decoration, not information.
 const PRICE_POS_MIN_SAMPLE = 5;
 
 function pricePosition(car, comparables) {
@@ -107,8 +98,6 @@ function pricePosition(car, comparables) {
 
 function PricePositionBar(pos) {
   if (!pos) return '';
-  // "საშუალო ფასი" tells the reader nothing they can act on — the bar only
-  // earns its space when the price is actually notable in one direction.
   if (pos.band === 'mid') return '';
   const labels = { low: 'დაბალი ფასი', high: 'მაღალი ფასი' };
   return `
@@ -143,7 +132,7 @@ function StickyBar(car, cash) {
 
 function DetailPage(car, photos, comparables) {
   const cash = carCash(car);
-  
+
   const stats = [
     car.year ? { label: 'წელი', value: car.year } : null,
     car.mileage ? { label: 'გარბენი', value: car.mileage } : null,
@@ -230,9 +219,6 @@ function bindThumbs() {
   });
 }
 
-// Reveals the sticky CTA bar once the main image has scrolled away, so the
-// offer action is never out of reach. Falls back to always-hidden where
-// IntersectionObserver is unavailable rather than pinning it permanently.
 function bindStickyBar() {
   const bar = document.querySelector('#detail-stickybar');
   const media = document.querySelector('.detail-main-media');
@@ -257,7 +243,7 @@ function bindGalleryTools() {
     if (!share) return;
     const payload = { title: document.title, url: window.location.href };
     if (navigator.share) {
-      navigator.share(payload).catch(() => { /* user dismissed */ });
+      navigator.share(payload).catch(() => {  });
       return;
     }
     navigator.clipboard?.writeText(payload.url)
@@ -285,12 +271,9 @@ function openLightbox(src) {
 
 async function render() {
   const id = getId();
-  // Every listing is a real one now, so there is no demo set to check first
-  // and no isDemo branch downstream of it.
   const car = id ? await fetchVehicleById(id) : null;
 
   const photos = car ? await fetchVehiclePhotos(car.id) : [];
-  // Comparison set for the price-position bar.
   let comparables = [];
   if (car) {
     const feed = await fetchFeed().catch(() => null);
