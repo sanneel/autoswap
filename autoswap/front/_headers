@@ -6,3 +6,23 @@
   Permissions-Policy: accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
   Cross-Origin-Opener-Policy: same-origin-allow-popups
   Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# `npm run build` renames every JS/CSS file after a hash of its contents, so a
+# changed file is a different URL and these can never go stale. Without this the
+# browser re-downloads styles.css + shared.js + the page script on every
+# navigation - measured at 431 KB for a single click of the hero search.
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+# Images and audio are not content-hashed (they are versioned by hand with ?v=),
+# so they get a long but finite lifetime rather than `immutable`.
+/assets/*
+  Cache-Control: public, max-age=2592000
+
+# HTML is deliberately left to revalidate on every request (Pages' default) so a
+# new deploy is picked up immediately. Do not add a Cache-Control rule under /*:
+# it would also match the assets above and produce a duplicate header.
+
