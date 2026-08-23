@@ -89,7 +89,7 @@ function vehicleTitle(v) {
 }
 
 function statusBadge(map, status) {
-  return `<span class="status-badge status-badge--${escapeAttr(status)}">${map[status] || status}</span>`;
+  return `<span class="status-badge status-badge--${escapeAttr(status)}">${escapeAttr(map[status] || status)}</span>`;
 }
 
 async function renderGarage(body) {

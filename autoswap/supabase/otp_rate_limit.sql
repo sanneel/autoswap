@@ -50,6 +50,7 @@ declare
   -- Rule 3: distributed (IP-rotation) velocity
   c_glob_window  constant interval := interval '30 seconds';
   c_glob_max_ips constant int      := 3;            -- 4th distinct IP trips the cooldown
+  c_glob_min_ph  constant int      := 3;            -- ...but only if several NUMBERS are being hit
   c_glob_block   constant interval := interval '3 minutes';
 
   v_now      timestamptz := now();
@@ -57,6 +58,7 @@ declare
   v_ip_count int;
   v_ph_count int;
   v_ip_distinct int;
+  v_ph_distinct int;
 begin
   -- Opportunistic housekeeping (cheap, indexed); keeps the tables tiny.
   delete from public.otp_request_events where created_at < v_now - interval '1 hour';
@@ -126,11 +128,17 @@ begin
   end if;
 
   -- 4) Distributed velocity: many distinct IPs in a tiny window = rotation.
-  select count(distinct ip) into v_ip_distinct
+  -- Counting distinct IPs alone made this a denial-of-service lever: anyone who
+  -- could vary their apparent IP tripped a GLOBAL cooldown for every user. The
+  -- rule now also requires several distinct numbers to be under fire, which is
+  -- what an actual rotation attack looks like - and each of those numbers is
+  -- independently capped by rule 2, so the bar cannot be met cheaply.
+  select count(distinct ip), count(distinct phone)
+    into v_ip_distinct, v_ph_distinct
     from public.otp_request_events
    where ip is not null and created_at > v_now - c_glob_window;
 
-  if v_ip_distinct > c_glob_max_ips then
+  if v_ip_distinct > c_glob_max_ips and v_ph_distinct >= c_glob_min_ph then
     v_until := v_now + c_glob_block;
     insert into public.otp_blocks (scope, blocked_until, reason)
       values ('global', v_until, 'distributed velocity')

@@ -48,6 +48,43 @@ begin
   assert v->>'scope' = 'blocked',      'global: later hit sees existing block';
 end $$;
 
+
+-- The distributed rule must not be a DoS lever: one caller varying its apparent
+-- IP against a SINGLE number must never trip the global cooldown, because that
+-- would deny sign-in to everyone else.
+do $$
+declare v jsonb;
+begin
+  delete from public.otp_request_events; delete from public.otp_blocks;
+  v := public.otp_rate_check('192.0.2.11', '+995500000201');
+  v := public.otp_rate_check('192.0.2.12', '+995500000201');
+  v := public.otp_rate_check('192.0.2.13', '+995500000201');
+  v := public.otp_rate_check('192.0.2.14', '+995500000201');   -- 4 distinct IPs, one number
+  assert not (v->>'allowed')::boolean, 'single-number flood should still be blocked';
+  assert v->>'scope' = 'phone',
+    format('flood at one number must block by phone, not globally (scope=%s)', v->>'scope');
+  assert not exists (select 1 from public.otp_blocks
+                      where scope = 'global' and blocked_until > now()),
+    'a single-number flood must not raise a GLOBAL block';
+
+  -- an unrelated user is still able to sign in
+  v := public.otp_rate_check('198.51.100.77', '+995500000299');
+  assert (v->>'allowed')::boolean, 'bystander was denied - the global DoS lever is still open';
+end $$;
+
+-- A genuine rotation attack - many IPs across many numbers - must still trip it.
+do $$
+declare v jsonb;
+begin
+  delete from public.otp_request_events; delete from public.otp_blocks;
+  v := public.otp_rate_check('192.0.2.21', '+995500000301');
+  v := public.otp_rate_check('192.0.2.22', '+995500000302');
+  v := public.otp_rate_check('192.0.2.23', '+995500000303');
+  v := public.otp_rate_check('192.0.2.24', '+995500000304');
+  assert not (v->>'allowed')::boolean, 'distributed rotation should be blocked';
+  assert v->>'scope' = 'global', format('rotation should trip the global scope (scope=%s)', v->>'scope');
+end $$;
+
 rollback;
 
 \echo 'otp-rate-limit.test.sql: all assertions passed'

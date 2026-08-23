@@ -32,11 +32,21 @@ SQL regression tests (`npm run test:db:security`).
 | **P2 `telegram_chat_id` client-writable — same ineffective column `REVOKE`** | `telegram.sql` protected the column with `revoke update (telegram_chat_id)`, a no-op for the same reason as the P0 above. Only the bot ever sets it, after the user proves ownership by sending their link code to it — but a client could point their own profile at any chat id, skipping that check and pushing their notifications into a stranger's Telegram. Fix: a `profiles_guard_telegram` trigger freezes the column for direct client writes while the bot (service role) still sets it. It lives in `telegram.sql` rather than the shared profiles guard because that file is optional — a deployment without it has no such column, and a trigger referencing a missing field would break every profile update. `telegram_link_code` stays client-writable; the client generates it. |
 | **P1 `ingest-car-catalog.mjs --dry-run` still wrote** | The advertised "inspect without writing" flag only let the script *start*; `main()` still upserted `car_makes`/`car_models`, destroying the curated live catalog. Fix: `--dry-run` now short-circuits every `upsert()` and logs what it *would* write. |
 
-Known, accepted residuals (documented, not code-fixable here): the OTP rate limiter
-trusts the left-most `X-Forwarded-For` hop (spoofable — the built-in Supabase auth
-limits remain the hard backstop, and the distributed rule is deliberately a short
-self-healing cooldown); wildcard CORS on the edge functions is inert because auth is
-bearer-token, not cookie-based (no `Allow-Credentials`).
+## Third pass (the residuals above, now closed)
+
+| Finding | Fix |
+|---|---|
+| **P2 Rate limiter keyed on a spoofable IP → per-IP bypass + global OTP outage** | `clientIp()` read the **left-most** `X-Forwarded-For` entry — the one the caller writes — and only consulted `x-real-ip` when `X-Forwarded-For` was absent, so merely sending the header shadowed the trustworthy value. One machine could reset its own bucket and, worse, invent the 4 "distinct IPs" that trip the distributed rule, whose block is **global**: a DoS lever. Fix: a shared `back/_shared/client-ip.ts` prefers headers a proxy *overwrites* (`cf-connecting-ip`, `true-client-ip`, `x-real-ip`, `fly-client-ip`) and only then falls back to `X-Forwarded-For`, counted **from the right** (`TRUSTED_PROXY_HOPS`, default 1). When nothing trustworthy is found it returns `null`, so `otp_rate_check` skips the IP-keyed rules rather than enforcing them on attacker-chosen data — the per-phone rule keys on the number being texted and still holds. |
+| **P2 The distributed rule was itself the DoS lever** | It tripped a global cooldown on *distinct IPs alone*. It now also requires several distinct **numbers** to be under fire (`c_glob_min_ph`), which is what a real rotation attack looks like — and each of those numbers is independently capped by the per-phone rule, so the bar cannot be met cheaply. A flood at a single number is blocked by phone scope and no longer denies sign-in to everyone else; regression-tested both ways. |
+| **P3 Wildcard CORS on the SMS-spending endpoints** | Inert on the five JWT-authenticated functions (bearer auth, no `Allow-Credentials`), but `request-otp`/`verify-otp` are callable without a JWT and cost real money, so any page could pump OTPs at a number through a visitor's browser. Those two now reflect only allow-listed origins (`ALLOWED_ORIGINS`, default `autoswap.ge` + `www`, plus localhost for development). The other five are unchanged. |
+| **P3 SMS provider errors echoed to the caller** | `request-otp` returned the provider's raw message, error code and HTTP status on a 502. Now logged server-side and answered with a generic message. |
+| **P3 Webhook secret compared with `!==`** | `telegram-bot` now uses a constant-time comparison. |
+| **P3 `vehicle_matches_desire` was a matching oracle** | `SECURITY DEFINER` and granted to `authenticated`, so any client could ask "does A match B?" for rows RLS hides. No client calls it — execute is now revoked from clients; `find_mutual_matches_for_vehicle` (also definer) still uses it. |
+| **P3 Escapers missed `'` and `` ` `` ** | Not exploitable today (every attribute is double-quoted), but one refactor away from being so. `escapeAttr`/`escapeHtml` now cover both. `optionTags()` escapes its value and label, `statusBadge()` escapes an unmapped status, and the dead `selectField()` was deleted. |
+
+Remaining accepted residual: the Supabase session lives in `localStorage` (the
+library default — moving it would end "stay signed in"), and `script-src` still
+allows `cdn.jsdelivr.net` for supabase-js, pinned with an SRI hash.
 
 ### Required migration step (phone-login accounts)
 
@@ -64,6 +74,13 @@ schema.sql → functions.sql → policies.sql → storage.sql
 verify_ge_auth.sql  → then run backfill_verified_phones() (see above)
 telegram.sql   (optional, for Telegram notifications)
 ```
+
+## Edge Function environment variables
+
+| Variable | Used by | Notes |
+| --- | --- | --- |
+| `ALLOWED_ORIGINS` | `request-otp`, `verify-otp` | Comma-separated browser origins allowed to call the OTP endpoints. Defaults to `https://autoswap.ge,https://www.autoswap.ge` (localhost is always allowed). **Set this for preview deployments** — a `*.pages.dev` URL is not allowed by default and its OTP calls will be blocked by the browser. |
+| `TRUSTED_PROXY_HOPS` | `request-otp`, `verify-otp` | How many proxies in front of the function append to `X-Forwarded-For`. Default `1` (trust the right-most entry). Only needs changing if extra proxies are put in front of Supabase; getting it wrong makes the limiter key on the wrong address. |
 
 ## Must configure in the Supabase dashboard (not in code)
 

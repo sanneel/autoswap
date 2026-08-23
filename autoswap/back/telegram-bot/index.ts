@@ -10,6 +10,20 @@ async function sendMessage(chatId: number | string, text: string) {
   });
 }
 
+// Compare the webhook secret without leaking how far the match got. `!==` on
+// strings bails at the first differing byte; over a network that difference is
+// impractical to measure, but a secret comparison is the wrong place to rely on
+// that being true.
+function timingSafeEqual(a: string, b: string): boolean {
+  const encoder = new TextEncoder();
+  const x = encoder.encode(a);
+  const y = encoder.encode(b);
+  let diff = x.length ^ y.length;
+  const length = Math.max(x.length, y.length);
+  for (let i = 0; i < length; i += 1) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -17,7 +31,7 @@ Deno.serve(async (req) => {
 
   const secret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
   if (!secret) return new Response("Server misconfigured: TELEGRAM_WEBHOOK_SECRET not set", { status: 500 });
-  if (req.headers.get("x-telegram-bot-api-secret-token") !== secret) {
+  if (!timingSafeEqual(req.headers.get("x-telegram-bot-api-secret-token") || "", secret)) {
     return new Response("Forbidden", { status: 403 });
   }
 

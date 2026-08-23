@@ -26,7 +26,7 @@ const IS_TOUCH = typeof window.matchMedia === 'function'
   && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 function escapeHtml(value) {
-  return String(value).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  return String(value).replace(/[&<>"'`]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
 }
 
 const PAGE_SIZE = 24;
@@ -210,22 +210,11 @@ function optionTags(values, selected, labelMap) {
     .map((value) => {
       const label = labelMap ? labelFor(labelMap, value) : value;
       const isSel = String(value) === String(selected) ? ' selected' : '';
-      return `<option value="${value}"${isSel}>${label}</option>`;
+      return `<option value="${escapeHtml(value)}"${isSel}>${escapeHtml(label)}</option>`;
     })
     .join('');
 }
 
-function selectField(name, labelText, values, selected, allText, labelMap, extraClass = '') {
-  return `
-    <label class="filter-field${extraClass ? ` ${extraClass}` : ''}">
-      <span class="filter-label">${labelText}</span>
-      <select name="${name}">
-        <option value="">${allText}</option>
-        ${optionTags(values, selected, labelMap)}
-      </select>
-    </label>
-  `;
-}
 
 function comboField(kind, labelText, value, placeholder, disabled = false) {
   const listId = `${kind}-combo-list`;

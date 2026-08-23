@@ -30,7 +30,12 @@ as $$
   where v.id = p_vehicle_id and d.id = p_desired_vehicle_id;
 $$;
 
-grant execute on function public.vehicle_matches_desire(uuid, uuid) to authenticated, service_role;
+-- SECURITY DEFINER, so it reads vehicles/desired_vehicles with RLS bypassed and
+-- answers "does A match B?" for any pair of ids - a matching oracle over rows the
+-- caller cannot otherwise see. Nothing client-side calls it; it is only used
+-- inside find_mutual_matches_for_vehicle (itself definer), which keeps working.
+revoke all on function public.vehicle_matches_desire(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.vehicle_matches_desire(uuid, uuid) to service_role;
 
 create or replace function public.find_mutual_matches_for_vehicle(p_vehicle_id uuid)
 returns int
