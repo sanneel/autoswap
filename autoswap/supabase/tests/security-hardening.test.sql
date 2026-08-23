@@ -144,5 +144,47 @@ begin
   end if;
 end $$;
 
+-- ============================================================================
+-- telegram_chat_id: only the bot (service role) may set it - the same
+-- ineffective column REVOKE as the profiles trust columns. Skipped when the
+-- optional telegram.sql has not been applied.
+-- ============================================================================
+do $$
+declare u uuid; chat text; code text;
+begin
+  if not exists (select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'profiles'
+                    and column_name = 'telegram_chat_id') then
+    raise notice 'telegram.sql not applied - skipping telegram_chat_id guard test';
+    return;
+  end if;
+
+  insert into auth.users(email) values('tg@test.local') returning id into u;
+  update public.profiles set telegram_chat_id = '555000111' where id = u;  -- as the bot
+
+  -- client tries to repoint the chat id, and legitimately sets a link code
+  set local role authenticated;
+  perform set_config('request.jwt.claim.sub', u::text, true);
+  update public.profiles
+     set telegram_chat_id = '999999999', telegram_link_code = 'abc123'
+   where id = u;
+  reset role;
+
+  select telegram_chat_id, telegram_link_code into chat, code from public.profiles where id = u;
+  if chat <> '555000111' then
+    raise exception 'TEST FAILED: client repointed telegram_chat_id (now %)', chat;
+  end if;
+  if code is distinct from 'abc123' then
+    raise exception 'TEST FAILED: client could not set telegram_link_code (got %)', code;
+  end if;
+
+  -- the bot (service role) must still be able to link a chat
+  update public.profiles set telegram_chat_id = '777000222' where id = u;
+  select telegram_chat_id into chat from public.profiles where id = u;
+  if chat <> '777000222' then
+    raise exception 'TEST FAILED: service role can no longer link a chat (got %)', chat;
+  end if;
+end $$;
+
 do $$ begin raise notice 'ALL SECURITY-HARDENING TESTS PASSED'; end $$;
 rollback;
