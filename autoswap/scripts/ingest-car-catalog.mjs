@@ -61,7 +61,13 @@ async function fetchJSON(url, attempt = 1) {
   }
 }
 
+const DRY_RUN = process.argv.includes('--dry-run');
+
 async function upsert(table, rows, onConflict) {
+  if (DRY_RUN) {
+    console.log(`  [dry-run] would upsert ${rows.length} row(s) into ${table} (no write performed)`);
+    return;
+  }
   for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
     const chunk = rows.slice(i, i + UPSERT_CHUNK);
     const url = `${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`;

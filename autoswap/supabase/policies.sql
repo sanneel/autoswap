@@ -24,8 +24,40 @@ drop policy if exists profiles_update_self on public.profiles;
 create policy profiles_update_self on public.profiles for update
   using (id = auth.uid()) with check (id = auth.uid());
 
+-- Column-level REVOKE UPDATE is defense-in-depth only: it is a no-op whenever the
+-- role also holds table-level UPDATE (which Supabase grants anon/authenticated by
+-- default), because a table-wide grant already covers every column. The real,
+-- grant-independent guard is the trigger below.
 revoke update (phone_verified, email_verified, completed_swaps_count, response_rate, last_active_at)
   on public.profiles from anon, authenticated;
+
+-- Freeze server-owned trust/verification columns against client forgery. A direct
+-- PostgREST write runs as current_user = 'authenticated'/'anon'; a legitimate write
+-- from a SECURITY DEFINER RPC (e.g. accept_offer bumping completed_swaps_count) runs
+-- as the function owner, so those pass through untouched. Kept as SECURITY INVOKER on
+-- purpose so it observes the *caller's* effective role, not its own owner.
+create or replace function public.trg_profiles_guard_trust()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if current_user in ('authenticated', 'anon') then
+    new.phone_verified        := old.phone_verified;
+    new.email_verified        := old.email_verified;
+    new.completed_swaps_count := old.completed_swaps_count;
+    new.response_rate         := old.response_rate;
+    new.last_active_at        := old.last_active_at;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_guard_trust on public.profiles;
+create trigger profiles_guard_trust
+  before update on public.profiles
+  for each row execute function public.trg_profiles_guard_trust();
 
 drop policy if exists vehicles_select_public on public.vehicles;
 create policy vehicles_select_public on public.vehicles for select

@@ -81,11 +81,19 @@ security definer
 set search_path = public
 stable
 as $$
+  -- Resolve a login to an account by phone. The authoritative source is the
+  -- GoTrue-verified auth.users.phone column; raw_user_meta_data is CLIENT-WRITABLE
+  -- (auth.updateUser({data:{phone}})) and is only a fallback for legacy accounts
+  -- whose number lives solely in metadata. A verified phone-column match must
+  -- always win, otherwise an attacker who forges their metadata phone to a
+  -- victim's number and holds an older account captures that victim's sign-in.
   select id
     from auth.users
    where phone in (replace(p_phone, '+', ''), p_phone)
       or raw_user_meta_data->>'phone' = p_phone
-   order by created_at
+   order by
+     coalesce(phone in (replace(p_phone, '+', ''), p_phone), false) desc,  -- verified column first (NULL phone -> false)
+     created_at
    limit 1;
 $$;
 

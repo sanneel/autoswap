@@ -414,7 +414,7 @@ svg {
   background-image:
     linear-gradient(180deg, rgba(243, 246, 241, 0.55), rgba(243, 246, 241, 0.3) 44%, rgba(243, 246, 241, 0.8) 100%),
     linear-gradient(90deg, rgba(243, 246, 241, 0.5), rgba(243, 246, 241, 0.14) 46%, rgba(243, 246, 241, 0.5)),
-    url("assets/hero-road-bg.png");
+    url("assets/hero-road-bg.webp");
   background-position: center;
   background-size: cover;
 }
@@ -1418,7 +1418,7 @@ svg {
   background:
     radial-gradient(620px 300px at 85% 0%, rgba(30, 77, 52, 0.28), transparent 60%),
     linear-gradient(100deg, rgba(15, 20, 15, 0.97), rgba(26, 30, 38, 0.92)),
-    url("assets/hero-road-bg.png") center 63% / cover;
+    url("assets/hero-road-bg.webp") center 63% / cover;
   color: #fff;
   box-shadow: 0 24px 64px rgba(15, 20, 15, 0.28);
 }
@@ -7767,7 +7767,7 @@ body {
 .hero-backdrop {
   background-image:
     linear-gradient(180deg, rgba(243, 246, 241, 0.58), rgba(243, 246, 241, 0.82)),
-    url("assets/hero-road-bg.png");
+    url("assets/hero-road-bg.webp");
   background-size: cover;
   background-position: center 62%;
 }
@@ -8710,7 +8710,7 @@ body {
   opacity: 0.74;
   background-image:
     linear-gradient(180deg, rgba(243, 246, 241, 0.42), rgba(243, 246, 241, 0.78) 56%, rgba(243, 246, 241, 0.98)),
-    url("assets/hero-road-bg.png");
+    url("assets/hero-road-bg.webp");
 }
 
 .hero-copy {
@@ -9626,7 +9626,7 @@ body {
   opacity: 0.78;
   background-image:
     linear-gradient(180deg, rgba(243, 246, 241, 0.52), rgba(243, 246, 241, 0.74) 58%, rgba(243, 246, 241, 0.98)),
-    url("assets/hero-road-bg.png");
+    url("assets/hero-road-bg.webp");
   background-position: center 68%;
   background-size: cover;
 }
@@ -12506,7 +12506,7 @@ select[data-aselect]:focus-visible,
     opacity: 1;
     background-image:
       linear-gradient(180deg, rgba(243, 246, 241, 0) 0%, rgba(243, 246, 241, 0.06) 42%, rgba(243, 246, 241, 0.72) 78%, rgba(243, 246, 241, 0.96) 100%),
-      url("assets/hero-road-bg.png");
+      url("assets/hero-road-bg.webp");
     background-size: auto 205%, auto 205%;
     background-position: 50% 68%, 50% 68%;
     background-repeat: no-repeat, no-repeat;
@@ -12750,7 +12750,7 @@ select[data-aselect]:focus-visible,
   opacity: 0.78;
   background-image:
     linear-gradient(180deg, rgba(243, 246, 241, 0.52), rgba(243, 246, 241, 0.74) 58%, rgba(243, 246, 241, 0.98)),
-    url("assets/hero-road-bg.png");
+    url("assets/hero-road-bg.webp");
   background-size: cover, cover;
   background-position: 50% 68%, 50% 68%;
   background-repeat: no-repeat, no-repeat;
@@ -12779,7 +12779,7 @@ select[data-aselect]:focus-visible,
       rgba(243, 246, 241, 0.20) 46%,
       rgba(243, 246, 241, 0.74) 84%,
       rgba(243, 246, 241, 0.97) 100%),
-    url("assets/hero-road-bg.png");
+    url("assets/hero-road-bg.webp");
   background-size: auto max(205%, 56.3vw), auto max(205%, 56.3vw);
   background-position: 50% 95%, 50% 95%;
   background-repeat: no-repeat, no-repeat;
@@ -12902,8 +12902,8 @@ html {
 }
 
 .hero--garage .garage-search {
-  --hero-copper: #b8541f;
-  --hero-copper-hover: #a1471a;
+  --hero-copper: var(--copper);
+  --hero-copper-hover: var(--copper-hover);
   border-color: rgba(16, 34, 24, 0.28);
   background: linear-gradient(180deg, #3f6b4f 0%, #365e45 100%);
   box-shadow: 0 24px 54px -26px rgba(16, 30, 20, 0.62);
@@ -12987,13 +12987,13 @@ html {
 }
 
 .hero--garage .hero-cash-slider .cash-slider::-webkit-slider-thumb {
-  background: #b8541f;
+  background: var(--copper);
   border-color: #fff;
   margin-top: -10px;
 }
 
 .hero--garage .hero-cash-slider .cash-slider::-moz-range-thumb {
-  background: #b8541f;
+  background: var(--copper);
   border-color: #fff;
 }
 
@@ -13054,7 +13054,7 @@ html {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #b8541f;
+  background: var(--copper);
   border: 3px solid #fff;
   box-shadow: 0 2px 6px rgba(16, 20, 15, 0.35);
   margin-top: -7px;
@@ -13064,7 +13064,7 @@ html {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #b8541f;
+  background: var(--copper);
   border: 3px solid #fff;
   box-shadow: 0 2px 6px rgba(16, 20, 15, 0.35);
 }

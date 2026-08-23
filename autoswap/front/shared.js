@@ -1,10 +1,10 @@
 (function () {
   const assets = {
-    road: 'assets/hero-road-bg.png',
+    road: 'assets/hero-road-bg.webp',
     logo: 'assets/autoswap-logo.png',
-    bmw: 'assets/hero-bmw-530i.png',
-    audi: 'assets/hero-audi-a6.png',
-    porsche: 'assets/hero-porsche-aligned.png?v=4',
+    bmw: 'assets/hero-bmw-530i.webp',
+    audi: 'assets/hero-audi-a6.webp',
+    porsche: 'assets/hero-porsche-aligned.webp?v=5',
     revs: {
       bmw: 'assets/bmw-rev.mp3',
       porsche: 'assets/porsche-rev.mp3',
