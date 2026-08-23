@@ -70,10 +70,21 @@ sure the provider is live before launch so real users never see it.
 Deploy the functions in `back/` (offer accept/decline/counter, matching, and
 **`request-otp`**, the rate-limited OTP entry point):
 
+The CLI only deploys from `supabase/functions/`, so stage `back/` there first
+(the copy is generated and gitignored - `back/` stays the source of truth):
+
 ```bash
-supabase functions deploy request-otp
-# …plus accept-offer, decline-offer, counter-offer, mark-offer-viewed,
-#    run-matching-for-vehicle
+npm run functions:stage
+supabase functions deploy request-otp --project-ref <your-project-ref>
+# …plus verify-otp, accept-offer, decline-offer, counter-offer,
+#    mark-offer-viewed, run-matching-for-vehicle, telegram-bot
+```
+
+Set the Edge Function secrets before the first deploy (see SECURITY.md for the
+full list):
+
+```bash
+supabase secrets set ALLOWED_ORIGINS=https://autoswap.ge,https://www.autoswap.ge
 ```
 
 `request-otp` uses the project's `SUPABASE_SERVICE_ROLE_KEY` (injected into
