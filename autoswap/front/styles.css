@@ -2683,6 +2683,94 @@ body.adv-open {
   color: #fff;
 }
 
+/* ---- Filter groups (labelled sections in the panel) ------------------- */
+.filter-group {
+  display: grid;
+  gap: 14px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+.filter-group:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.filter-group-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: var(--graphite);
+  font-size: 13px;
+  font-weight: 800;
+}
+.filter-group-head svg { width: 15px; height: 15px; color: var(--copper); flex: 0 0 auto; }
+
+/* Foreground the swap terms — the signature of a swap marketplace. */
+.filter-group--swap {
+  padding: 12px;
+  margin: 2px 0;
+  border: 1px solid var(--copper-soft, rgba(30, 77, 52, 0.22));
+  border-radius: 12px;
+  background: var(--accent-soft, rgba(30, 77, 52, 0.06));
+}
+.filter-group--swap:last-child { padding: 12px; }
+
+/* ---- Active-filter chip bar (above the results) ---------------------- */
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+.active-filters[hidden] { display: none; }
+
+.active-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px 6px 13px;
+  border: 1px solid var(--copper);
+  border-radius: 20px;
+  background: var(--accent-soft, rgba(30, 77, 52, 0.08));
+  color: var(--copper);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 140ms, box-shadow 140ms;
+}
+.active-pill:hover { background: rgba(30, 77, 52, 0.14); }
+.active-pill:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+
+.active-pill-x {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--copper);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.active-clear-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.active-clear-all:hover { color: var(--copper); }
+.active-clear-all svg { width: 14px; height: 14px; }
+
 .adv-check {
   display: flex;
   align-items: center;
@@ -13798,8 +13886,20 @@ html {
 }
 
 .filter-check span {
+  flex: 1 1 auto;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+}
+
+/* Several later `.filters-form input { width:100% }` rules don't exclude
+   checkboxes; this attribute selector outranks them so the checkbox stays 14px
+   and its label keeps the remaining width. */
+.filters-form input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  min-width: 0;
+  padding: 0;
 }
 
 .filters-scroll { overflow-x: hidden; }

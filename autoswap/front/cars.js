@@ -255,6 +255,70 @@ function activeFilterCount() {
     .length;
 }
 
+const CASH_PILL_LABELS = { none: 'თანაბარი გაცვლა', add: 'ის ამატებს', ask: 'ის ითხოვს', flexible: 'შეთანხმებით' };
+
+function rangePillLabel(prefix, min, max, unit, plain) {
+  const fmt = (n) => (plain ? String(n) : Number(n).toLocaleString('en-US'));
+  if (min && max) return `${prefix} ${fmt(min)}–${fmt(max)}${unit}`;
+  if (min) return `${prefix} ${fmt(min)}${unit}-დან`;
+  return `${prefix} ${fmt(max)}${unit}-მდე`;
+}
+
+// One removable chip per applied filter. `key` maps to clearFilterKey().
+function activeFilterPills() {
+  const f = currentFilters;
+  const cur = (typeof getCurrency === 'function' && getCurrency() === 'USD') ? '$' : '₾';
+  const pills = [];
+  if (f.query) pills.push({ key: 'query', label: `„${f.query}“` });
+  if (f.make) pills.push({ key: 'make', label: f.make });
+  if (f.model) pills.push({ key: 'model', label: f.model });
+  if (f.category) pills.push({ key: 'category', label: labelFor(CATEGORY_LABELS, f.category) });
+  if (f.cash) pills.push({ key: 'cash', label: CASH_PILL_LABELS[f.cash] || f.cash });
+  if (f.cashMin || f.cashMax) pills.push({ key: 'cashamt', label: rangePillLabel('თანხა', f.cashMin, f.cashMax, ` ${cur}`) });
+  if (f.valueMin || f.valueMax) pills.push({ key: 'value', label: rangePillLabel('ფასი', f.valueMin, f.valueMax, ' ₾') });
+  if (f.yearFrom || f.yearTo) pills.push({ key: 'year', label: rangePillLabel('წელი', f.yearFrom, f.yearTo, '', true) });
+  if (f.mileageMin || f.mileageMax) pills.push({ key: 'mileage', label: rangePillLabel('გარბენი', f.mileageMin, f.mileageMax, ' კმ') });
+  if (f.transmission) pills.push({ key: 'transmission', label: labelFor(TRANSMISSION_LABELS, f.transmission) });
+  if (f.fuel) pills.push({ key: 'fuel', label: labelFor(FUEL_LABELS, f.fuel) });
+  if (f.city) pills.push({ key: 'city', label: f.city });
+  if (f.fresh) { const o = FRESH_OPTIONS.find((x) => String(x.value) === String(f.fresh)); pills.push({ key: 'fresh', label: o ? o.label : f.fresh }); }
+  if (f.verified) pills.push({ key: 'verified', label: 'დადასტურებული მფლობელი' });
+  if (f.onlyMatches) pills.push({ key: 'onlyMatches', label: 'ჩემნაირს ეძებს' });
+  return pills;
+}
+
+function activeFiltersInner() {
+  const pills = activeFilterPills();
+  if (!pills.length) return '';
+  return pills.map((p) => (
+    `<button type="button" class="active-pill" data-chip-clear="${escapeHtml(p.key)}" title="მოხსნა">`
+    + `<span>${escapeHtml(p.label)}</span>`
+    + `<span class="active-pill-x" aria-hidden="true">&times;</span>`
+    + `</button>`
+  )).join('')
+    + `<button type="button" class="active-clear-all" id="active-clear-all">${icons.refresh} ყველას გასუფთავება</button>`;
+}
+
+function ActiveFilters() {
+  const inner = activeFiltersInner();
+  return `<div class="active-filters" id="active-filters" aria-label="გააქტიურებული ფილტრები"${inner ? '' : ' hidden'}>${inner}</div>`;
+}
+
+// Reset a single filter (and any paired range/model keys) from a chip.
+function clearFilterKey(key) {
+  const f = currentFilters;
+  switch (key) {
+    case 'make': f.make = ''; f.makeId = ''; f.model = ''; f.modelGroup = ''; f.modelTerms = []; break;
+    case 'model': f.model = ''; f.modelGroup = ''; f.modelTerms = []; break;
+    case 'value': f.valueMin = ''; f.valueMax = ''; break;
+    case 'year': f.yearFrom = ''; f.yearTo = ''; break;
+    case 'mileage': f.mileageMin = ''; f.mileageMax = ''; break;
+    case 'cashamt': f.cashMin = ''; f.cashMax = ''; break;
+    case 'cash': f.cash = ''; f.cashMin = ''; f.cashMax = ''; break;
+    default: if (key in f) f[key] = '';
+  }
+}
+
 function advChips(fieldName, options, currentVal) {
   return `<div class="adv-chips">${options.map((opt) => {
     const val = typeof opt === 'string' ? opt : opt.value;
@@ -387,78 +451,83 @@ function FilterSidebar() {
         <div class="filters-scroll">
           ${MyCarFilterPanel()}
 
-          <label class="filter-field">
-            <span class="filter-label">საძიებო სიტყვა</span>
-            <div class="combo" data-query-suggest>
-              <span class="filter-search combo-control">${icons.search}
-                <input type="search" name="query" value="${escapeHtml(f.query || '')}" placeholder="მარკა, მოდელი, ქალაქი…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="query-suggest-list">
-              </span>
-              <ul class="combo-list" id="query-suggest-list" role="listbox" hidden></ul>
+          <div class="filter-group">
+            <label class="filter-field">
+              <span class="filter-label">საძიებო სიტყვა</span>
+              <div class="combo" data-query-suggest>
+                <span class="filter-search combo-control">${icons.search}
+                  <input type="search" name="query" value="${escapeHtml(f.query || '')}" placeholder="მარკა, მოდელი, ქალაქი…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="query-suggest-list">
+                </span>
+                <ul class="combo-list" id="query-suggest-list" role="listbox" hidden></ul>
+              </div>
+            </label>
+          </div>
+
+          <div class="filter-group">
+            <p class="filter-group-head">მანქანა</p>
+            ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა…')}
+            ${comboField('model', 'მოდელი', f.model, 'აირჩიე მოდელი…', !f.makeId)}
+            <div class="filter-field">
+              <span class="filter-label">ტიპი</span>
+              ${advChips('category', [{ value: '', label: 'ნებისმიერი' }, ...categories.map((c) => ({ value: c, label: labelFor(CATEGORY_LABELS, c) }))], f.category)}
             </div>
-          </label>
-
-          <div class="filter-rule" role="presentation"></div>
-
-          ${comboField('make', 'მარკა', f.make, 'მოძებნე მარკა…')}
-          ${comboField('model', 'მოდელი', f.model, 'აირჩიე მოდელი…', !f.makeId)}
-
-          <div class="filter-field">
-            <span class="filter-label">ტიპი</span>
-            ${advChips('category', [{ value: '', label: 'ნებისმიერი' }, ...categories.map((c) => ({ value: c, label: labelFor(CATEGORY_LABELS, c) }))], f.category)}
           </div>
 
-          <div class="filter-rule" role="presentation"></div>
+          <div class="filter-group filter-group--swap">
+            <p class="filter-group-head">${icons.swap} გაცვლის პირობები</p>
+            <div class="filter-field">
+              <span class="filter-label">თანხის სხვაობა</span>
+              ${advChips('cash', [
+                { value: '', label: 'ნებისმიერი' },
+                { value: 'none', label: 'თანაბარი' },
+                { value: 'add', label: 'ის ამატებს' },
+                { value: 'ask', label: 'ის ითხოვს' },
+                { value: 'flexible', label: 'შეთანხმებით' },
+              ], f.cash)}
+            </div>
+            <div class="filter-field filter-cash-amount" id="filter-cash-amount"${(f.cash === 'add' || f.cash === 'ask') ? '' : ' hidden'}>
+              ${stepRangeField('თანხის ოდენობა (₾)', 'cashMin', 'cashMax', f.cashMin, f.cashMax, CASH_STEPS)}
+            </div>
+            ${myCar ? `<label class="filter-check">
+              <input type="checkbox" name="onlyMatches" value="1"${f.onlyMatches ? ' checked' : ''}>
+              <span>მხოლოდ ისინი, ვინც ჩემნაირ მანქანას ეძებს</span>
+            </label>` : ''}
+          </div>
 
-          ${transmissions.length ? `<div class="filter-field">
-            <span class="filter-label">გადაცემის კოლოფი</span>
-            ${advChips('transmission', [{ value: '', label: 'ნებისმიერი' }, ...transmissions.map((t) => ({ value: t, label: labelFor(TRANSMISSION_LABELS, t) }))], f.transmission)}
+          <div class="filter-group">
+            <p class="filter-group-head">ფასი და მდგომარეობა</p>
+            ${stepRangeField('ფასის დიაპაზონი (₾)', 'valueMin', 'valueMax', f.valueMin, f.valueMax, PRICE_STEPS)}
+            ${years.length ? yearRangeField('მოდელის წელი', years, f.yearFrom, f.yearTo) : ''}
+            ${stepRangeField('გარბენი (კმ)', 'mileageMin', 'mileageMax', f.mileageMin, f.mileageMax, MILEAGE_STEPS)}
+          </div>
+
+          ${(transmissions.length || fuels.length) ? `<div class="filter-group">
+            <p class="filter-group-head">მახასიათებლები</p>
+            ${transmissions.length ? `<div class="filter-field">
+              <span class="filter-label">გადაცემის კოლოფი</span>
+              ${advChips('transmission', [{ value: '', label: 'ნებისმიერი' }, ...transmissions.map((t) => ({ value: t, label: labelFor(TRANSMISSION_LABELS, t) }))], f.transmission)}
+            </div>` : ''}
+            ${fuels.length ? `<div class="filter-field">
+              <span class="filter-label">საწვავის ტიპი</span>
+              ${advChips('fuel', [{ value: '', label: 'ნებისმიერი' }, ...fuels.map((t) => ({ value: t, label: labelFor(FUEL_LABELS, t) }))], f.fuel)}
+            </div>` : ''}
           </div>` : ''}
 
-          ${fuels.length ? `<div class="filter-field">
-            <span class="filter-label">საწვავის ტიპი</span>
-            ${advChips('fuel', [{ value: '', label: 'ნებისმიერი' }, ...fuels.map((t) => ({ value: t, label: labelFor(FUEL_LABELS, t) }))], f.fuel)}
-          </div>` : ''}
-
-          ${stepRangeField('ფასის დიაპაზონი (₾)', 'valueMin', 'valueMax', f.valueMin, f.valueMax, PRICE_STEPS)}
-          ${years.length ? yearRangeField('მოდელის წელი', years, f.yearFrom, f.yearTo) : ''}
-          ${stepRangeField('გარბენი (კმ)', 'mileageMin', 'mileageMax', f.mileageMin, f.mileageMax, MILEAGE_STEPS)}
-
-          <div class="filter-rule" role="presentation"></div>
-
-          <div class="filter-field">
-            <span class="filter-label">თანხის სხვაობა</span>
-            ${advChips('cash', [
-              { value: '', label: 'ნებისმიერი' },
-              { value: 'none', label: 'თანაბარი' },
-              { value: 'add', label: 'ის ამატებს' },
-              { value: 'ask', label: 'ის ითხოვს' },
-              { value: 'flexible', label: 'შეთანხმებით' },
-            ], f.cash)}
+          <div class="filter-group">
+            <p class="filter-group-head">მდებარეობა და განცხადება</p>
+            ${cities.length ? `<div class="filter-field">
+              <span class="filter-label">ქალაქი</span>
+              ${advChips('city', [{ value: '', label: 'ნებისმიერი' }, ...cities], f.city)}
+            </div>` : ''}
+            <div class="filter-field">
+              <span class="filter-label">განცხადების ასაკი</span>
+              ${advChips('fresh', FRESH_OPTIONS, f.fresh)}
+            </div>
+            <label class="filter-check">
+              <input type="checkbox" name="verified" value="1"${f.verified ? ' checked' : ''}>
+              <span>დადასტურებული მფლობელი</span>
+            </label>
           </div>
-
-          <div class="filter-field filter-cash-amount" id="filter-cash-amount"${(f.cash === 'add' || f.cash === 'ask') ? '' : ' hidden'}>
-            ${stepRangeField('თანხის ოდენობა (₾)', 'cashMin', 'cashMax', f.cashMin, f.cashMax, CASH_STEPS)}
-          </div>
-
-          ${cities.length ? `<div class="filter-field">
-            <span class="filter-label">ქალაქი</span>
-            ${advChips('city', [{ value: '', label: 'ნებისმიერი' }, ...cities], f.city)}
-          </div>` : ''}
-
-          <div class="filter-field">
-            <span class="filter-label">განცხადების ასაკი</span>
-            ${advChips('fresh', FRESH_OPTIONS, f.fresh)}
-          </div>
-
-          <label class="filter-check">
-            <input type="checkbox" name="verified" value="1"${f.verified ? ' checked' : ''}>
-            <span>დადასტურებული მფლობელი</span>
-          </label>
-
-          ${myCar ? `<label class="filter-check">
-            <input type="checkbox" name="onlyMatches" value="1"${f.onlyMatches ? ' checked' : ''}>
-            <span>ეძებს ჩემნაირ მანქანას</span>
-          </label>` : ''}
         </div>
 
         <div class="filters-actions">
@@ -706,6 +775,7 @@ function CatalogPage() {
         ${FilterSidebar()}
         <div class="results">
           ${ResultsHead(filtered.length)}
+          ${ActiveFilters()}
           <div class="car-list view-${currentView}" id="car-list">
             ${listBodyHTML(slice)}
           </div>
@@ -849,6 +919,13 @@ function update() {
     const n = activeFilterCount();
     badge.textContent = n ? String(n) : '';
     badge.hidden = !n;
+  }
+
+  const activeBar = document.querySelector('#active-filters');
+  if (activeBar) {
+    const inner = activeFiltersInner();
+    activeBar.innerHTML = inner;
+    activeBar.hidden = !inner;
   }
 
   const list = document.querySelector('#car-list');
@@ -1496,13 +1573,26 @@ function bindEvents() {
   });
 
   const clearAllFilters = () => {
+    const sort = currentFilters.sort;
     currentFilters = emptyFilters();
+    currentFilters.sort = sort;
     pagesShown = 1;
     syncFiltersToURL();
     renderAll();
   };
   document.querySelector('#filters-reset')?.addEventListener('click', clearAllFilters);
   document.querySelector('#filters-clear')?.addEventListener('click', clearAllFilters);
+
+  // Removable active-filter chips (above the results).
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('#active-clear-all')) { clearAllFilters(); return; }
+    const chip = event.target.closest('[data-chip-clear]');
+    if (!chip) return;
+    clearFilterKey(chip.dataset.chipClear);
+    pagesShown = 1;
+    syncFiltersToURL();
+    renderAll();
+  });
 
   document.querySelector('#sort-select')?.addEventListener('change', (event) => {
     currentFilters.sort = event.target.value;
