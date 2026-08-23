@@ -598,7 +598,10 @@ async function renderProfile(body) {
     return;
   }
 
-  const authPhone = me.phone || (me.user_metadata && me.user_metadata.phone) || profile.phone || '';
+  const authPhone = me.phone
+    || (me.app_metadata && me.app_metadata.verified_phone)
+    || (me.user_metadata && me.user_metadata.phone)
+    || profile.phone || '';
 
   body.innerHTML = `
     <h1>პროფილი</h1>

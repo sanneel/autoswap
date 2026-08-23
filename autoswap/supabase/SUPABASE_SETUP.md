@@ -42,6 +42,11 @@ The schema, policies, functions, storage, and car catalog tables live in
 5. `car_catalog.sql` (make/model reference tables for contains search)
 6. `otp_rate_limit.sql` (OTP throttle tables + `otp_rate_check` RPC)
 7. `verify_ge_auth.sql` (requestId↔phone binding + phone→user lookup)
+   - **Then run once:** `select * from public.backfill_verified_phones();`
+     Phone→user lookup no longer trusts the client-writable `user_metadata`, so
+     legacy accounts that carry their number only there must be migrated into
+     service-role-only `app_metadata`. Idempotent; review the report it returns
+     (see SECURITY.md). Skipping this makes those accounts unreachable at login.
 8. `seed.sql`     (optional local demo data)
 
 Then ingest the catalog from the project root:

@@ -81,20 +81,85 @@ security definer
 set search_path = public
 stable
 as $$
-  -- Resolve a login to an account by phone. The authoritative source is the
-  -- GoTrue-verified auth.users.phone column; raw_user_meta_data is CLIENT-WRITABLE
-  -- (auth.updateUser({data:{phone}})) and is only a fallback for legacy accounts
-  -- whose number lives solely in metadata. A verified phone-column match must
-  -- always win, otherwise an attacker who forges their metadata phone to a
-  -- victim's number and holds an older account captures that victim's sign-in.
+  -- Resolve a phone-OTP login to an account.
+  --
+  -- Only two sources are consulted, and BOTH are writable exclusively by the
+  -- service role:
+  --   1. auth.users.phone                     - set by GoTrue with phone_confirm
+  --   2. raw_app_meta_data->>'verified_phone' - stamped by the verify-otp Edge
+  --                                             Function after a proven OTP
+  --
+  -- raw_user_meta_data is deliberately NOT consulted: any signed-in client can
+  -- write it with auth.updateUser({data:{phone}}), so trusting it lets an
+  -- attacker claim a victim's number and capture that victim's sign-in.
+  -- Legacy accounts whose number lived only in user_metadata are migrated by
+  -- public.backfill_verified_phones() below.
   select id
     from auth.users
    where phone in (replace(p_phone, '+', ''), p_phone)
-      or raw_user_meta_data->>'phone' = p_phone
+      or raw_app_meta_data->>'verified_phone' = p_phone
    order by
      coalesce(phone in (replace(p_phone, '+', ''), p_phone), false) desc,  -- verified column first (NULL phone -> false)
      created_at
    limit 1;
+$$;
+
+-- One-time migration for accounts created before verified_phone existed: those
+-- whose number lives only in the client-writable user_metadata (the retry
+-- fallback in verify-otp used to create them without a phone column). Promotes
+-- the claim into service-role-only app_metadata so the account stays reachable
+-- after user_id_for_phone stopped reading user_metadata.
+--
+-- A metadata claim is promoted ONLY when it is uncontested: skipped if any
+-- account already holds that number in the verified phone column, and skipped
+-- if more than one account claims it. Those rows are returned for an operator
+-- to resolve by hand rather than silently blessed. Idempotent; returns a report.
+--
+-- NOTE: a claim that was already forged before this migration is
+-- indistinguishable from a genuine one, so run this promptly and review the
+-- report. It does not make such a claim any stronger than it is today (that
+-- account already wins resolution) - it only stops NEW forgeries from counting.
+create or replace function public.backfill_verified_phones()
+returns table (user_id uuid, claimed_phone text, action text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r record;
+  ph text;
+begin
+  for r in
+    select u.id, u.raw_user_meta_data->>'phone' as meta_phone
+      from auth.users u
+     where u.phone is null
+       and coalesce(u.raw_user_meta_data->>'phone', '') <> ''
+       and u.raw_app_meta_data->>'verified_phone' is null
+     order by u.created_at
+  loop
+    ph := r.meta_phone;
+
+    if exists (select 1 from auth.users v
+                where v.phone in (replace(ph, '+', ''), ph)) then
+      user_id := r.id; claimed_phone := ph; action := 'skipped_claimed_by_verified';
+      return next; continue;
+    end if;
+
+    if (select count(*) from auth.users v
+         where v.phone is null
+           and v.raw_user_meta_data->>'phone' = ph) > 1 then
+      user_id := r.id; claimed_phone := ph; action := 'skipped_ambiguous';
+      return next; continue;
+    end if;
+
+    update auth.users
+       set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+                             || jsonb_build_object('verified_phone', ph)
+     where id = r.id;
+    user_id := r.id; claimed_phone := ph; action := 'promoted';
+    return next;
+  end loop;
+end;
 $$;
 
 revoke all on function public.otp_request_record(text, text, text, text, uuid) from public, anon, authenticated;
@@ -102,9 +167,11 @@ revoke all on function public.otp_request_begin_verify(text)                   f
 revoke all on function public.otp_request_claim(text)                          from public, anon, authenticated;
 revoke all on function public.otp_requests_prune()                             from public, anon, authenticated;
 revoke all on function public.user_id_for_phone(text)                          from public, anon, authenticated;
+revoke all on function public.backfill_verified_phones()                        from public, anon, authenticated;
 
 grant execute on function public.otp_request_record(text, text, text, text, uuid) to service_role;
 grant execute on function public.otp_request_begin_verify(text)                   to service_role;
 grant execute on function public.otp_request_claim(text)                          to service_role;
 grant execute on function public.otp_requests_prune()                             to service_role;
 grant execute on function public.user_id_for_phone(text)                          to service_role;
+grant execute on function public.backfill_verified_phones()                        to service_role;

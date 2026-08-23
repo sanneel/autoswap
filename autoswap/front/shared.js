@@ -1599,10 +1599,23 @@
       && identities.some((identity) => identity.provider && identity.provider !== 'phone');
   }
 
+  // Display-only view of the number attached to an account, in descending order
+  // of trust: the GoTrue-verified column, then app_metadata.verified_phone
+  // (stamped by verify-otp; readable by the client but writable only by the
+  // service role), then legacy user_metadata. Identity is never resolved from
+  // this - that happens server-side in user_id_for_phone().
+  function attachedPhone(user) {
+    if (!user) return '';
+    return user.phone
+      || (user.app_metadata && user.app_metadata.verified_phone)
+      || (user.user_metadata && user.user_metadata.phone)
+      || '';
+  }
+
   function needsPhone(user) {
     if (!user || user.demo) return false;
     if (signedInWithOAuth(user)) return false;
-    return !user.phone && !(user.user_metadata && user.user_metadata.phone);
+    return !attachedPhone(user);
   }
 
   function autofillOtpFromSms(input, onFilled) {

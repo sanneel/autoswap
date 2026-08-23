@@ -61,35 +61,86 @@ begin
 end $$;
 
 -- ============================================================================
--- P1: user_id_for_phone must prefer the GoTrue-verified phone column over the
---     client-writable raw_user_meta_data->>'phone'.
+-- P1: user_id_for_phone must resolve logins ONLY from service-role-writable
+--     sources (the GoTrue-verified phone column and app_metadata). The
+--     client-writable raw_user_meta_data must never decide an identity.
 -- ============================================================================
 do $$
-declare resolved uuid; victim uuid; legacy uuid;
+declare victim uuid; appmeta uuid;
 begin
-  -- attacker: older account, phone only in forgeable metadata = victim's number
+  -- A verified phone-column account must win over a forged metadata claim, even
+  -- when the forger's account is older.
   insert into auth.users(email, phone, raw_user_meta_data, created_at)
     values ('atk@test.local', null, '{"phone":"+995599111222"}'::jsonb, now() - interval '10 days');
-  -- victim: newer account, phone in the verified column
   insert into auth.users(email, phone, raw_user_meta_data, created_at)
     values ('vic@test.local', '+995599111222', '{}'::jsonb, now() - interval '1 day')
     returning id into victim;
-  resolved := public.user_id_for_phone('+995599111222');
-  if resolved is distinct from victim then
-    raise exception 'TEST FAILED: phone resolution picked forged-metadata account, not the verified one';
+  if public.user_id_for_phone('+995599111222') is distinct from victim then
+    raise exception 'TEST FAILED: phone resolution picked the forged-metadata account';
   end if;
 
-  -- metadata-only fallback still resolves when no verified-column account exists
+  -- A forged metadata claim ALONE must resolve to nothing. Otherwise a victim
+  -- who has no account yet gets funnelled into the attacker's account on their
+  -- first genuine OTP sign-in.
   insert into auth.users(email, phone, raw_user_meta_data, created_at)
-    values ('leg@test.local', null, '{"phone":"+995599777888"}'::jsonb, now() - interval '3 days')
-    returning id into legacy;
-  if public.user_id_for_phone('+995599777888') is distinct from legacy then
-    raise exception 'TEST FAILED: legacy metadata-only phone no longer resolves';
+    values ('forger@test.local', null, '{"phone":"+995599555000"}'::jsonb, now() - interval '5 days');
+  if public.user_id_for_phone('+995599555000') is not null then
+    raise exception 'TEST FAILED: client-writable user_metadata still resolves an identity';
+  end if;
+
+  -- app_metadata.verified_phone (service-role only, stamped by verify-otp) does resolve.
+  insert into auth.users(email, phone, raw_app_meta_data, created_at)
+    values ('app@test.local', null, '{"verified_phone":"+995599777888"}'::jsonb, now() - interval '3 days')
+    returning id into appmeta;
+  if public.user_id_for_phone('+995599777888') is distinct from appmeta then
+    raise exception 'TEST FAILED: app_metadata.verified_phone does not resolve';
   end if;
 
   -- unknown phone resolves to nothing (a new account gets created downstream)
   if public.user_id_for_phone('+995599000000') is not null then
     raise exception 'TEST FAILED: unknown phone resolved to an account';
+  end if;
+end $$;
+
+-- ============================================================================
+-- backfill_verified_phones(): promotes only UNCONTESTED legacy metadata claims
+-- into app_metadata, and reports the rest instead of blessing them.
+-- ============================================================================
+do $$
+declare legacy uuid; owner_id uuid; n int;
+begin
+  -- uncontested legacy account (old verify-otp retry fallback: no phone column)
+  insert into auth.users(email, phone, raw_user_meta_data, created_at)
+    values ('legacy@test.local', null, '{"phone":"+995599000111"}'::jsonb, now() - interval '9 days')
+    returning id into legacy;
+  -- contested: a verified account already owns this number
+  insert into auth.users(email, phone, raw_user_meta_data, created_at)
+    values ('claimer@test.local', null, '{"phone":"+995599000222"}'::jsonb, now() - interval '9 days');
+  insert into auth.users(email, phone, created_at)
+    values ('realowner@test.local', '+995599000222', now() - interval '8 days')
+    returning id into owner_id;
+  -- ambiguous: two metadata-only accounts claim the same number
+  insert into auth.users(email, phone, raw_user_meta_data, created_at)
+    values ('dup1@test.local', null, '{"phone":"+995599000333"}'::jsonb, now() - interval '7 days');
+  insert into auth.users(email, phone, raw_user_meta_data, created_at)
+    values ('dup2@test.local', null, '{"phone":"+995599000333"}'::jsonb, now() - interval '6 days');
+
+  perform public.backfill_verified_phones();
+
+  if public.user_id_for_phone('+995599000111') is distinct from legacy then
+    raise exception 'TEST FAILED: uncontested legacy account was not migrated and is now unreachable';
+  end if;
+  if public.user_id_for_phone('+995599000222') is distinct from owner_id then
+    raise exception 'TEST FAILED: backfill let a metadata claim override a verified owner';
+  end if;
+  if public.user_id_for_phone('+995599000333') is not null then
+    raise exception 'TEST FAILED: backfill blessed an ambiguous claim instead of reporting it';
+  end if;
+
+  -- idempotent: a second run must promote nothing
+  select count(*) into n from public.backfill_verified_phones() where action = 'promoted';
+  if n <> 0 then
+    raise exception 'TEST FAILED: backfill is not idempotent (% promoted on rerun)', n;
   end if;
 end $$;
 

@@ -113,18 +113,26 @@ Deno.serve(async (req) => {
   let linkEmail = email;
 
   if (!userId) {
+    // The number is only ever recorded in service-role-only fields: the
+    // GoTrue-verified phone column and app_metadata. It must NEVER go into
+    // user_metadata - any signed-in client can rewrite that with
+    // auth.updateUser({data:{...}}), and user_id_for_phone would then be
+    // resolving logins against attacker-controlled data.
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
       email_confirm: true,
       phone,
       phone_confirm: true,
-      user_metadata: { phone },
+      app_metadata: { verified_phone: phone },
     });
     if (createError || !created?.user) {
+      // Fallback for projects that reject a phone on create (phone provider
+      // off): the account gets no phone column, so app_metadata.verified_phone
+      // is the only thing that keeps it resolvable on the next sign-in.
       const { data: retry, error: retryError } = await admin.auth.admin.createUser({
         email,
         email_confirm: true,
-        user_metadata: { phone },
+        app_metadata: { verified_phone: phone },
       });
       if (retryError || !retry?.user) {
         console.error("verify-otp: createUser failed", createError?.message, retryError?.message);
