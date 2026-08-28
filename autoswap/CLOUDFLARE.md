@@ -71,6 +71,17 @@ requests will fail on a missing variable.
 - **Extensionless URLs** - `/cars` resolves to `cars.html` on Pages exactly as
   it did on Netlify, so the internal links and `nextTarget()` in `login.js`
   keep working. No `_redirects` file is needed.
+- **`/vehicle` is rendered at the edge.** `functions/vehicle.js` is a Pages
+  Function: it looks the listing up in `public_vehicle_feed` and rewrites the
+  page's `<title>`, OG/Twitter tags and canonical before the HTML is sent. This
+  exists because WhatsApp, Facebook and Telegram never run JavaScript, so the
+  client-side tags in `vehicle.js` do nothing for them and every shared listing
+  used to preview as the same generic card. It reads the same
+  `AUTO_SWAP_SUPABASE_URL` / `AUTO_SWAP_SUPABASE_ANON_KEY` variables the build
+  uses, and fails open - missing variables, a broken Supabase, an unknown id or
+  a non-UUID all return the untouched static page. Keep `functions/` beside
+  `front/` in the **root directory** (`autoswap`); Pages picks it up from there,
+  not from the build output.
 - **Long-lived asset caching** - Pages sets its own immutable caching on
   hashed assets. This repo instead versions by hand with `?v=` query strings in
   the `<link>` and `<script>` tags, which works identically on either host.
