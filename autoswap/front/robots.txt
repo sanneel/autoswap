@@ -1,7 +1,8 @@
 User-agent: *
 Allow: /
+# The site serves clean URLs, so both forms are listed.
 Disallow: /account.html
-Disallow: /account          # the site serves clean URLs, so both forms need listing
+Disallow: /account
 Disallow: /login.html
 Disallow: /login
 

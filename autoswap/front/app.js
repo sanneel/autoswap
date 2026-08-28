@@ -304,6 +304,7 @@ const legacyListings = [
 
 let activeListings = [];
 let feedLoaded = false;
+let feedFailed = false;
 
 function Hero() {
   return `
@@ -997,6 +998,14 @@ function BrowseStrip() {
 function renderListingGrid(cars) {
   const wrap = document.querySelector('#landing-listings');
   if (!wrap) return;
+  if (feedFailed && !cars.length) {
+    wrap.innerHTML = `
+      <div class="empty-state empty-state--actions" role="status">
+        <p>განცხადებების ჩატვირთვა ვერ მოხერხდა. სცადე თავიდან.</p>
+      </div>
+    `;
+    return;
+  }
   wrap.innerHTML = LandingListings(cars);
 }
 
@@ -1171,6 +1180,9 @@ function App() {
 
 async function hydrateFromSupabase() {
   const mapped = await window.AutoSwap.fetchFeed();
+  // null means the load failed; [] means there really are no listings. Treating
+  // them the same made an outage look like an empty marketplace.
+  feedFailed = mapped === null;
   activeListings = mapped || [];
   feedLoaded = true;
   renderListingGrid(activeListings);

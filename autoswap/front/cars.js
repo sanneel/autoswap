@@ -146,6 +146,7 @@ function seedMyCarFromURL() {
 }
 let allCars = [];
 let feedLoaded = false;
+let feedFailed = false;
 seedMyCarFromURL();
 let currentFilters = readFiltersFromURL();
 let pagesShown = 1;
@@ -675,6 +676,15 @@ function listBodyHTML(slice) {
 function emptyStateHTML() {
   const myCar = getMyCar();
   const catalogEmpty = allCars.length === 0;
+
+  if (feedFailed) {
+    // Same message and shape account.js already uses for a failed load.
+    return `
+      <div class="empty-state empty-state--actions" role="status">
+        <p>განცხადებების ჩატვირთვა ვერ მოხერხდა. სცადე თავიდან.</p>
+      </div>
+    `;
+  }
 
   if (catalogEmpty) {
     return `
@@ -1667,6 +1677,10 @@ function renderAll() {
 
 async function hydrateFromSupabase() {
   const mapped = await fetchFeed();
+  // fetchFeed() returns null when the request failed and [] when the marketplace
+  // is genuinely empty. Collapsing both to [] told visitors "no listings yet, be
+  // the first" during an outage - the most damaging thing a marketplace can say.
+  feedFailed = mapped === null;
   allCars = mapped || [];
   feedLoaded = true;
   recomputePriceBaselines();
