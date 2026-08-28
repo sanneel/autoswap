@@ -714,7 +714,11 @@ function emptyStateHTML() {
 
 function loadMoreHTML(total) {
   const shown = Math.min(total, pagesShown * PAGE_SIZE);
-  const remaining = total - shown;
+  // `total` is what the client pass produced from the loaded rows; the server
+  // may hold more for these filters, so count those too or the button vanishes
+  // at the window edge - the original bug in a smaller form.
+  const serverRemaining = serverTotal != null ? Math.max(0, serverTotal - shown) : 0;
+  const remaining = Math.max(total - shown, serverRemaining);
   if (remaining <= 0) return '';
   return `<button type="button" class="btn btn-light load-more" id="load-more">მეტის ჩატვირთვა <span>(${remaining})</span></button>`;
 }
@@ -1614,9 +1618,23 @@ function bindEvents() {
     update();
   });
 
-  document.querySelector('#load-more-wrap')?.addEventListener('click', (event) => {
+  document.querySelector('#load-more-wrap')?.addEventListener('click', async (event) => {
     if (!event.target.closest('#load-more')) return;
     pagesShown += 1;
+    // If the next page runs past what is loaded and the server has more rows
+    // for these filters, fetch the next window and append before rendering.
+    const needed = pagesShown * PAGE_SIZE;
+    if (needed > allCars.length && serverTotal != null && allCars.length < serverTotal) {
+      const seq = ++feedRequestSeq;
+      const more = await fetchFeedFiltered(currentFilters, undefined, allCars.length);
+      if (seq !== feedRequestSeq) return;
+      if (more && more.rows.length) {
+        const seen = new Set(allCars.map((c) => c.id));
+        allCars = allCars.concat(more.rows.filter((c) => !seen.has(c.id)));
+        serverTotal = more.total;
+        recomputePriceBaselines();
+      }
+    }
     update();
   });
 

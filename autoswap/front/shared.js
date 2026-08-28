@@ -852,7 +852,7 @@
   // idempotent, never narrower.
   const FEED_WINDOW = 200;
 
-  async function fetchFeedFiltered(filters, limit = FEED_WINDOW) {
+  async function fetchFeedFiltered(filters, limit = FEED_WINDOW, offset = 0) {
     if (!sbClient) return null;
     const f = filters || {};
     const num = (v) => (v === '' || v == null ? null : Number(v));
@@ -896,10 +896,13 @@
       }
     }
 
-    const { data, error, count } = await q
-      .order('is_boosted', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    q = q.order('is_boosted', { ascending: false })
+         .order('created_at', { ascending: false });
+    // range() is inclusive at both ends, so this asks for exactly `limit` rows
+    // starting at `offset` - that is how "load more" walks past the window.
+    const { data, error, count } = offset
+      ? await q.range(offset, offset + limit - 1)
+      : await q.limit(limit);
 
     if (error) {
       console.error('AutoSwap: filtered feed load failed', error.message);
