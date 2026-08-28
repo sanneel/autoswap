@@ -7,6 +7,7 @@ const {
   FUEL_LABELS,
   labelFor,
   fetchFeed,
+  fetchFeedFiltered,
   searchMakes,
   searchModels,
   getMyCar,
@@ -147,6 +148,9 @@ function seedMyCarFromURL() {
 let allCars = [];
 let feedLoaded = false;
 let feedFailed = false;
+let serverTotal = null;
+let feedRequestSeq = 0;
+let refetchTimer = null;
 seedMyCarFromURL();
 let currentFilters = readFiltersFromURL();
 let pagesShown = 1;
@@ -909,7 +913,12 @@ function update() {
   const slice = pageSlice(filtered);
 
   const count = document.querySelector('#results-count');
-  if (count) count.textContent = String(filtered.length);
+  if (count) {
+    // The client pass can only narrow what the server returned. If it did not,
+    // the honest number is the server's total for these filters.
+    const narrowed = filtered.length < allCars.length;
+    count.textContent = String(narrowed || serverTotal == null ? filtered.length : serverTotal);
+  }
   const applyCount = document.querySelector('#apply-count');
   if (applyCount) applyCount.textContent = `(${filtered.length})`;
 
@@ -1222,6 +1231,7 @@ function setComboValue(kind, name, id, item = null) {
   }
   pagesShown = 1;
   update();
+  scheduleRefetch();
 }
 
 function chooseComboOption(combo, option) {
@@ -1239,6 +1249,7 @@ function chooseComboOption(combo, option) {
     currentFilters.modelTerms = item.terms || [item.name];
     pagesShown = 1;
     update();
+    scheduleRefetch();
     renderComboList(combo, modelGroupChildren(item, ''));
     input.focus();
     return;
@@ -1520,6 +1531,7 @@ function applyFormFilters(form) {
   currentFilters = readFiltersFromForm(form);
   pagesShown = 1;
   update();
+  scheduleRefetch();
 }
 
 function bindEvents() {
@@ -1569,6 +1581,7 @@ function bindEvents() {
     }
     pagesShown = 1;
     update();
+    scheduleRefetch();
   });
 
   const clearAllFilters = () => {
@@ -1578,6 +1591,7 @@ function bindEvents() {
     pagesShown = 1;
     syncFiltersToURL();
     renderAll();
+    scheduleRefetch();
   };
   document.querySelector('#filters-reset')?.addEventListener('click', clearAllFilters);
   document.querySelector('#filters-clear')?.addEventListener('click', clearAllFilters);
@@ -1591,6 +1605,7 @@ function bindEvents() {
     pagesShown = 1;
     syncFiltersToURL();
     renderAll();
+    scheduleRefetch();
   });
 
   document.querySelector('#sort-select')?.addEventListener('change', (event) => {
@@ -1675,17 +1690,29 @@ function renderAll() {
   bindQuerySuggest();
 }
 
-async function hydrateFromSupabase() {
-  const mapped = await fetchFeed();
-  // fetchFeed() returns null when the request failed and [] when the marketplace
-  // is genuinely empty. Collapsing both to [] told visitors "no listings yet, be
-  // the first" during an outage - the most damaging thing a marketplace can say.
-  feedFailed = mapped === null;
-  allCars = mapped || [];
+// Ask the database for rows matching the current filters instead of filtering a
+// fixed newest-48 window in the browser. Requests are sequenced because a fast
+// typist can outrun an in-flight response and a stale reply must not win.
+async function refetchFeed() {
+  const seq = ++feedRequestSeq;
+  const res = await fetchFeedFiltered(currentFilters);
+  if (seq !== feedRequestSeq) return;
+  // null means the request failed; a result with no rows means nothing matched.
+  feedFailed = res === null;
+  allCars = res ? res.rows : [];
+  serverTotal = res ? res.total : null;
   feedLoaded = true;
   recomputePriceBaselines();
-  pagesShown = 1;
-  renderAll();
+  update();
+}
+
+function scheduleRefetch() {
+  clearTimeout(refetchTimer);
+  refetchTimer = setTimeout(refetchFeed, 220);
+}
+
+async function hydrateFromSupabase() {
+  await refetchFeed();
 }
 
 renderAll();

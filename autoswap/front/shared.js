@@ -814,6 +814,8 @@
     });
   });
 
+  const CASH_MODE_TO_COLUMN = { none: 'none', add: 'add_money', ask: 'ask_money', flexible: 'flexible' };
+
   async function fetchFeed(limit = 48) {
     if (!sbClient) return null;
 
@@ -834,6 +836,76 @@
 
     cacheSet(`feed:${limit}`, data || [], 60 * 1000);
     return (data || []).map(mapFeedRow);
+  }
+
+  // Server-side filtering for the catalog.
+  //
+  // The catalog used to load the newest 48 rows and filter them in the browser,
+  // so every filter searched only those 48: a car that existed past the window
+  // was unfindable, and the result count claimed the marketplace held 48 cars
+  // however many it really held. Anything the database can decide is decided
+  // there now, across the whole table, and an exact count comes back with it.
+  //
+  // The client still runs its own pass over what returns - the model-family
+  // matching and the "matches my car" logic have no server equivalent - so the
+  // predicates below are deliberately a subset. Re-applying them client-side is
+  // idempotent, never narrower.
+  const FEED_WINDOW = 200;
+
+  async function fetchFeedFiltered(filters, limit = FEED_WINDOW) {
+    if (!sbClient) return null;
+    const f = filters || {};
+    const num = (v) => (v === '' || v == null ? null : Number(v));
+
+    let q = sbClient.from('public_vehicle_feed').select('*', { count: 'exact' });
+
+    if (f.owner) q = q.eq('owner_id', f.owner);
+    if (f.make) q = q.ilike('make', `%${f.make}%`);
+    if (f.category) q = q.eq('category', f.category);
+    if (f.transmission) q = q.eq('transmission', f.transmission);
+    if (f.fuel) q = q.eq('fuel_type', f.fuel);
+    if (f.city) q = q.eq('city', f.city);
+    if (f.cash) q = q.eq('cash_mode', CASH_MODE_TO_COLUMN[f.cash] || f.cash);
+    if (f.verified) q = q.eq('owner_phone_verified', true);
+
+    const range = [
+      ['year', num(f.yearFrom), num(f.yearTo)],
+      ['mileage', num(f.mileageMin), num(f.mileageMax)],
+      ['estimated_value', num(f.valueMin), num(f.valueMax)],
+    ];
+    for (const [col, min, max] of range) {
+      if (min) q = q.gte(col, min);
+      if (max) q = q.lte(col, max);
+    }
+
+    if (f.fresh !== '' && f.fresh != null) {
+      const days = Number(f.fresh);
+      if (Number.isFinite(days)) {
+        const since = new Date(Date.now() - days * 86400000).toISOString();
+        q = q.gte('created_at', since);
+      }
+    }
+
+    // Free text: the columns PostgREST can match directly. Wants labels are an
+    // array column, so they stay a client-side concern.
+    const term = String(f.query || '').trim();
+    if (term) {
+      const safe = term.replace(/[,()*]/g, ' ').trim();
+      if (safe) {
+        q = q.or(`make.ilike.*${safe}*,model.ilike.*${safe}*,city.ilike.*${safe}*`);
+      }
+    }
+
+    const { data, error, count } = await q
+      .order('is_boosted', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('AutoSwap: filtered feed load failed', error.message);
+      return null;
+    }
+    return { rows: (data || []).map(mapFeedRow), total: count == null ? (data || []).length : count };
   }
 
   function bustListingCaches() {
@@ -2760,6 +2832,7 @@
     Footer,
     createClient,
     fetchFeed,
+    fetchFeedFiltered,
     fetchVehicleById,
     fetchVehiclePhotos,
     searchMakes,
