@@ -227,8 +227,8 @@ function comboField(kind, labelText, value, placeholder, disabled = false) {
     <div class="filter-field">
       <span class="filter-label" id="${labelId}">${labelText}</span>
       <div class="combo${disabledClass}" data-combo="${kind}">
-        <span class="filter-search combo-control" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-owns="${listId}">
-          <input type="text" class="combo-input" name="${kind}" autocomplete="off" aria-labelledby="${labelId}" placeholder="${displayPlaceholder}" data-placeholder="${placeholder}" value="${escapeHtml(value || '')}" aria-autocomplete="list" aria-controls="${listId}" aria-expanded="false"${disabledAttr}>
+        <span class="filter-search combo-control">
+          <input type="text" class="combo-input" name="${kind}" autocomplete="off" aria-labelledby="${labelId}" placeholder="${displayPlaceholder}" data-placeholder="${placeholder}" value="${escapeHtml(value || '')}" role="combobox" aria-haspopup="listbox" aria-autocomplete="list" aria-controls="${listId}" aria-expanded="false"${disabledAttr}>
           <button type="button" class="combo-clear" aria-label="გასუფთავება"${clearHidden}>&times;</button>
         </span>
         <ul class="combo-list" id="${listId}" role="listbox" hidden></ul>

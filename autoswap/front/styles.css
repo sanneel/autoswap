@@ -13967,3 +13967,48 @@ html {
   .filters-title { font-size: 17px; }
   .filters-title svg { display: none; }
 }
+
+/* --------------------------------------------------------------------------
+   Touch targets — PRODUCT.md sets a 44px minimum (WCAG 2.5.5).
+   The marketplace reads dense on purpose, so where a control has to stay
+   visually small its *hit area* is grown with a centred pseudo-element instead
+   of its box: nothing moves, only the tappable region changes. Controls that
+   can simply be bigger without disturbing the layout just get bigger.
+   -------------------------------------------------------------------------- */
+/* .cur-flip (the 20px currency flip on a card's cash chip) is deliberately left
+   below 44px. Growing its hit area with a pseudo-element was tried and does not
+   survive this stylesheet's stacking - the card aside paints over it, so the
+   enlarged region silently swallowed nothing and the rule was dead weight.
+   Enlarging the control itself would bloat every card in the feed. It stays as
+   is under WCAG 2.5.5's equivalent-control exception: the header currency
+   switch performs the same action and does meet the target size. */
+
+/* Isolated icon buttons — safe to actually grow. */
+.gallery-tool,
+.gallery-tools .save-btn {
+  width: 44px;
+  height: 44px;
+}
+
+.rail-arrow {
+  width: 44px;
+}
+
+.sell-mode-chip {
+  min-height: 44px;
+}
+
+/* Two adjacent pills: growing the width would overlap their hit areas and let
+   one steal the other's taps, so only the short axis is corrected. The header
+   selector below is more specific than a bare `.currency-switch button`, so it
+   has to be matched or the rule is silently ignored. */
+.currency-switch button,
+.site-header .currency-switch button {
+  min-height: 44px;
+}
+
+/* Row actions on the account cards (edit / pause / activate). */
+.account-card-actions .btn-sm,
+.account-card-actions .btn {
+  min-height: 44px;
+}

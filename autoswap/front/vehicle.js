@@ -142,7 +142,7 @@ function DetailPage(car, photos, comparables) {
     car.estimatedValueLabel ? { label: 'ღირებულება', value: `~${car.estimatedValueLabel}` } : null,
   ].filter(Boolean);
   const statRow = stats
-    .map((s) => `<div class="stat-cell"><span>${s.label}</span><strong>${esc(s.value)}</strong></div>`)
+    .map((s) => `<div class="stat-cell" role="listitem"><span>${s.label}</span><strong>${esc(s.value)}</strong></div>`)
     .join('');
 
   const name = esc(`${car.make} ${car.model}`);
@@ -269,6 +269,83 @@ function openLightbox(src) {
   overlay.querySelector('.lightbox-close')?.focus();
 }
 
+// Every listing used to ship the same <title>, og:image and og:url, so a car
+// shared to WhatsApp or Facebook - the way listings actually travel here -
+// showed an identical generic card, and search engines saw one page. Everything
+// below is derived from the listing's own data; no new user-facing copy.
+function applyListingMeta(car, photos) {
+  const year = car.year ? ` · ${car.year}` : '';
+  const title = `${car.make} ${car.model}${year} · AutoSwap`.trim();
+  const description = descriptionFor(car);
+  const url = `${window.location.origin}/vehicle?id=${encodeURIComponent(car.id)}`;
+  const cover = (photos && photos.length && photos[0].url) || car.image || '';
+  const image = cover && /^https?:\/\//.test(cover) ? cover : (cover ? window.location.origin + cover : '');
+
+  document.title = title;
+
+  const meta = (selector, value) => {
+    if (!value) return;
+    let el = document.head.querySelector(selector);
+    if (!el) {
+      el = document.createElement('meta');
+      const m = /\[(name|property)="([^"]+)"\]/.exec(selector);
+      if (!m) return;
+      el.setAttribute(m[1], m[2]);
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', value);
+  };
+
+  meta('meta[name="description"]', description);
+  meta('meta[property="og:title"]', title);
+  meta('meta[property="og:description"]', description);
+  meta('meta[property="og:url"]', url);
+  meta('meta[property="og:image"]', image);
+  meta('meta[name="twitter:title"]', title);
+  meta('meta[name="twitter:description"]', description);
+  meta('meta[name="twitter:image"]', image);
+
+  let canonical = document.head.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement('link');
+    canonical.setAttribute('rel', 'canonical');
+    document.head.appendChild(canonical);
+  }
+  canonical.setAttribute('href', url);
+
+  // schema.org Vehicle, so a listing can qualify for a rich result rather than
+  // a bare blue link. Fields only - nothing here is prose.
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'Vehicle',
+    name: `${car.make} ${car.model}`.trim(),
+    url,
+    brand: { '@type': 'Brand', name: car.make },
+    model: car.model || undefined,
+    vehicleModelDate: car.year ? String(car.year) : undefined,
+    mileageFromOdometer: car.mileageNum
+      ? { '@type': 'QuantitativeValue', value: car.mileageNum, unitCode: 'KMT' } : undefined,
+    fuelType: car.fuel || undefined,
+    vehicleTransmission: car.transmissionLabel || undefined,
+    itemCondition: 'https://schema.org/UsedCondition',
+    image: image || undefined,
+    description,
+    offers: car.estimatedValue
+      ? { '@type': 'Offer', price: car.estimatedValue, priceCurrency: 'GEL',
+          availability: 'https://schema.org/InStock', url }
+      : undefined,
+  };
+  let ld = document.head.querySelector('script[data-listing-ld]');
+  if (!ld) {
+    ld = document.createElement('script');
+    ld.type = 'application/ld+json';
+    ld.setAttribute('data-listing-ld', '');
+    document.head.appendChild(ld);
+  }
+  // "</script>" inside the seller's own description would close this block early.
+  ld.textContent = JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
 async function render() {
   const id = getId();
   const car = id ? await fetchVehicleById(id) : null;
@@ -282,6 +359,7 @@ async function render() {
 
   document.querySelector('#app').innerHTML = car ? DetailPage(car, photos, comparables) : NotFound();
   if (car) {
+    applyListingMeta(car, photos);
     bindThumbs();
     bindStickyBar();
     bindGalleryTools();

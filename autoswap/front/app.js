@@ -381,7 +381,7 @@ function SearchBar() {
         </div>
         <div class="search-field search-brand-field" data-brand-picker>
           <span>${icons.search}</span>
-          <input name="want" data-brand-input type="search" aria-label="რა მანქანა გინდა, მარკა ან მოდელი" placeholder="მარკა ან მოდელი" autocomplete="off" aria-controls="hero-brand-list" aria-expanded="false">
+          <input name="want" data-brand-input type="search" aria-label="რა მანქანა გინდა, მარკა ან მოდელი" placeholder="მარკა ან მოდელი" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="hero-brand-list" aria-expanded="false">
           <input name="make" data-brand-hidden type="hidden">
           <button class="brand-picker-clear" type="button" data-brand-clear aria-label="გასუფთავება" hidden>&times;</button>
           <div class="brand-picker-panel" id="hero-brand-panel" data-brand-panel hidden>
@@ -400,7 +400,7 @@ function SearchBar() {
       <div class="swap-search-bottom">
         <label class="search-field">
           <span>${icons.location}</span>
-          <select name="city">
+          <select name="city" aria-label="ქალაქი">
             <option value="">ყველა ქალაქი</option>
             <option value="თბილისი">თბილისი</option>
             <option value="ბათუმი">ბათუმი</option>
