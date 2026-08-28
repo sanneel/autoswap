@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
 Disallow: /account.html
+Disallow: /account          # the site serves clean URLs, so both forms need listing
+Disallow: /login.html
+Disallow: /login
 
 Sitemap: https://autoswap.ge/sitemap.xml
