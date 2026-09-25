@@ -1,0 +1,3 @@
+# Vendored with an SRI hash: line-ending conversion on checkout would change the
+# bytes and the browser would refuse to run it.
+front/supabase-js-*.js -text

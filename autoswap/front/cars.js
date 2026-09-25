@@ -1569,48 +1569,8 @@ function bindEvents() {
 
   form?.addEventListener('submit', (event) => event.preventDefault());
 
-  document.addEventListener('click', (event) => {
-    const chip = event.target.closest('[data-adv-chip]');
-    if (!chip) return;
-    const field = chip.dataset.advChip;
-    const value = chip.dataset.value;
-    currentFilters[field] = value;
-    document.querySelectorAll(`[data-adv-chip="${field}"]`).forEach((c) => {
-      c.classList.toggle('is-active', c.dataset.value === value);
-    });
-    if (field === 'cash') {
-      const amountField = document.querySelector('#filter-cash-amount');
-      if (amountField) amountField.hidden = !(value === 'add' || value === 'ask');
-      if (value !== 'add' && value !== 'ask') { currentFilters.cashMin = ''; currentFilters.cashMax = ''; }
-    }
-    pagesShown = 1;
-    update();
-    scheduleRefetch();
-  });
-
-  const clearAllFilters = () => {
-    const sort = currentFilters.sort;
-    currentFilters = emptyFilters();
-    currentFilters.sort = sort;
-    pagesShown = 1;
-    syncFiltersToURL();
-    renderAll();
-    scheduleRefetch();
-  };
   document.querySelector('#filters-reset')?.addEventListener('click', clearAllFilters);
   document.querySelector('#filters-clear')?.addEventListener('click', clearAllFilters);
-
-  // Removable active-filter chips (above the results).
-  document.addEventListener('click', (event) => {
-    if (event.target.closest('#active-clear-all')) { clearAllFilters(); return; }
-    const chip = event.target.closest('[data-chip-clear]');
-    if (!chip) return;
-    clearFilterKey(chip.dataset.chipClear);
-    pagesShown = 1;
-    syncFiltersToURL();
-    renderAll();
-    scheduleRefetch();
-  });
 
   document.querySelector('#sort-select')?.addEventListener('change', (event) => {
     currentFilters.sort = event.target.value;
@@ -1691,6 +1651,50 @@ function bindEvents() {
   bindDragRails();
 }
 
+function clearAllFilters() {
+  const sort = currentFilters.sort;
+  currentFilters = emptyFilters();
+  currentFilters.sort = sort;
+  pagesShown = 1;
+  syncFiltersToURL();
+  renderAll();
+  scheduleRefetch();
+}
+
+// Delegated document listeners are bound once, here, never in bindEvents():
+// renderAll() calls that on every re-render, and a copy per render meant each
+// chip removal re-rendered once per stacked copy and doubled the stack.
+document.addEventListener('click', (event) => {
+  const chip = event.target.closest('[data-adv-chip]');
+  if (!chip) return;
+  const field = chip.dataset.advChip;
+  const value = chip.dataset.value;
+  currentFilters[field] = value;
+  document.querySelectorAll(`[data-adv-chip="${field}"]`).forEach((c) => {
+    c.classList.toggle('is-active', c.dataset.value === value);
+  });
+  if (field === 'cash') {
+    const amountField = document.querySelector('#filter-cash-amount');
+    if (amountField) amountField.hidden = !(value === 'add' || value === 'ask');
+    if (value !== 'add' && value !== 'ask') { currentFilters.cashMin = ''; currentFilters.cashMax = ''; }
+  }
+  pagesShown = 1;
+  update();
+  scheduleRefetch();
+});
+
+// Removable active-filter chips (above the results).
+document.addEventListener('click', (event) => {
+  if (event.target.closest('#active-clear-all')) { clearAllFilters(); return; }
+  const chip = event.target.closest('[data-chip-clear]');
+  if (!chip) return;
+  clearFilterKey(chip.dataset.chipClear);
+  pagesShown = 1;
+  syncFiltersToURL();
+  renderAll();
+  scheduleRefetch();
+});
+
 document.addEventListener('click', (event) => {
   if (event.target.closest('[data-mycar-edit]')) openMyCarModal();
 });
@@ -1724,9 +1728,12 @@ async function refetchFeed() {
   update();
 }
 
+// Every caller is a discrete action (a chip, a select, a picked make); typing is
+// already debounced before it gets here. The zero timeout only folds calls made
+// in the same tick into one request.
 function scheduleRefetch() {
   clearTimeout(refetchTimer);
-  refetchTimer = setTimeout(refetchFeed, 220);
+  refetchTimer = setTimeout(refetchFeed, 0);
 }
 
 async function hydrateFromSupabase() {

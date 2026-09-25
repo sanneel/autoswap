@@ -10,9 +10,22 @@
 // non-UUID id, an unknown listing - every one of those returns the untouched
 // static page rather than an error, because a generic preview is a much smaller
 // problem than a listing that will not load.
+//
+// Browsers skip the rewrite entirely. They get the same tags from the page
+// script, and the Supabase lookup here held back the first byte of every car
+// click (150-325ms warm, 1.2s cold, against ~40ms for the static page).
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SITE = 'https://autoswap.ge';
+
+// Browsers mark page loads (and prerenders) with Sec-Fetch-Dest: document;
+// preview crawlers do not send it, and the ones that might are caught by name.
+const CRAWLER_RE = /bot|crawl|spider|preview|facebookexternalhit|whatsapp|telegram|viber|slack|discord|skype|embedly|vkshare|pinterest/i;
+
+function isBrowserNavigation(request) {
+  if (request.headers.get('sec-fetch-dest') !== 'document') return false;
+  return !CRAWLER_RE.test(request.headers.get('user-agent') || '');
+}
 
 class AttrSetter {
   constructor(attr, value) { this.attr = attr; this.value = value; }
@@ -30,6 +43,7 @@ class TextSetter {
 
 export async function onRequestGet(context) {
   const { request, env, next } = context;
+  if (isBrowserNavigation(request)) return next();
   const response = await next();
 
   try {

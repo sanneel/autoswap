@@ -30,6 +30,10 @@ const pages = ['index.html', 'cars.html', 'sell.html', 'vehicle.html?id=8f1d8bb3
 const browser = await chromium.launch();
 const ctx = await browser.newContext();
 await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (route) => route.abort());
+// supabase-js is served from this origin now, so the external block above no
+// longer keeps the client away. Block it too, or pages get a client whose every
+// request fails, which is an outage test and not this one.
+await ctx.route(/\/supabase-js-[\d.]+\.js$/, (route) => route.abort());
 let failures = 0;
 
 for (const pagePath of pages) {
