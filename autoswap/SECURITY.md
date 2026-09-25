@@ -45,8 +45,28 @@ SQL regression tests (`npm run test:db:security`).
 | **P3 Escapers missed `'` and `` ` `` ** | Not exploitable today (every attribute is double-quoted), but one refactor away from being so. `escapeAttr`/`escapeHtml` now cover both. `optionTags()` escapes its value and label, `statusBadge()` escapes an unmapped status, and the dead `selectField()` was deleted. |
 
 Remaining accepted residual: the Supabase session lives in `localStorage` (the
-library default — moving it would end "stay signed in"), and `script-src` still
-allows `cdn.jsdelivr.net` for supabase-js, pinned with an SRI hash.
+library default — moving it would end "stay signed in").
+
+supabase-js and the Noto Sans Georgian font are now served from this origin
+(`front/supabase-js-2.47.10.js`, still pinned with its SRI hash, and
+`front/assets/fonts/`), so `script-src`, `style-src` and `font-src` no longer
+allow `cdn.jsdelivr.net` or Google Fonts. `script-src` gains
+`'inline-speculation-rules'`, which permits only `<script type="speculationrules">`
+blocks (hover prerendering of read-only pages) and no executable inline script.
+
+## Fourth pass (launch readiness, 2026-09-25)
+
+Probed production read-only with the anon key; covered by new blocks in
+`supabase/tests/security-hardening.test.sql`, each checked to fail when its fix
+is reverted.
+
+| Finding | Fix |
+|---|---|
+| **P0 Every profile readable by any visitor, in production** | The repo's own-row `profiles_select` had never been applied; the live policy was still `using (true)`, exposing `phone` and `telegram_link_code` (the latter lets a stranger link their Telegram to someone else's notifications). Nothing in code was wrong, the database was behind: `LAUNCH.md` step 2 applies the files, tested against a database shaped like production. A regression test now asserts anon reads zero profiles. |
+| **P1 Email-only accounts could list cars and send offers** | Phone+password login uses shadow emails, so Supabase's email sign-up endpoint is open, and no policy required any identity. An account made there with any address could post once its email was confirmed. `account_is_trusted()` now gates `vehicles` and `offers` inserts: a verified phone (GoTrue's column or verify-otp's `app_metadata.verified_phone`) or an OAuth provider. Google accounts still need no phone, as decided in c0247e8. Photo uploads were already tied to owning the listing. |
+| **P2 A phone number could be squatted** | Registering `p<number>@phone.autoswap.ge` through the public endpoint first made verify-otp's `createUser` fail for the number's real owner. verify-otp now removes such an account first, via the service-role-only `squatted_shadow_account()`, which only matches accounts verify-otp cannot have made: unconfirmed, never signed in, no verified phone, owning nothing. |
+| **P2 A missing SMS key turned sign-in into a demo** | When neither verify.ge nor Supabase phone auth could send, request-otp answered 200 `provider_disabled` and the page accepted code `1234`, "signing in" to a local fake account; on the attach path it also wrote an unverified phone into `user_metadata`. request-otp now answers 503, the page shows its existing "service unavailable" message, and a demo user left in storage is ignored whenever a Supabase project is configured. Demo sign-in remains only for a checkout with no config. |
+| **P3 Front-end failures were invisible** | Handled errors only reached `console.error`. Browsers now report them to `public.client_errors`: insert-only for clients, cannot be attributed to another user, capped at 120 rows a minute and pruned after 30 days. |
 
 ### Required migration step (phone-login accounts)
 
