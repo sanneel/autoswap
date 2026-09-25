@@ -341,6 +341,46 @@ create table if not exists public.listing_boosts_future (
 create index if not exists listing_boosts_active_idx
   on public.listing_boosts_future (vehicle_id, boosted_until desc);
 
+-- Front-end errors reported by visitors' browsers (reportClientError in
+-- front/shared.js), so a broken page shows up here instead of going unnoticed.
+-- Insert-only for clients; read it from the dashboard:
+--   select created_at, page, message from public.client_errors order by created_at desc limit 100;
+create table if not exists public.client_errors (
+  id         bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  page       text not null check (char_length(page) <= 300),
+  message    text not null check (char_length(message) <= 1000),
+  detail     text check (char_length(detail) <= 4000),
+  user_agent text check (char_length(user_agent) <= 300),
+  user_id    uuid default auth.uid()
+);
+
+create index if not exists client_errors_created_idx on public.client_errors (created_at desc);
+
+-- The endpoint is open to anyone with the anon key, so cap it: past 120 rows in
+-- a minute further reports are dropped silently (returning null skips the row
+-- without an error), and rows older than 30 days are pruned as new ones arrive.
+create or replace function public.trg_client_errors_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if (select count(*) from public.client_errors where created_at > now() - interval '1 minute') >= 120 then
+    return null;
+  end if;
+  if random() < 0.02 then
+    delete from public.client_errors where created_at < now() - interval '30 days';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists client_errors_guard on public.client_errors;
+create trigger client_errors_guard before insert on public.client_errors
+  for each row execute function public.trg_client_errors_guard();
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql

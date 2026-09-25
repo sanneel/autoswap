@@ -1,8 +1,32 @@
 const {
   Header, Footer, icons, fetchVehicleById, fetchVehiclePhotos, escapeAttr,
-  fetchFeed, priceCurrencyToggle, toast,
+  fetchFeed, priceCurrencyToggle, toast, sb, authReady, buildModal, openLoginGateModal, isUuid,
 } = window.AutoSwap;
 const esc = escapeAttr;
+
+// Reporting a listing. The reports table and its row-level security already
+// exist; the UI waits only on copy, which the owner writes. Every string starts
+// empty and the button stays hidden until `button` is filled in.
+const REPORT_COPY = {
+  button: '',       // quiet link under the owner card
+  title: '',        // modal heading
+  reasonLabel: '',  // label above the reason select
+  reasons: {        // one per value the reports.reason check constraint accepts
+    fake_listing: '',
+    scam: '',
+    spam: '',
+    abuse: '',
+    wrong_information: '',
+    duplicate_listing: '',
+    other: '',
+  },
+  detailsLabel: '', // label above the optional free-text box
+  submit: '',       // submit button
+  sent: '',         // toast after the report is saved
+  failed: '',       // toast when saving fails
+  signIn: '',       // sign-in gate message for signed-out visitors
+};
+const reportEnabled = () => Boolean(REPORT_COPY.button);
 
 function getId() {
   return new URLSearchParams(window.location.search).get('id') || '';
@@ -179,6 +203,7 @@ function DetailPage(car, photos, comparables) {
               </div>
               ${ownerHref ? `<span class="owner-more">სხვა განცხადებები ${icons.arrowRight}</span>` : ''}
             </${ownerTag}>
+            ${reportEnabled() ? `<button type="button" class="btn btn-ghost btn-sm detail-report" data-report>${esc(REPORT_COPY.button)}</button>` : ''}
           </aside>
         </div>
         <section class="detail-about">
@@ -363,7 +388,62 @@ async function render() {
     bindThumbs();
     bindStickyBar();
     bindGalleryTools();
+    bindReport(car);
   }
+}
+
+function bindReport(car) {
+  document.querySelector('[data-report]')?.addEventListener('click', async () => {
+    const user = await authReady;
+    if (!sb || !user) {
+      openLoginGateModal(REPORT_COPY.signIn);
+      return;
+    }
+    const options = Object.entries(REPORT_COPY.reasons)
+      .map(([value, label]) => `<option value="${esc(value)}">${esc(label || value)}</option>`)
+      .join('');
+    const { overlay, close } = buildModal(`
+      <div class="modal-body">
+        <h2 class="modal-title" id="report-title">${esc(REPORT_COPY.title)}</h2>
+        <form class="offer-form" id="report-form" novalidate>
+          <label class="field">
+            <span>${esc(REPORT_COPY.reasonLabel)}</span>
+            <select name="reason" required>${options}</select>
+          </label>
+          <label class="field">
+            <span>${esc(REPORT_COPY.detailsLabel)}</span>
+            <textarea name="details" rows="3" maxlength="1000"></textarea>
+          </label>
+          <div class="offer-actions">
+            <button type="button" class="btn btn-ghost" data-close>გაუქმება</button>
+            <button type="submit" class="btn btn-primary">${esc(REPORT_COPY.submit)}</button>
+          </div>
+        </form>
+      </div>
+    `, 'report-title');
+    overlay.querySelector('#report-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('[type="submit"]');
+      submit.disabled = true;
+      const data = new FormData(form);
+      const { error } = await sb.from('reports').insert({
+        reporter_id: user.id,
+        vehicle_id: car.id,
+        reported_user_id: isUuid(car.ownerId) && car.ownerId !== user.id ? car.ownerId : null,
+        reason: String(data.get('reason')),
+        details: String(data.get('details') || '').trim() || null,
+      });
+      if (error) {
+        console.error('AutoSwap: report failed', error.message);
+        submit.disabled = false;
+        toast(REPORT_COPY.failed, 'error');
+        return;
+      }
+      close();
+      toast(REPORT_COPY.sent);
+    });
+  });
 }
 
 render();

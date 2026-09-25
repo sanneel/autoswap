@@ -519,6 +519,43 @@
 
   const sbClient = createClient();
 
+  // Errors go to public.client_errors so a broken page surfaces without a
+  // third-party service. At most five distinct messages per page load, nothing
+  // from local development, and a failed report is dropped rather than logged,
+  // so reporting can never feed back into console.error.
+  const reportedErrors = new Set();
+  function reportClientError(message, detail) {
+    if (!sbClient || reportedErrors.size >= 5) return;
+    if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)) return;
+    const text = String(message || '').trim().slice(0, 1000);
+    if (!text || reportedErrors.has(text)) return;
+    reportedErrors.add(text);
+    sbClient.from('client_errors').insert({
+      page: (window.location.pathname + window.location.search).slice(0, 300),
+      message: text,
+      detail: detail ? String(detail).slice(0, 4000) : null,
+      user_agent: navigator.userAgent.slice(0, 300),
+    }).then(() => {}, () => {});
+  }
+  const describe = (value) => {
+    if (typeof value === 'string') return value;
+    if (value instanceof Error) return value.message;
+    try { return JSON.stringify(value); } catch (_err) { return String(value); }
+  };
+  window.addEventListener('error', (event) => {
+    reportClientError(event.message, (event.error && event.error.stack) || `${event.filename}:${event.lineno}:${event.colno}`);
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    reportClientError(describe(event.reason), event.reason && event.reason.stack);
+  });
+  // Handled failures (a feed query that 400s, an OTP send that fails) only reach
+  // console.error, which is exactly what went unnoticed with the price filter.
+  const consoleError = console.error.bind(console);
+  console.error = (...args) => {
+    consoleError(...args);
+    reportClientError(args.map(describe).join(' '));
+  };
+
   const CACHE_PREFIX = 'as:cache:';
 
   function cacheGet(key) {
@@ -576,6 +613,9 @@
   const authListeners = new Set();
 
   function demoAuthUser() {
+    // A demo user left in storage from before sign-in was real must not keep
+    // presenting as signed in on a configured site.
+    if (sbClient) return null;
     const demo = getDemoUser();
     return demo ? { demo: true, ...demo } : null;
   }
@@ -1504,6 +1544,8 @@
     };
   }
 
+  const SERVICE_UNAVAILABLE = 'სერვისი დროებით მიუწვდომელია. სცადე მოგვიანებით.';
+
   async function callAuthFn(name, body, options) {
     const base = String(window.AUTO_SWAP_SUPABASE_URL || '').trim().replace(/\/$/, '');
     const anonKey = String(window.AUTO_SWAP_SUPABASE_ANON_KEY || '').trim();
@@ -1525,11 +1567,14 @@
     let data = {};
     try { data = await res.json(); } catch (_err) {  }
     if (res.status === 404 && !data.error) {
-      return { error: 'სერვისი დროებით მიუწვდომელია. სცადე მოგვიანებით.' };
+      return { error: SERVICE_UNAVAILABLE };
     }
     return { res, data };
   }
 
+  // Demo sign-in (code 1234) exists only for a checkout with no Supabase config.
+  // With a real project behind the page, a missing SMS provider is an outage and
+  // is reported as one, never turned into a pretend sign-in.
   async function requestOtp(phone, channel, purpose) {
     if (!sbClient) return { demo: true };
     const wantsAttach = purpose === 'attach';
@@ -1543,6 +1588,10 @@
       const wait = Number(data.retry_after) || 60;
       return { error: `კოდი ვერ გაიგზავნა: ${data.error || 'too many requests'} (${wait}s)` };
     }
+    if (data.status === 'provider_disabled') {
+      console.error('request-otp: no SMS provider is configured on the server');
+      return { error: SERVICE_UNAVAILABLE };
+    }
     if (!res.ok) {
       console.error('request-otp failed', {
         status: res.status,
@@ -1553,7 +1602,6 @@
       });
       return { error: `კოდი ვერ გაიგზავნა: ${data.error || res.statusText}` };
     }
-    if (data.status === 'provider_disabled') return { demo: true };
     if (data.status === 'legacy_attach') return { demo: false, legacy: true };
     const delivered = String(data.channel || 'SMS').toLowerCase();
     const asked = String(data.requested_channel || delivered).toLowerCase();
@@ -1731,7 +1779,10 @@
     const { error } = await sbClient.auth.updateUser({ phone });
     if (!error) return { demo: false };
     const message = String(error.message || '');
-    if (/provider|not enabled|disabled|unsupported|sms/i.test(message)) return { demo: true };
+    if (/provider|not enabled|disabled|unsupported|sms/i.test(message)) {
+      console.error('phone attach: Supabase phone auth is not enabled', message);
+      return { error: `ნომერი ვერ დაემატა: ${SERVICE_UNAVAILABLE}` };
+    }
     return { error: `ნომერი ვერ დაემატა: ${message}` };
   }
 

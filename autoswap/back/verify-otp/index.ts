@@ -105,6 +105,20 @@ Deno.serve(async (req) => {
   let linkEmail = email;
 
   if (!userId) {
+    // Someone may have registered this number's shadow email through the public
+    // sign-up endpoint first, which would make createUser fail for the real
+    // owner. squatted_shadow_account only returns an account verify-otp could
+    // not have made (unconfirmed, never signed in, no verified phone, owns
+    // nothing), so removing it loses nothing.
+    const { data: squatter, error: squatError } = await admin.rpc("squatted_shadow_account", { p_email: email });
+    if (squatError) {
+      console.error("verify-otp: squatted_shadow_account failed", squatError.message);
+    } else if (squatter) {
+      const { error: deleteError } = await admin.auth.admin.deleteUser(squatter as string);
+      if (deleteError) console.error("verify-otp: could not remove squatted shadow account", deleteError.message);
+      else console.warn("verify-otp: removed a squatted shadow account", squatter);
+    }
+
     // The number is only ever recorded in service-role-only fields: the
     // GoTrue-verified phone column and app_metadata. It must NEVER go into
     // user_metadata - any signed-in client can rewrite that with

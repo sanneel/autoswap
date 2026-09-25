@@ -13,6 +13,7 @@ alter table public.messages                 enable row level security;
 alter table public.reports                  enable row level security;
 alter table public.listing_moderation_flags enable row level security;
 alter table public.listing_boosts_future    enable row level security;
+alter table public.client_errors            enable row level security;
 
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles for select using (id = auth.uid());
@@ -59,12 +60,47 @@ create trigger profiles_guard_trust
   before update on public.profiles
   for each row execute function public.trg_profiles_guard_trust();
 
+-- Listings and offers only come from accounts with a real identity behind them:
+-- a verified phone (GoTrue's confirmed column, or the app_metadata stamp that
+-- verify-otp writes) or an OAuth provider such as Google. Supabase's email
+-- sign-up endpoint has to stay open because phone+password login rides on
+-- shadow emails, and without this check an account made there with any address
+-- could list cars and send offers without ever proving a phone or a Google login.
+-- SECURITY DEFINER because auth.users is not readable by the caller.
+create or replace function public.account_is_trusted()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+      from auth.users u
+     where u.id = auth.uid()
+       and (
+         u.phone_confirmed_at is not null
+         or u.raw_app_meta_data ? 'verified_phone'
+         or coalesce(u.raw_app_meta_data ->> 'provider', 'email') not in ('email', 'phone')
+         or exists (
+           select 1
+             from jsonb_array_elements_text(coalesce(u.raw_app_meta_data -> 'providers', '[]'::jsonb)) as p(name)
+            where p.name not in ('email', 'phone')
+         )
+       )
+  );
+$$;
+
+revoke all on function public.account_is_trusted() from public, anon;
+grant execute on function public.account_is_trusted() to authenticated, service_role;
+
 drop policy if exists vehicles_select_public on public.vehicles;
 create policy vehicles_select_public on public.vehicles for select
   using (status = 'active' or owner_id = auth.uid());
 
 drop policy if exists vehicles_insert_own on public.vehicles;
-create policy vehicles_insert_own on public.vehicles for insert with check (owner_id = auth.uid());
+create policy vehicles_insert_own on public.vehicles for insert
+  with check (owner_id = auth.uid() and public.account_is_trusted());
 
 drop policy if exists vehicles_update_own on public.vehicles;
 create policy vehicles_update_own on public.vehicles for update
@@ -115,6 +151,7 @@ create policy offers_select_party on public.offers for select
 drop policy if exists offers_insert_sender on public.offers;
 create policy offers_insert_sender on public.offers for insert with check (
   from_user_id = auth.uid()
+  and public.account_is_trusted()
   and from_user_id <> to_user_id
   and status = 'pending'
   and parent_offer_id is null
@@ -195,3 +232,9 @@ create policy moderation_flags_select_owner on public.listing_moderation_flags f
 drop policy if exists listing_boosts_select on public.listing_boosts_future;
 create policy listing_boosts_select on public.listing_boosts_future for select
   using (user_id = auth.uid() or boosted_until > now());
+
+-- Browsers may report errors, never read them, and cannot attribute a report to
+-- someone else. No select policy: only the dashboard (service role) sees them.
+drop policy if exists client_errors_insert on public.client_errors;
+create policy client_errors_insert on public.client_errors for insert to anon, authenticated
+  with check (user_id is not distinct from auth.uid());

@@ -12,6 +12,11 @@ const PHONE_RE = /^\+995\d{9}$/;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersFor(req) });
+  // Which provider would send a code, without sending one. Lets
+  // scripts/verify-production.mjs catch a missing VERIFY_GE_API_KEY.
+  if (req.method === "GET") {
+    return jsonResponseFor(req, { provider: verifyGeConfigured() ? "verify_ge" : "supabase" });
+  }
   if (req.method !== "POST") return jsonResponseFor(req, { error: "Method not allowed" }, 405);
 
   let phone: string | undefined;
@@ -126,7 +131,11 @@ Deno.serve(async (req) => {
 
   const message = String(error.message || "");
   if (/provider|not enabled|disabled|unsupported|sms/i.test(message)) {
-    return jsonResponseFor(req, { status: "provider_disabled" });
+    // Neither verify.ge nor Supabase phone auth can send. This used to answer
+    // 200 and the page fell back to a demo code, so a missing key looked like a
+    // working sign-in to real visitors. It is an outage: say so.
+    console.error("request-otp: no SMS provider configured (set VERIFY_GE_API_KEY)", message);
+    return jsonResponseFor(req, { status: "provider_disabled", error: "SMS provider not configured" }, 503);
   }
   return jsonResponseFor(req, { error: message }, 400);
 });

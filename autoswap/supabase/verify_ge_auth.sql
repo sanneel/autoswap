@@ -104,6 +104,31 @@ as $$
    limit 1;
 $$;
 
+-- An account holding a number's shadow email that verify-otp did not create.
+-- The email sign-up endpoint is public, so anyone can register
+-- p995XXXXXXXXX@<shadow domain> first; the real owner's registration then dies
+-- on "email already registered". Every account verify-otp makes has its email
+-- confirmed on creation, and nobody can confirm a shadow address by mail, so an
+-- unconfirmed one that has never signed in, carries no verified phone and owns
+-- nothing is a squatter (or dead weight) and safe for verify-otp to delete.
+create or replace function public.squatted_shadow_account(p_email text)
+returns uuid
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select u.id
+    from auth.users u
+   where lower(u.email) = lower(p_email)
+     and u.email_confirmed_at is null
+     and u.last_sign_in_at is null
+     and u.phone_confirmed_at is null
+     and u.raw_app_meta_data->>'verified_phone' is null
+     and not exists (select 1 from public.vehicles v where v.owner_id = u.id)
+   limit 1;
+$$;
+
 -- One-time migration for accounts created before verified_phone existed: those
 -- whose number lives only in the client-writable user_metadata (the retry
 -- fallback in verify-otp used to create them without a phone column). Promotes
@@ -167,6 +192,7 @@ revoke all on function public.otp_request_begin_verify(text)                   f
 revoke all on function public.otp_request_claim(text)                          from public, anon, authenticated;
 revoke all on function public.otp_requests_prune()                             from public, anon, authenticated;
 revoke all on function public.user_id_for_phone(text)                          from public, anon, authenticated;
+revoke all on function public.squatted_shadow_account(text)                    from public, anon, authenticated;
 revoke all on function public.backfill_verified_phones()                        from public, anon, authenticated;
 
 grant execute on function public.otp_request_record(text, text, text, text, uuid) to service_role;
@@ -174,4 +200,5 @@ grant execute on function public.otp_request_begin_verify(text)                 
 grant execute on function public.otp_request_claim(text)                          to service_role;
 grant execute on function public.otp_requests_prune()                             to service_role;
 grant execute on function public.user_id_for_phone(text)                          to service_role;
+grant execute on function public.squatted_shadow_account(text)                    to service_role;
 grant execute on function public.backfill_verified_phones()                        to service_role;
