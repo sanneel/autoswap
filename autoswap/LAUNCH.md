@@ -137,10 +137,10 @@ service-role key is in Supabase → Project Settings → API; never commit it.
 - Add a free external uptime check (for example UptimeRobot) on
   `https://autoswap.ge/` so an outage pages you instead of a user.
 
-## 10. Optional, easier before launch than after
+## 10. Region: not worth moving
 
-Each Supabase call takes about 140 ms from Tbilisi, which matches US East;
-Frankfurt would be about 67 ms. Check Project Settings → General → Region.
-Moving means a new project in `eu-central-1`, restoring the backup from step 1,
-redeploying the edge functions and updating the two `AUTO_SWAP_SUPABASE_*`
-build variables. It is far cheaper while the database is still empty.
+The project is in `eu-west-1` (Ireland). Each Supabase call takes about 140 ms
+from Tbilisi, but the network round trip to AWS Ireland is only about 80 ms and
+to Frankfurt about 67 ms, so most of the cost is not distance and a move would
+save roughly 12 ms a request. The latency work in the front end (fewer round
+trips, preconnect, prerendering) is where the time was.

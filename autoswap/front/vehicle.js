@@ -4,27 +4,26 @@ const {
 } = window.AutoSwap;
 const esc = escapeAttr;
 
-// Reporting a listing. The reports table and its row-level security already
-// exist; the UI waits only on copy, which the owner writes. Every string starts
-// empty and the button stays hidden until `button` is filled in.
+// Reporting a listing, written to the existing reports table. The button stays
+// hidden while `button` is empty. Draft copy: the owner reviews all Georgian text.
 const REPORT_COPY = {
-  button: '',       // quiet link under the owner card
-  title: '',        // modal heading
-  reasonLabel: '',  // label above the reason select
+  button: 'შეატყობინე დარღვევა',
+  title: 'რა არის ამ განცხადებაში არასწორი?',
+  reasonLabel: 'მიზეზი',
   reasons: {        // one per value the reports.reason check constraint accepts
-    fake_listing: '',
-    scam: '',
-    spam: '',
-    abuse: '',
-    wrong_information: '',
-    duplicate_listing: '',
-    other: '',
+    fake_listing: 'ყალბი განცხადება',
+    scam: 'თაღლითობის მცდელობა',
+    spam: 'სპამი ან რეკლამა',
+    abuse: 'შეურაცხმყოფელი შინაარსი',
+    wrong_information: 'არასწორი ინფორმაცია',
+    duplicate_listing: 'განმეორებული განცხადება',
+    other: 'სხვა',
   },
-  detailsLabel: '', // label above the optional free-text box
-  submit: '',       // submit button
-  sent: '',         // toast after the report is saved
-  failed: '',       // toast when saving fails
-  signIn: '',       // sign-in gate message for signed-out visitors
+  detailsLabel: 'დეტალები (არასავალდებულო)',
+  submit: 'გაგზავნა',
+  sent: 'მადლობა, შეტყობინება მიღებულია. განვიხილავთ.',
+  failed: 'შეტყობინება ვერ გაიგზავნა. სცადე თავიდან.',
+  signIn: 'დარღვევის შესატყობინებლად ჯერ შედი ანგარიშზე.',
 };
 const reportEnabled = () => Boolean(REPORT_COPY.button);
 
