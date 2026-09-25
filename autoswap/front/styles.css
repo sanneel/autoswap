@@ -5430,12 +5430,16 @@ p {
 
 .auth-secondary {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 18px;
+  gap: 4px 12px;
+  margin-top: 14px;
 }
 
 .auth-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
   background: none;
   color: var(--deep-green);
   font-size: 14px;
@@ -7702,18 +7706,28 @@ a.header-user:hover {
     min-width: 0;
   }
 
-  .sell-shell--lite .sell-mode-chip {
-    padding: 6px 8px;
-    font-size: 0;
+  .sell-shell--lite .sell-mode-bar {
+    justify-content: flex-start;
+    gap: 6px;
+    margin-inline: -4px;
+    padding-inline: 4px;
+    scroll-snap-type: x proximity;
   }
 
-  .sell-shell--lite .sell-mode-chip span {
-    font-size: 12px;
+  .sell-shell--lite .sell-mode-chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
+
+  .sell-shell--lite .sell-mode-chip.is-active {
+    background: var(--accent-soft);
   }
 
   .sell-shell--lite .sell-mode-chip + .sell-mode-chip::before {
-    width: 26px;
-    margin-right: 0;
+    display: none;
   }
 
   .sell-shell--lite .sell-section {
@@ -8397,7 +8411,7 @@ body {
 
 .auth-shell {
   min-height: calc(100vh - 128px);
-  place-items: start center;
+  place-items: start stretch;
   padding-top: 54px;
 }
 
@@ -10402,7 +10416,7 @@ body {
 
 @media (max-width: 980px) {
   .featured-swap {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
   }
 
@@ -10411,12 +10425,18 @@ body {
   }
 
   .featured-aside {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     padding-right: 0;
   }
 
   .listing-grid--trio {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 380px) {
+  .featured-aside {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -10774,7 +10794,8 @@ body {
 
 .legal-doc h1 {
   margin: 0 0 6px;
-  font-size: clamp(28px, 4vw, 40px);
+  font-size: clamp(20px, 7vw, 40px);
+  overflow-wrap: anywhere;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
@@ -11983,6 +12004,9 @@ select[data-aselect]:focus-visible,
 }
 
 .crumbs a {
+  display: inline-block;
+  padding: 8px 0;
+  margin: -8px 0;
   color: var(--secondary);
   font-weight: 600;
   text-decoration: none;
@@ -13537,16 +13561,30 @@ html {
     display: none;
   }
 
+  /* body already pads for the tab bar, so the sticky inset only needs the gap */
   .sell-shell--lite .sell-actions {
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: calc(var(--tabbar-h, 58px) + 8px);
-    margin: 0;
+    position: sticky;
+    bottom: 8px;
+    margin: 14px 0 0;
   }
 
   .sell-shell--lite .sell-form {
-    padding-bottom: 160px;
+    padding-bottom: 24px;
+  }
+
+  .sell-shell--lite .sell-locked .sell-actions {
+    display: none;
+  }
+
+  .sell-locked-card {
+    top: 76px;
+    margin-top: 36px;
+  }
+
+  .legal-header a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 }
 

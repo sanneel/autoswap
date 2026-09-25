@@ -75,3 +75,17 @@ node scripts/upload-test-listings-from-csv.mjs C:\Users\pc\Downloads\100.csv 15
 The script creates/reuses `autoswap-test-loader@autoswap.test`, removes previous
 test listings owned by that loader, then inserts fresh vehicles, photos, swap
 preferences, and desired-vehicle labels.
+
+## `responsive-audit.mjs`
+
+Serves `front/` locally and opens every page in headless Chromium at eight
+widths (320 to 1440). For each page it reports horizontal page scroll, elements
+leaking past the viewport, clipped text, text under 11px and tap targets under
+32px, and saves viewport-sized screenshots to `test-results/responsive/`.
+
+```bash
+npm run audit:responsive
+```
+
+`ONLY=p390,d1280` limits the widths, `PAGES=cars,sell` limits the pages and
+`SHOTS=0` skips screenshots. The exit code is 1 when any page overflows.

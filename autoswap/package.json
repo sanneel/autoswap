@@ -12,7 +12,8 @@
     "functions:stage": "node scripts/stage-functions.mjs",
     "build": "node scripts/gen-config.mjs && node scripts/hash-assets.mjs",
     "smoke": "node scripts/smoke-frontend.mjs",
-    "ingest:catalog": "node scripts/ingest-car-catalog.mjs"
+    "ingest:catalog": "node scripts/ingest-car-catalog.mjs",
+    "audit:responsive": "node scripts/responsive-audit.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
