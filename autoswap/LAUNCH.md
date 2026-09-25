@@ -15,7 +15,10 @@ It probes the live site and database with the public anon key, sends no SMS,
 writes nothing, and prints every open item with its fix. Exit code 0 means no
 blockers are left.
 
-Done on 2026-09-25: `request-otp` and `verify-otp` redeployed (step 3), Pages
+Done on 2026-09-25: database migrated with all eight files, schema reloaded and
+the phone backfill run (step 2, after a JSON export of every table and the
+old policies, views and functions to `F:\autoswap-backups\2026-09-25` on the
+owner's machine); `request-otp` and `verify-otp` redeployed (step 3), Pages
 output directory set to `dist` and the `www` redirect rule added (steps 5 and
 6), Google OAuth app published (step 7; Supabase URL configuration was already
 correct). Email routing and the Pro upgrade were deliberately left for later.
