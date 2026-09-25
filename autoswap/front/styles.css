@@ -1,3 +1,10 @@
+/* Everything from here down to the form-controls block at the end of this
+   file lives in the "legacy" cascade layer. Unlayered rules beat layered
+   ones regardless of specificity, so that block can state each control once
+   instead of out-specifying the overrides that accumulated in here. New rules
+   belong outside the layer too. */
+@layer legacy {
+
 :root {
   --ink: #161a15;
   --ink-elevated: #222921;
@@ -14049,4 +14056,793 @@ html {
 .account-card-actions .btn-sm,
 .account-card-actions .btn {
   min-height: 44px;
+}
+
+} /* @layer legacy */
+
+/* ==========================================================================
+   Form controls
+   One vocabulary for every text field, select, dropdown panel, chip and
+   checkbox on the site. This block sits outside @layer legacy: unlayered rules
+   win over layered ones whatever their specificity, so each control is stated
+   once here instead of out-ranking the page-by-page overrides above.
+   Base rules are wrapped in :where() (zero specificity) so the context rules
+   that follow them (hero panel, filter sidebar, sell form) always apply.
+   ========================================================================== */
+
+:root {
+  --field-h: 48px;
+  --field-h-compact: 44px;
+  --field-radius: 12px;
+  --field-pad: 14px;
+  --field-bg: #f8faf7;
+  --field-bg-focus: #ffffff;
+  --field-line: rgba(22, 26, 21, 0.15);
+  --field-line-hover: rgba(22, 26, 21, 0.32);
+  --field-line-soft: rgba(22, 26, 21, 0.09);
+  --field-ring: 0 0 0 4px rgba(30, 77, 52, 0.13);
+  --field-text: var(--graphite);
+  --field-placeholder: #5f695d;
+  --field-label: #3f483e;
+  --field-icon: #5a6459;
+  --field-disabled-bg: #eef1ec;
+  --field-invalid: #a33627;
+  --field-invalid-bg: #fdf5f3;
+  --field-invalid-ring: 0 0 0 4px rgba(163, 54, 39, 0.12);
+  --field-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235a6459' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
+  --pop-bg: #ffffff;
+  --pop-line: rgba(22, 26, 21, 0.1);
+  --pop-radius: 14px;
+  --pop-shadow: 0 2px 6px rgba(16, 20, 15, 0.05), 0 22px 44px -18px rgba(16, 20, 15, 0.34);
+  --option-hover: #eef3ed;
+
+  /* The swap terms get the same quiet tint wherever they are edited. */
+  --swap-tint: rgba(30, 77, 52, 0.045);
+  --swap-line: rgba(30, 77, 52, 0.16);
+
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* A `display` rule anywhere used to beat the hidden attribute: desktop
+   dropdowns grew a second search box and empty filters kept a clear button. */
+[hidden] {
+  display: none !important;
+}
+
+/* The base reset covered button, input and select only, so every textarea
+   fell back to the browser's monospace. */
+textarea {
+  font: inherit;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--copper);
+}
+
+/* ---- Fields that draw their own box ------------------------------------ */
+
+:where(
+  .field input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+  .field select,
+  .field textarea,
+  .results-sort select,
+  .msg-form input
+) {
+  width: 100%;
+  min-height: var(--field-h);
+  padding: 0 var(--field-pad);
+  border: 1px solid var(--field-line);
+  border-radius: var(--field-radius);
+  background-color: var(--field-bg);
+  color: var(--field-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+:where(.field textarea) {
+  padding: 12px var(--field-pad);
+  line-height: 1.55;
+  resize: vertical;
+}
+
+:where(
+  .field input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+  .field select,
+  .field textarea,
+  .results-sort select,
+  .msg-form input
+):hover:not(:focus, :disabled) {
+  border-color: var(--field-line-hover);
+}
+
+:where(
+  .field input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+  .field select,
+  .field textarea,
+  .results-sort select,
+  .msg-form input
+):focus,
+select[data-aselect][aria-expanded="true"] {
+  outline: none;
+  border-color: var(--copper);
+  background-color: var(--field-bg-focus);
+  box-shadow: var(--field-ring);
+}
+
+:where(
+  .field input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+  .field select,
+  .field textarea,
+  .msg-form input
+):disabled {
+  border-color: transparent;
+  background-color: var(--field-disabled-bg);
+  color: var(--field-placeholder);
+  cursor: not-allowed;
+}
+
+:is(.field, .msg-form, .search-field, .combo-control, .brand-picker-search) :is(input, textarea)::placeholder {
+  color: var(--field-placeholder);
+  font-weight: 500;
+  opacity: 1;
+}
+
+/* Selects: one chevron everywhere, including the ones enhanceSelects() opens
+   as a custom panel (the select itself stays the trigger). */
+:where(.field select, .results-sort select, .search-field select, .range-box select) {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 40px;
+  background-image: var(--field-chevron);
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+/* Labels and layout. Only the gap: sell lays its icon fields out as a
+   column that pins the control to the bottom, other forms use a grid. */
+.field {
+  gap: 7px;
+}
+
+.field > span:first-child,
+.field > label:first-child {
+  color: var(--field-label);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* Paired fields line up on their boxes even when one label wraps. */
+.field-row {
+  align-items: end;
+}
+
+/* Errors: sell marks the field, other forms mark the control. */
+.field--invalid .field-control > :is(input, select),
+.field--unknown .field-control > input,
+.field--invalid .mm-picker > input,
+.field--unknown .mm-picker > input,
+:where(.field) :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--field-invalid);
+  background-color: var(--field-invalid-bg);
+}
+
+.field--invalid .field-control > :is(input, select):focus,
+.field--invalid .mm-picker > input:focus,
+:where(.field) :is(input, select, textarea)[aria-invalid="true"]:focus {
+  box-shadow: var(--field-invalid-ring);
+}
+
+.field--invalid > span:first-child {
+  color: var(--field-invalid);
+}
+
+.field--locked .field-control > input {
+  border-color: transparent;
+  background-color: var(--field-disabled-bg);
+  color: var(--field-placeholder);
+  cursor: not-allowed;
+}
+
+/* Leading icon (sell form). The make/model picker wraps its input in a
+   positioned span that used to paint over the icon. */
+.field--icon .field-control > svg {
+  z-index: 1;
+  left: 14px;
+  width: 18px;
+  height: 18px;
+  color: var(--field-icon);
+}
+
+.field--icon .field-control > :is(input, select),
+.field--icon .mm-picker > input {
+  padding-left: 42px;
+}
+
+.field-control--area textarea {
+  padding-bottom: 30px;
+}
+
+.pw-input input {
+  padding-inline-end: 48px;
+}
+
+.otp-input,
+.auth-code-input {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  text-align: center;
+}
+
+.offer-amount-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px;
+  gap: 8px;
+}
+
+/* ---- Fields drawn by a wrapper (icon + input, caption + select) --------- */
+
+:where(.search-field, .combo-control, .range-box, .brand-picker-search) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--field-h);
+  padding: 0 12px;
+  border: 1px solid var(--field-line);
+  border-radius: var(--field-radius);
+  background-color: var(--field-bg);
+  color: var(--field-icon);
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+:where(.search-field, .combo-control, .range-box, .brand-picker-search):hover:not(:focus-within) {
+  border-color: var(--field-line-hover);
+}
+
+:where(.search-field, .combo-control, .range-box, .brand-picker-search):focus-within {
+  border-color: var(--copper);
+  background-color: var(--field-bg-focus);
+  box-shadow: var(--field-ring);
+}
+
+:where(.search-field, .combo-control, .brand-picker-search) > svg,
+:where(.search-field, .brand-picker-search) > span > svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--field-icon);
+}
+
+/* The wrapper is the field: the control inside paints nothing of its own,
+   so there is one border and one focus ring, not a box inside a box. */
+:is(.search-field, .combo-control, .range-box, .brand-picker-search) :is(input, select) {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: calc(var(--field-h) - 2px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  outline: none;
+  color: var(--field-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.search-field select {
+  padding-right: 24px;
+  background-position: right 0 center;
+}
+
+:is(.search-field, .combo-control, .brand-picker-search) input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* Clear buttons inside fields */
+.combo-clear,
+.brand-picker-clear {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--field-icon);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.combo-clear:hover,
+.brand-picker-clear:hover {
+  background: rgba(22, 26, 21, 0.07);
+  color: var(--graphite);
+}
+
+.combo-clear {
+  flex: 0 0 auto;
+  margin-inline-end: -4px;
+}
+
+/* ---- Dropdown panels ----------------------------------------------------- */
+
+.combo-list,
+.aselect-panel,
+.brand-picker-panel {
+  padding: 6px;
+  border: 1px solid var(--pop-line);
+  border-radius: var(--pop-radius);
+  background: var(--pop-bg);
+  box-shadow: var(--pop-shadow);
+  animation: pop-in 160ms var(--ease-out-quart);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.brand-picker-list,
+.aselect-panel {
+  gap: 2px;
+}
+
+.combo-option,
+.aselect-option,
+.brand-picker-option,
+.brand-picker-option.is-textonly {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  color: var(--graphite);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.brand-picker-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.combo-option:hover,
+.combo-option.is-active,
+.aselect-option:hover,
+.aselect-option.is-active,
+.brand-picker-option:hover,
+.brand-picker-option.is-active,
+.brand-picker-option:focus-visible {
+  background: var(--option-hover);
+}
+
+.aselect-option.is-selected {
+  color: var(--copper);
+  font-weight: 700;
+}
+
+.combo-option--all-group {
+  background: transparent;
+  font-weight: 700;
+}
+
+.combo-option-meta {
+  color: var(--field-placeholder);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.brand-picker-group {
+  padding: 10px 12px 4px;
+  background: var(--pop-bg);
+  color: var(--field-placeholder);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.combo-empty,
+.brand-picker-panel.is-empty::before {
+  padding: 12px;
+  color: var(--field-placeholder);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* While results load the panel has nothing in it; show it once rows (or
+   the empty message) arrive instead of flashing an empty strip. The touch
+   search row counts as content: it is what the user types into. */
+.brand-picker-panel:not(.is-empty):not(:has(.brand-picker-list > *)):not(:has(.brand-picker-search:not([hidden]))) {
+  display: none;
+}
+
+/* The inner search row only exists on touch, where the field itself stays
+   read-only so the keyboard does not cover the list. */
+.brand-picker-search {
+  min-height: var(--field-h-compact);
+  margin-bottom: 6px;
+}
+
+.brand-picker-search input {
+  height: calc(var(--field-h-compact) - 2px);
+}
+
+/* Popular makes: a compact logo row, not squares that grow with the panel. */
+.brand-featured,
+.combo-featured {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 6px;
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid var(--pop-line);
+  list-style: none;
+}
+
+.brand-featured-tile,
+.combo-featured-tile {
+  display: grid;
+  place-items: center;
+  aspect-ratio: auto;
+  height: 48px;
+  padding: 0;
+  border: 1px solid var(--pop-line);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.brand-featured-tile:hover,
+.brand-featured-tile:focus-visible,
+.combo-featured-tile:hover,
+.combo-featured-tile:focus-visible {
+  border-color: var(--field-line-hover);
+  background: var(--option-hover);
+}
+
+.brand-featured-tile .brand-logo-img,
+.combo-featured-tile img {
+  width: 28px;
+  height: 28px;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+}
+
+/* ---- Home: search panel over the hero ------------------------------------ */
+
+.garage-search .search-field {
+  border-color: transparent;
+  background-color: #fff;
+}
+
+.garage-search .search-field:hover:not(:focus-within) {
+  border-color: rgba(22, 26, 21, 0.28);
+}
+
+.garage-search .search-field:focus-within {
+  border-color: var(--copper);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.42);
+}
+
+.garage-search .search-field.has-selection:not(:focus-within) {
+  border-color: rgba(30, 77, 52, 0.45);
+}
+
+.garage-search .search-brand-field {
+  padding-right: 44px;
+}
+
+.search-submit {
+  gap: 8px;
+}
+
+/* ---- Catalog filter sidebar ---------------------------------------------- */
+
+.filters-scroll {
+  gap: 0;
+}
+
+.filters-scroll > .mycar-rail {
+  padding: 4px 0 16px;
+  border: 0;
+}
+
+/* One hairline between groups (it used to be a solid line and a dashed one). */
+.filters-scroll > .filter-group {
+  gap: 14px;
+  margin: 0;
+  padding: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--field-line-soft);
+}
+
+.filters-scroll > .filter-group:last-child {
+  padding-bottom: 4px;
+}
+
+.filters-scroll > .filter-group--swap {
+  margin: 4px 0;
+  padding: 14px;
+  border: 1px solid var(--swap-line);
+  border-radius: 14px;
+  background: var(--swap-tint);
+}
+
+.filters-scroll > .filter-group--swap + .filter-group {
+  border-top: 0;
+}
+
+.filter-group-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: var(--graphite);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.filter-group-head svg {
+  width: 16px;
+  height: 16px;
+  color: var(--copper);
+}
+
+.filter-field {
+  display: grid;
+  gap: 7px;
+}
+
+.filter-label {
+  color: var(--field-label);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.filters-form .combo-control {
+  min-height: var(--field-h-compact);
+}
+
+.filters-form .combo-control :is(input, select) {
+  height: calc(var(--field-h-compact) - 2px);
+  font-size: 14px;
+}
+
+.filters-form .combo-control > svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Model waits for a make: say so with the surface, not just the placeholder. */
+.combo.is-disabled .combo-control {
+  border-color: transparent;
+  background-color: var(--field-disabled-bg);
+  opacity: 1;
+  filter: none;
+  cursor: not-allowed;
+}
+
+.combo.is-disabled .combo-input {
+  cursor: not-allowed;
+}
+
+/* Range pairs: floating caption over a select, both halves one field wide. */
+.range-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.range-box {
+  position: relative;
+  display: block;
+  min-height: 0;
+  padding: 0;
+}
+
+.range-box--select::after {
+  content: none;
+}
+
+.range-caption {
+  position: absolute;
+  top: 7px;
+  inset-inline-start: 12px;
+  z-index: 1;
+  color: var(--field-placeholder);
+  font-size: 11.5px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.range-box :is(select, input) {
+  height: 54px;
+  padding: 22px 28px 6px 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.range-box select {
+  background-position: right 10px top 30px;
+  background-size: 14px;
+}
+
+.range-box select:has(option[value=""]:checked) {
+  color: var(--field-placeholder);
+  font-weight: 600;
+}
+
+/* Option chips: quiet, border-only hover; the chosen one carries the accent. */
+.adv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.adv-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--field-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--graphite);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.adv-chip:hover:not(.is-active) {
+  border-color: var(--field-line-hover);
+}
+
+.adv-chip.is-active {
+  border-color: var(--copper);
+  background: var(--copper);
+  color: #fff;
+}
+
+.adv-chip:focus-visible {
+  outline: 2px solid var(--copper);
+  outline-offset: 2px;
+}
+
+.filter-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--graphite);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.filter-check input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Filters apply as they change, so desktop needs no footer. The drawer keeps
+   one button that closes it onto the results; its reset sits in the head. */
+@media (min-width: 981px) {
+  .filters-actions {
+    display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .filters-actions .filters-search {
+    width: 100%;
+    min-height: 52px;
+  }
+}
+
+/* Sort: sized to its longest option, not to half the toolbar. */
+.results-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.results-sort select {
+  width: auto;
+  min-width: 200px;
+  min-height: 40px;
+  padding-left: 12px;
+  padding-right: 38px;
+  background-color: #fff;
+  background-position: right 12px center;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+/* ---- Sell form ----------------------------------------------------------- */
+
+/* The three sections were tinted green, blue and beige. One white surface;
+   the swap terms keep the tint they have in the catalog filters. */
+.sell-shell--v3 .sell-section.sell-section--car,
+.sell-shell--v3 .sell-section.sell-section--details {
+  border-color: var(--border);
+  background: #fff;
+}
+
+.sell-shell--v3 .sell-section.sell-section--terms {
+  border-color: var(--swap-line);
+  background: linear-gradient(var(--swap-tint), var(--swap-tint)), #fff;
+}
+
+.sell-shell--v3 .sell-section .sell-section-badge {
+  border-color: rgba(30, 77, 52, 0.2);
+  background: #e8f0e9;
+  color: var(--copper);
+}
+
+/* Rows are spaced by the grid, not by a sibling margin: `.field + .field`
+   pushed only the second cell of a row down whenever the first cell had no
+   field before it, so paired labels sat 10px apart. */
+.sell-shell--v3 .sell-grid {
+  row-gap: 22px;
+}
+
+.sell-shell--v3 .sell-grid > .field {
+  margin-top: 0;
+}
+
+/* ---- Sign-in ------------------------------------------------------------- */
+
+.auth-divider {
+  margin: 18px 0 8px;
+}
+
+.btn-google:hover {
+  background: var(--field-bg);
+}
+
+/* ---- Touch --------------------------------------------------------------- */
+
+@media (pointer: coarse) {
+  .adv-chip {
+    min-height: 44px;
+    padding: 0 16px;
+  }
+
+  .filter-check {
+    min-height: 44px;
+  }
+}
+
+/* iOS Safari zooms into any focused field under 16px. This has to beat every
+   context size above, hence the !important. */
+@media (hover: none) and (pointer: coarse) {
+  :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), select, textarea):not(.otp-input, .auth-code-input) {
+    font-size: 16px !important;
+  }
 }

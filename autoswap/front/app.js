@@ -982,7 +982,7 @@ function BrowseStrip() {
               <span class="brand-chip-text"><strong>${brand.label || brand.make}</strong></span>
             </a>
           `).join('')}
-          <span class="brand-chip-sep" aria-hidden="true"></span>
+          ${brands.length ? '<span class="brand-chip-sep" aria-hidden="true"></span>' : ''}
           ${filters.map((route) => `
             <a class="browse-pill" href="${route.href}">
               <span>${route.label}</span>

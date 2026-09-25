@@ -438,7 +438,7 @@ function FilterSidebar() {
       <form class="filters-form" id="filters-form">
         <div class="filters-head">
           <span class="filters-title">${icons.filter} ფილტრები</span>
-          <button type="button" class="filters-reset" id="filters-reset">${icons.refresh} გასუფთავება</button>
+          <button type="button" class="filters-reset" id="filters-reset"${activeFilterCount() ? '' : ' hidden'}>${icons.refresh} გასუფთავება</button>
           <button type="button" class="filters-close" id="filters-close" aria-label="დახურვა">&times;</button>
         </div>
 
@@ -526,7 +526,6 @@ function FilterSidebar() {
 
         <div class="filters-actions">
           <button type="button" class="btn btn-primary filters-search" id="filters-search">შედეგების ჩვენება <span class="filters-search-count" id="apply-count">(${getFiltered().length})</span></button>
-          <button type="button" class="btn btn-ghost filters-clear" id="filters-clear">${icons.refresh} გასუფთავება</button>
         </div>
       </form>
     </aside>
@@ -926,12 +925,14 @@ function update() {
   const applyCount = document.querySelector('#apply-count');
   if (applyCount) applyCount.textContent = `(${filtered.length})`;
 
+  const activeCount = activeFilterCount();
   const badge = document.querySelector('#filters-badge');
   if (badge) {
-    const n = activeFilterCount();
-    badge.textContent = n ? String(n) : '';
-    badge.hidden = !n;
+    badge.textContent = activeCount ? String(activeCount) : '';
+    badge.hidden = !activeCount;
   }
+  const reset = document.querySelector('#filters-reset');
+  if (reset) reset.hidden = !activeCount;
 
   const activeBar = document.querySelector('#active-filters');
   if (activeBar) {
@@ -1306,9 +1307,20 @@ function bindQuerySuggest() {
   let timer = null;
   let seq = 0;
 
+  const control = wrap.querySelector('.combo-control');
+
   const close = () => {
     list.hidden = true;
     input.setAttribute('aria-expanded', 'false');
+    delete list.dataset.activeIndex;
+  };
+
+  const choose = (option) => {
+    seq += 1;
+    clearTimeout(timer);
+    input.value = option.textContent.trim();
+    close();
+    applyFormFilters(form);
   };
 
   const run = async () => {
@@ -1323,7 +1335,9 @@ function bindQuerySuggest() {
       .map((label) => `<li class="combo-option" role="option"><span>${escapeHtml(label)}</span></li>`)
       .join('');
     list.hidden = false;
+    list.dataset.activeIndex = '-1';
     input.setAttribute('aria-expanded', 'true');
+    placeComboList(list, control || input);
   };
 
   input.addEventListener('input', () => {
@@ -1339,16 +1353,29 @@ function bindQuerySuggest() {
     const option = event.target.closest('.combo-option');
     if (!option) return;
     event.preventDefault();
-    seq += 1;
-    clearTimeout(timer);
-    input.value = option.textContent.trim();
-    close();
-    applyFormFilters(form);
+    choose(option);
   });
 
   input.addEventListener('blur', () => setTimeout(close, 140));
   input.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') close();
+    if (event.key === 'Escape') {
+      close();
+      return;
+    }
+    if (list.hidden) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const current = Number(list.dataset.activeIndex ?? -1);
+      const up = event.key === 'ArrowUp';
+      setActiveComboOption(list, current < 0 && up ? -1 : current + (up ? -1 : 1));
+      return;
+    }
+    if (event.key === 'Enter') {
+      const active = list.querySelector('.combo-option.is-active');
+      if (!active) return;
+      event.preventDefault();
+      choose(active);
+    }
   });
 }
 
@@ -1458,6 +1485,14 @@ function initCombos() {
     setTimeout(() => makeControl?.classList.remove('is-flash'), 900);
     makeInput?.focus();
   });
+
+  // A make from the URL (the home page's brand chips) arrives without an id,
+  // which left the model field locked until the make was picked again.
+  if (currentFilters.make && !currentFilters.makeId) {
+    resolveSelectedMakeId()
+      .then((id) => { if (id) setModelComboDisabled(false); })
+      .catch(() => {});
+  }
 }
 
 function bindDragRails(root = document) {
@@ -1570,7 +1605,6 @@ function bindEvents() {
   form?.addEventListener('submit', (event) => event.preventDefault());
 
   document.querySelector('#filters-reset')?.addEventListener('click', clearAllFilters);
-  document.querySelector('#filters-clear')?.addEventListener('click', clearAllFilters);
 
   document.querySelector('#sort-select')?.addEventListener('change', (event) => {
     currentFilters.sort = event.target.value;
